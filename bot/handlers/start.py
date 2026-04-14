@@ -22,18 +22,19 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
-    """Команда /start — проверяем есть ли пользователь, если нет — начинаем с согласия."""
+    """Команда /start — всегда показываем приветствие или главное меню."""
     await state.clear()
 
     result = await session.execute(select(User).where(User.id == message.from_user.id))
     user = result.scalar_one_or_none()
 
     if user and user.consent_general and user.consent_special:
+        # Пользователь уже зарегистрирован — показываем главное меню
         lang = user.language.value if user.language else "ru"
         await message.answer(t("main_menu", lang), reply_markup=main_menu_kb(lang))
         return
 
-    # Новый пользователь — показываем выбор языка
+    # Новый пользователь или не завершил согласие — начинаем с выбора языка
     await message.answer(
         t("welcome", "ru"),
         reply_markup=lang_kb(),
