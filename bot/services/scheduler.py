@@ -93,7 +93,8 @@ async def daily_report(bot: Bot):
             )
         )
         payments_total_raw = result.scalar() or 0
-        payments_total = f"{payments_total_raw:,} тийин" if payments_total_raw else "0"
+        # amount хранится в тийинах — конвертируем в сум
+        payments_total = f"{payments_total_raw // 100:,} сум" if payments_total_raw else "0"
 
         # Новые анкеты
         result = await session.execute(

@@ -16,7 +16,7 @@ from bot.keyboards.inline import (
     region_kb, nationality_kb, family_position_kb,
     religiosity_kb, marital_kb, children_kb,
     skip_kb, photo_type_kb, profile_status_kb,
-    location_kb, location_reply_kb, confirm_age_kb,
+    location_kb, location_reply_kb, confirm_age_kb, back_kb,
     tariff_kb,
 )
 
@@ -527,50 +527,50 @@ async def q22_parent_tg(message: Message, state: FSMContext):
 async def q22_candidate_tg(message: Message, state: FSMContext):
     await state.update_data(candidate_telegram=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q22_location", lang), reply_markup=location_kb(lang))
+    # Показываем ReplyKeyboard с кнопкой геолокации + InlineKeyboard с альтернативами
+    from aiogram.types import ReplyKeyboardRemove
+    await message.answer(t("q22_location", lang), reply_markup=location_reply_kb(lang))
     await state.set_state(QuestionnaireStates.q22_location)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.q22_candidate_telegram)
 async def q22_candidate_tg_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("q22_location", lang), reply_markup=location_kb(lang))
+    await callback.message.answer(t("q22_location", lang), reply_markup=location_reply_kb(lang))
     await state.set_state(QuestionnaireStates.q22_location)
     await callback.answer()
 
 
 # ── Q22: Геолокация ──
-@router.callback_query(F.data == "loc:skip", QuestionnaireStates.q22_location)
-async def q22_loc_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    await callback.message.edit_text(t("q23", lang), reply_markup=profile_status_kb(lang))
-    await state.set_state(QuestionnaireStates.q23_status)
-    await callback.answer()
-
-
-@router.callback_query(F.data == "loc:link", QuestionnaireStates.q22_location)
-async def q22_loc_link(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    label = "Отправьте ссылку на карту:" if lang == "ru" else "Xaritaga havolani yuboring:"
-    await callback.message.edit_text(label)
-    await callback.answer()
-
-
 @router.message(QuestionnaireStates.q22_location, F.location)
 async def q22_loc_geo(message: Message, state: FSMContext):
+    from aiogram.types import ReplyKeyboardRemove
     await state.update_data(
         location_lat=message.location.latitude,
         location_lon=message.location.longitude,
     )
     lang = await _lang(state)
+    await message.answer("📍", reply_markup=ReplyKeyboardRemove())
     await message.answer(t("q23", lang), reply_markup=profile_status_kb(lang))
     await state.set_state(QuestionnaireStates.q23_status)
 
 
 @router.message(QuestionnaireStates.q22_location)
 async def q22_loc_text(message: Message, state: FSMContext):
-    await state.update_data(location_link=message.text.strip())
+    from aiogram.types import ReplyKeyboardRemove
+    text = message.text.strip()
     lang = await _lang(state)
+
+    # Кнопка "Пропустить" из ReplyKeyboard
+    skip_labels = [t("btn_skip", "ru"), t("btn_skip", "uz")]
+    if text in skip_labels:
+        await message.answer("👌", reply_markup=ReplyKeyboardRemove())
+        await message.answer(t("q23", lang), reply_markup=profile_status_kb(lang))
+        await state.set_state(QuestionnaireStates.q23_status)
+        return
+
+    await state.update_data(location_link=text)
+    await message.answer("✅", reply_markup=ReplyKeyboardRemove())
     await message.answer(t("q23", lang), reply_markup=profile_status_kb(lang))
     await state.set_state(QuestionnaireStates.q23_status)
 

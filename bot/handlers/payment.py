@@ -88,7 +88,14 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
 
     if method == "card":
         # Перевод на карту — показываем реквизиты
-        await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer")
+        # Определяем сумму по региону пользователя
+        result = await session.execute(
+            select(Profile).where(Profile.user_id == callback.from_user.id).limit(1)
+        )
+        user_profile = result.scalar_one_or_none()
+        residence = user_profile.residence_status.value if user_profile and user_profile.residence_status else "uzbekistan"
+        amount = 75000_00 if residence == "cis" else 50000_00
+        await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer", pay_amount=amount, lang=lang)
         await callback.message.edit_text(t("payment_card_transfer", lang))
         await state.set_state(PaymentStates.awaiting_screenshot)
     elif method == "moderator":
