@@ -10,19 +10,19 @@ class Config:
     bot_token: str = field(default_factory=lambda: os.environ["BOT_TOKEN"])
     database_url: str = field(default_factory=lambda: os.environ["DATABASE_URL"])
     moderator_chat_id: int = field(
-        default_factory=lambda: int(os.environ.get("MODERATOR_CHAT_ID", "8400995899"))
+        default_factory=lambda: int(os.environ.get("MODERATOR_CHAT_ID", "0")) or 8400995899
     )
     moderator_tashkent: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_TASHKENT", "@rishta_manager_tashkent")
     )
     mod_tashkent_id: int = field(
-        default_factory=lambda: int(os.environ.get("MOD_TASHKENT_ID", "8400995899"))
+        default_factory=lambda: int(os.environ.get("MOD_TASHKENT_ID", "0")) or 8400995899
     )
     mod_samarkand_id: int = field(
-        default_factory=lambda: int(os.environ.get("MOD_SAMARKAND_ID", "8400995899"))
+        default_factory=lambda: int(os.environ.get("MOD_SAMARKAND_ID", "0")) or 8400995899
     )
     main_moderator_id: int = field(
-        default_factory=lambda: int(os.environ.get("MAIN_MODERATOR_ID", "8400995899"))
+        default_factory=lambda: int(os.environ.get("MAIN_MODERATOR_ID", "0")) or 8400995899
     )
     moderator_usa: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_USA", "@rishta_manager_usa")
