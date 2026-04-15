@@ -450,6 +450,16 @@ def profile_card_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def get_contact_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Кнопка «Получить контакт и адрес» — ведёт к оплате (Шаг 13)."""
+    label = "💳 Получить контакт и адрес" if lang == "ru" else "💳 Kontakt va manzil olish"
+    back = t("btn_back", lang)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data=f"getcontact:{profile_id}")],
+        [InlineKeyboardButton(text=back, callback_data="back:menu")],
+    ])
+
+
 def search_nav_kb(page: int, total_pages: int, lang: str = "ru") -> InlineKeyboardMarkup:
     buttons = []
     if page > 0:

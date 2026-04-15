@@ -537,6 +537,10 @@ T = {
     },
 
     # ── Step 13: Payment ──
+    "payment_prompt": {
+        "ru": "💳 Хотите получить контакт и адрес семьи?\n🔖 Анкета: {display_id}",
+        "uz": "💳 Oila kontakti va manzilini olmoqchimisiz?\n🔖 Anketa: {display_id}",
+    },
     "payment_uz": {
         "ru": (
             "💳 <b>Получить контакт и адрес</b>\n\n"

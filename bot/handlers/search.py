@@ -10,7 +10,7 @@ from bot.db.models import (
     Requirement, Favorite, ContactRequest, RequestStatus,
 )
 from bot.texts import t
-from bot.keyboards.inline import profile_card_kb, search_nav_kb, back_kb, main_menu_kb
+from bot.keyboards.inline import profile_card_kb, search_nav_kb, back_kb, main_menu_kb, get_contact_kb
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config
 
@@ -341,8 +341,49 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
 
     await callback.message.answer(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
-        reply_markup=back_kb(lang),
     )
+
+    # Шаг 13 — предлагаем получить контакт и адрес (оплата)
+    await callback.message.answer(
+        t("payment_prompt", lang, display_id=target_profile.display_id or "—"),
+        reply_markup=get_contact_kb(target_profile_id, lang),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("getcontact:"))
+async def get_contact_payment(callback: CallbackQuery, session: AsyncSession):
+    """Шаг 13 — переход к оплате для получения контакта."""
+    profile_id = int(callback.data.split(":")[1])
+    lang = await get_lang(session, callback.from_user.id)
+
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("Анкета не найдена")
+        return
+
+    # Определяем регион пользователя для выбора способа оплаты
+    result = await session.execute(
+        select(Profile).where(Profile.user_id == callback.from_user.id).limit(1)
+    )
+    user_profile = result.scalar_one_or_none()
+
+    display_id = profile.display_id or "—"
+    residence = user_profile.residence_status.value if user_profile and user_profile.residence_status else "uzbekistan"
+
+    from bot.keyboards.inline import payment_uz_kb, payment_cis_kb, payment_intl_kb
+
+    if residence in ("usa", "europe", "citizenship_other", "other_country"):
+        text = t("payment_intl", lang, display_id=display_id)
+        kb = payment_intl_kb(profile_id, lang)
+    elif residence == "cis":
+        text = t("payment_cis", lang, display_id=display_id)
+        kb = payment_cis_kb(profile_id, lang)
+    else:
+        text = t("payment_uz", lang, display_id=display_id)
+        kb = payment_uz_kb(profile_id, lang)
+
+    await callback.message.edit_text(text, reply_markup=kb)
     await callback.answer()
 
 

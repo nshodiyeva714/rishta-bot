@@ -10,7 +10,7 @@ from bot.db.models import (
     User, Profile, Payment, PaymentMethod, PaymentStatus,
     ProfileType, ContactRequest, RequestStatus,
 )
-from bot.states import PaymentStates
+from bot.states import PaymentStates, MeetingStates
 from bot.texts import t
 from bot.keyboards.inline import (
     payment_uz_kb, payment_cis_kb, payment_intl_kb,
@@ -103,6 +103,7 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
     elif method in ("payme", "click", "uzum"):
         # Интеграция с платёжными системами (заглушка)
         # В реальности здесь будет генерация ссылки на оплату
+        from datetime import datetime
         payment = Payment(
             user_id=callback.from_user.id,
             profile_id=profile_id,
@@ -116,11 +117,15 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
 
         # Временно — сразу подтверждаем (когда будет интеграция, это будет через webhook)
         payment.status = PaymentStatus.CONFIRMED
+        payment.confirmed_at = datetime.now()
         await session.commit()
 
         profile = await session.get(Profile, profile_id)
         if profile:
             await send_contact_details(callback.bot, session, callback.from_user.id, profile)
+            # Устанавливаем FSM для планирования встречи (Шаг 16)
+            await state.update_data(pay_profile_id=profile_id, lang=lang)
+            await state.set_state(MeetingStates.date)
 
         # Уведомление модератору
         if config.moderator_chat_id:
@@ -200,6 +205,8 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
         "✅ Скриншот отправлен модератору.\nОжидайте подтверждения оплаты." if lang == "ru"
         else "✅ Skrinshot moderatorga yuborildi.\nTo'lovni tasdiqlashni kuting."
     )
+    # Не очищаем state — оплата ещё не подтверждена.
+    # Модератор подтвердит → send_contact_details → meeting flow
     await state.clear()
 
 

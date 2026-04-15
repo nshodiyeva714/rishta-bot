@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite
+from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite, ProfileType
 from bot.texts import t
 from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb
 from bot.utils.helpers import age_text, calculate_age
@@ -143,6 +143,49 @@ async def activate_profile(callback: CallbackQuery, session: AsyncSession):
     await show_main_menu(callback, session)
 
 
+@router.callback_query(F.data.startswith("myedit:"))
+async def edit_profile(callback: CallbackQuery, session: AsyncSession):
+    """Редактирование анкеты — пока через модератора."""
+    lang = await get_lang(session, callback.from_user.id)
+    await callback.answer(
+        "✏️ Свяжитесь с модератором для редактирования" if lang == "ru"
+        else "✏️ Tahrirlash uchun moderator bilan bog'laning"
+    )
+
+
+@router.callback_query(F.data.startswith("myvip:"))
+async def upgrade_to_vip(callback: CallbackQuery, session: AsyncSession):
+    """Переход на VIP — оплата через модератора."""
+    profile_id = int(callback.data.split(":")[1])
+    profile = await session.get(Profile, profile_id)
+    lang = await get_lang(session, callback.from_user.id)
+
+    if not profile or profile.user_id != callback.from_user.id:
+        await callback.answer("⛔")
+        return
+
+    if profile.vip_status == VipStatus.ACTIVE:
+        await callback.answer("⭐ VIP уже активен" if lang == "ru" else "⭐ VIP allaqachon faol")
+        return
+
+    from bot.config import config
+    moderator = config.moderator_tashkent
+    text = (
+        f"⭐ <b>Перейти на VIP</b>\n\n"
+        f"🔖 Анкета: {profile.display_id or '—'}\n"
+        f"💰 Стоимость: 100,000 сум/мес\n\n"
+        f"Для оплаты VIP свяжитесь с модератором:\n{moderator}"
+    ) if lang == "ru" else (
+        f"⭐ <b>VIPga o'tish</b>\n\n"
+        f"🔖 Anketa: {profile.display_id or '—'}\n"
+        f"💰 Narxi: 100,000 so'm/oy\n\n"
+        f"VIP to'lovi uchun moderator bilan bog'laning:\n{moderator}"
+    )
+
+    await callback.message.answer(text)
+    await callback.answer()
+
+
 @router.callback_query(F.data.startswith("mydelete:"))
 async def delete_profile(callback: CallbackQuery, session: AsyncSession):
     profile_id = int(callback.data.split(":")[1])
@@ -240,7 +283,6 @@ async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: A
     lang = await get_lang(session, callback.from_user.id)
 
     # Проверяем, есть ли у пользователя уже анкета типа SON
-    from bot.db.models import ProfileType
     result = await session.execute(
         select(Profile).where(
             Profile.user_id == callback.from_user.id,
