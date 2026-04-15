@@ -11,7 +11,7 @@ from bot.db.models import (
 )
 from bot.texts import t
 from bot.keyboards.inline import profile_card_kb, search_nav_kb, back_kb, main_menu_kb, get_contact_kb
-from bot.utils.helpers import age_text, calculate_age
+from bot.utils.helpers import age_text, calculate_age, format_anketa_public
 from bot.config import config
 
 router = Router()
@@ -112,60 +112,8 @@ async def get_search_results(session: AsyncSession, user_id: int):
 
 
 def format_profile_card(profile: Profile, score: int, lang: str = "ru") -> str:
-    """Форматирование карточки анкеты."""
-    vip = "⭐ VIP · " if profile.vip_status == VipStatus.ACTIVE else ""
-    verified = "✅ Проверено" if lang == "ru" else "✅ Tekshirilgan"
-
-    age = calculate_age(profile.birth_year) if profile.birth_year else "?"
-    age_str = age_text(age) if isinstance(age, int) else str(age)
-
-    edu_map = {
-        "secondary": "Среднее" if lang == "ru" else "O'rta",
-        "vocational": "Среднее спец." if lang == "ru" else "O'rta maxsus",
-        "higher": "Высшее" if lang == "ru" else "Oliy",
-        "studying": profile.university_info or ("Учится" if lang == "ru" else "O'qiydi"),
-    }
-    edu = edu_map.get(profile.education.value, "—") if profile.education else "—"
-
-    car_map = {
-        "personal": "🚗 Личный" if lang == "ru" else "🚗 Shaxsiy",
-        "family": "🚗 Семейный" if lang == "ru" else "🚗 Oilaviy",
-        "none": "",
-    }
-    car = car_map.get(profile.car.value, "") if profile.car else ""
-
-    icon = "👧" if profile.profile_type == ProfileType.DAUGHTER else "👦"
-
-    lines = [
-        f"━━━━━━━━━━━━━━━",
-        f"{vip}{verified} · 🔥 {score}%",
-        f"🔖 {profile.display_id}",
-        f"{icon} {age_str} · {profile.height_cm or '?'} см / {profile.weight_kg or '?'} кг",
-        f"🎓 {edu}",
-    ]
-    if car:
-        lines.append(car)
-    if profile.city:
-        lines.append(f"🏙 {profile.city}" + (f", {profile.district}" if profile.district else ""))
-    if profile.nationality:
-        nat_map = {"uzbek": "🇺🇿 Узбек", "russian": "🇷🇺 Русский", "korean": "🇰🇷 Кореец",
-                   "tajik": "🇹🇯 Таджик", "kazakh": "🇰🇿 Казах", "other": "🌍 Другая"}
-        nat = nat_map.get(profile.nationality, profile.nationality)
-        lines.append(nat)
-    if profile.father_occupation:
-        lines.append(f"👨 Отец: {profile.father_occupation}")
-    if profile.mother_occupation:
-        lines.append(f"👩 Мать: {profile.mother_occupation}")
-    if profile.brothers_count is not None or profile.sisters_count is not None:
-        siblings = f"👨‍👩‍👧‍👦 {profile.brothers_count or 0} брат. / {profile.sisters_count or 0} сестр."
-        if profile.family_position:
-            pos_map = {"oldest": "старший", "middle": "средний", "youngest": "младший", "only": "единственный"}
-            siblings += f" ({pos_map.get(profile.family_position.value, '')})"
-        lines.append(siblings)
-
-    lines.append(f"👁 Просмотров: {profile.views_count or 0}")
-
-    return "\n".join(lines)
+    """Форматирование карточки анкеты — полная публичная версия."""
+    return format_anketa_public(profile, score, lang)
 
 
 @router.callback_query(F.data == "search:browse")

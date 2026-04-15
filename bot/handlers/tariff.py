@@ -24,7 +24,7 @@ from bot.keyboards.inline import (
     skip_kb, confirm_profile_kb, main_menu_kb,
     mod_review_kb,
 )
-from bot.utils.helpers import generate_display_id, age_text, calculate_age
+from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa
 from bot.config import config
 
 router = Router()
@@ -307,29 +307,12 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
     # Отправляем пользователю подтверждение
     await callback.message.edit_text(t("profile_submitted", lang, display_id=display_id))
 
-    # Шаг 9 — уведомляем модератора
+    # Шаг 9 — уведомляем модератора (ПОЛНАЯ анкета)
     if config.moderator_chat_id:
-        age = calculate_age(profile.birth_year) if profile.birth_year else "?"
-        icon = "👧" if ptype == ProfileType.DAUGHTER else "👦"
-        vip = "⭐ Да" if profile.vip_status == VipStatus.ACTIVE else "Нет"
-        photo_status = "есть" if profile.photo_file_id else "нет"
-        if profile.photo_type and profile.photo_type != PhotoType.NONE and profile.photo_type != PhotoType.REGULAR:
-            photo_status += f" ({profile.photo_type.value})"
-
-        mod_text = t("mod_new_profile", "ru",
-            display_id=display_id,
-            icon=icon,
-            name=profile.name or "—",
-            age=age_text(age) if isinstance(age, int) else age,
-            city=profile.city or "—",
-            district=profile.district or "—",
-            phone=profile.parent_phone or "—",
-            vip=vip,
-            photo=photo_status,
-        )
+        mod_text = format_full_anketa(profile, lang="ru")
 
         try:
-            msg = await bot.send_message(
+            await bot.send_message(
                 config.moderator_chat_id,
                 mod_text,
                 reply_markup=mod_review_kb(profile.id),

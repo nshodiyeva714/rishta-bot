@@ -17,6 +17,7 @@ from bot.keyboards.inline import (
     mod_payment_kb, meeting_skip_kb, back_kb,
 )
 from bot.config import config
+from bot.utils.helpers import format_anketa_private
 
 router = Router()
 
@@ -30,23 +31,16 @@ async def get_lang(session: AsyncSession, user_id: int) -> str:
 async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, profile: Profile):
     """Шаг 15 — Отправить контакты и адрес пользователю."""
     lang = await get_lang(session, user_id)
-    ptype = profile.profile_type
-    child = t("daughter_nom", lang) if ptype == ProfileType.DAUGHTER else t("son_nom", lang)
 
-    text = t("contact_revealed", lang,
-        display_id=profile.display_id or "—",
-        phone=profile.parent_phone or "—",
-        parent_tg=profile.parent_telegram or "—",
-        child=child,
-        candidate_tg=profile.candidate_telegram or "—",
-        city=profile.city or "—",
-        district=profile.district or "—",
-        address=profile.address or "—",
-    )
+    # Подтверждение оплаты
+    confirm_text = f"✅ <b>{'Оплата подтверждена!' if lang == 'ru' else 'To`lov tasdiqlandi!'}</b>\n🔖 {profile.display_id or '—'}"
+    await bot.send_message(user_id, confirm_text)
 
-    await bot.send_message(user_id, text)
+    # Контакты и адрес
+    private_text = format_anketa_private(profile, lang)
+    await bot.send_message(user_id, private_text)
 
-    # Отправляем фото если есть
+    # Фото если есть
     if profile.photo_file_id:
         try:
             await bot.send_photo(user_id, profile.photo_file_id,
@@ -56,11 +50,24 @@ async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, pr
         except Exception:
             pass
 
+    # Предупреждение
+    warn_text = (
+        "⚠️ Просим сохранять уважение к семье и конфиденциальность.\n\n"
+        "Модератор предупредил семью о вашем визите 🤝\n\n"
+        "Удачи! Пусть всё сложится наилучшим образом 🤲\n\n"
+        "<i>Через 14 дней спросим о результате 😊</i>"
+    ) if lang == "ru" else (
+        "⚠️ Oilaga hurmat va maxfiylikni saqlashingizni so'raymiz.\n\n"
+        "Moderator oilani tashrifingiz haqida ogohlantirdi 🤝\n\n"
+        "Omad! Hammasi yaxshi bo'lsin 🤲\n\n"
+        "<i>14 kundan so'ng natija haqida so'raymiz 😊</i>"
+    )
+    await bot.send_message(user_id, warn_text)
+
     # Предлагаем запланировать встречу (Шаг 16)
-    from bot.texts import t as _t
     await bot.send_message(
         user_id,
-        _t("meeting_date", lang),
+        t("meeting_date", lang),
         reply_markup=meeting_skip_kb(lang),
     )
 
