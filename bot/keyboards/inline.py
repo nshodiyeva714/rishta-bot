@@ -44,12 +44,10 @@ def back_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 def contact_moderator_kb(lang: str = "ru", region: str = "tashkent") -> InlineKeyboardMarkup:
     from bot.config import get_moderator_username
     username = get_moderator_username(region)
-    write_bot = "✍️ Написать через бота" if lang == "ru" else "✍️ Bot orqali yozish"
     write_tg = "💬 Написать в Telegram" if lang == "ru" else "💬 Telegramda yozish"
     back = t("btn_back", lang)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=write_tg, url=f"https://t.me/{username}")],
-        [InlineKeyboardButton(text=write_bot, callback_data="mod:write")],
         [InlineKeyboardButton(text=back, callback_data="back:menu")],
     ])
 
