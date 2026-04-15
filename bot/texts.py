@@ -69,8 +69,8 @@ T = {
 
     # ── Step 2: Main menu ──
     "main_menu": {
-        "ru": "Что вас интересует?",
-        "uz": "Sizni nima qiziqtiradi?",
+        "ru": "👋 Добро пожаловать в Rishta! 🤝",
+        "uz": "👋 Rishta'ga xush kelibsiz! 🤝",
     },
     "btn_search_bride": {"ru": "👦 Ищем невестку", "uz": "👦 Kelin qidiramiz"},
     "btn_post_daughter": {"ru": "👧 Разместить анкету дочери", "uz": "👧 Qiz anketasini joylashtirish"},
