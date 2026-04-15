@@ -206,8 +206,8 @@ def family_position_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🕌 Практикующий", "🕌 Умеренный", "🌐 Светский"],
-        "uz": ["🕌 Amaliyotchi", "🕌 Mo''tadil", "🌐 Dunyoviy"],
+        "ru": ["🕌 Практикующий", "☪️ Умеренный", "🌐 Светский"],
+        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy"],
     }
     values = ["practicing", "moderate", "secular"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -306,6 +306,22 @@ def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 # ── Requirements keyboards ──
 
+def req_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    labels = {
+        "ru": ["18–23", "24–27", "28–35", "36–45", "45+", "Не важно"],
+        "uz": ["18–23", "24–27", "28–35", "36–45", "45+", "Muhim emas"],
+    }
+    values = ["age_18_23", "age_24_27", "age_28_35", "age_36_45", "age_45_plus", "age_any"]
+    rows = []
+    for i in range(0, len(values), 3):
+        row = [
+            InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=values[j])
+            for j in range(i, min(i + 3, len(values)))
+        ]
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def req_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["🎓 Высшее обязательно", "🎓 Среднее специальное", "✅ Не важно"],
@@ -330,6 +346,35 @@ def req_residence_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def req_residence_simple_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    labels = {
+        "ru": ["🇺🇿 Узбекистан", "🌍 Другое", "⏭ Пропустить"],
+        "uz": ["🇺🇿 O'zbekiston", "🌍 Boshqa", "⏭ O'tkazib yuborish"],
+    }
+    values = ["rres_uzb", "rres_other", "rres_skip"]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=values[i])]
+        for i in range(3)
+    ])
+
+
+def req_residence_regions_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    labels = {
+        "ru": ["Ташкент", "Самарканд", "Фергана", "Бухара", "Наманган", "Андижан", "Нукус", "Любой"],
+        "uz": ["Toshkent", "Samarqand", "Farg'ona", "Buxoro", "Namangan", "Andijon", "Nukus", "Har qanday"],
+    }
+    values = ["rregion_tashkent", "rregion_samarkand", "rregion_fergana", "rregion_bukhara",
+              "rregion_namangan", "rregion_andijan", "rregion_nukus", "rregion_any"]
+    rows = []
+    for i in range(0, len(values), 2):
+        row = [
+            InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=values[j])
+            for j in range(i, min(i + 2, len(values)))
+        ]
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def req_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["🇺🇿 Узбечка", "🇷🇺 Русская", "🇰🇷 Кореянка", "🇹🇯 Таджичка", "🇰🇿 Казашка", "✅ Не важно"],
@@ -345,13 +390,13 @@ def req_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def req_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🕌 Практикующая", "🕌 Умеренная", "✅ Не важно"],
-        "uz": ["🕌 Amaliyotchi", "🕌 Mo''tadil", "✅ Muhim emas"],
+        "ru": ["🕌 Практикующий", "☪️ Умеренный", "🌐 Светский", "✅ Не важно"],
+        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy", "✅ Muhim emas"],
     }
-    values = ["practicing", "moderate", "any"]
+    values = ["practicing", "moderate", "secular", "any"]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"reqrel:{values[i]}")]
-        for i in range(3)
+        for i in range(4)
     ])
 
 

@@ -22,10 +22,8 @@ class QuestionnaireStates(StatesGroup):
     q7_housing = State()
     q7_parent_housing = State()
     q8_car = State()
-    q9_city = State()
-    q9_district = State()
+    q9_city_district = State()
     q9_address = State()
-    q10_residence = State()
     q10b_search_scope = State()
     q10b_preferred_city = State()
     q10b_preferred_district = State()
@@ -59,8 +57,7 @@ class TariffStates(StatesGroup):
 
 
 class RequirementStates(StatesGroup):
-    age_from = State()
-    age_to = State()
+    age = State()
     education = State()
     residence = State()
     residence_city = State()

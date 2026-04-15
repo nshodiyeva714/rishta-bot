@@ -1,4 +1,4 @@
-"""Шаг 5А/5Б — Анкета (23 вопроса)."""
+"""Шаг 5А/5Б — Анкета (25 вопросов)."""
 
 import re
 from datetime import datetime
@@ -12,7 +12,7 @@ from bot.states import QuestionnaireStates, TariffStates
 from bot.texts import t
 from bot.keyboards.inline import (
     education_kb, housing_kb, parent_housing_kb, car_kb,
-    residence_kb, search_scope_kb, city_kb, diaspora_country_kb,
+    search_scope_kb, city_kb, diaspora_country_kb,
     region_kb, nationality_kb, family_position_kb,
     religiosity_kb, marital_kb, children_kb,
     skip_kb, photo_type_kb, profile_status_kb,
@@ -182,41 +182,31 @@ async def q8_car(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(car=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("q9_city", lang))
-    await state.set_state(QuestionnaireStates.q9_city)
+    await callback.message.edit_text(t("q9_city_district", lang))
+    await state.set_state(QuestionnaireStates.q9_city_district)
     await callback.answer()
 
 
-# ── Q9: Город, район, адрес ──
-@router.message(QuestionnaireStates.q9_city)
-async def q9_city(message: Message, state: FSMContext):
+# ── Q9: Город и район (merged) ──
+@router.message(QuestionnaireStates.q9_city_district)
+async def q9_city_district(message: Message, state: FSMContext):
     await state.update_data(city=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q9_district", lang))
-    await state.set_state(QuestionnaireStates.q9_district)
-
-
-@router.message(QuestionnaireStates.q9_district)
-async def q9_district(message: Message, state: FSMContext):
-    await state.update_data(district=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(t("q9_address", lang))
+    await message.answer(t("q9_address", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q9_address)
 
 
+# ── Q10: Адрес ──
 @router.message(QuestionnaireStates.q9_address)
 async def q9_address(message: Message, state: FSMContext):
     await state.update_data(address=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q10", lang), reply_markup=residence_kb(lang))
-    await state.set_state(QuestionnaireStates.q10_residence)
+    await message.answer(t("q10b", lang), reply_markup=search_scope_kb(lang))
+    await state.set_state(QuestionnaireStates.q10b_search_scope)
 
 
-# ── Q10: Статус проживания ──
-@router.callback_query(F.data.startswith("res:"), QuestionnaireStates.q10_residence)
-async def q10_residence(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(residence_status=value)
+@router.callback_query(F.data == "skip", QuestionnaireStates.q9_address)
+async def q9_address_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(t("q10b", lang), reply_markup=search_scope_kb(lang))
     await state.set_state(QuestionnaireStates.q10b_search_scope)
@@ -389,30 +379,38 @@ async def q18_children(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# ── Q19: Здоровье ──
+# ── Q20: Здоровье ──
 @router.message(QuestionnaireStates.q19_health)
 async def q19_health(message: Message, state: FSMContext):
     await state.update_data(health_notes=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q20", lang))
+    await message.answer(t("q20", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q20_character)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.q19_health)
 async def q19_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("q20", lang))
+    await callback.message.edit_text(t("q20", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q20_character)
     await callback.answer()
 
 
-# ── Q20: Характер ──
+# ── Q21: Характер ──
 @router.message(QuestionnaireStates.q20_character)
 async def q20_character(message: Message, state: FSMContext):
     await state.update_data(character_hobbies=message.text.strip())
     lang = await _lang(state)
     await message.answer(t("q20a_intro", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q20a_ideal_family)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.q20_character)
+async def q20_character_skip(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    await callback.message.edit_text(t("q20a_intro", lang), reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.q20a_ideal_family)
+    await callback.answer()
 
 
 # ── Q20А: Совместимость (3 вопроса) ──
@@ -473,7 +471,7 @@ async def q21_photo_type(callback: CallbackQuery, state: FSMContext):
 
     if value == "none":
         # Без фото — переходим к контактам
-        await callback.message.edit_text(t("q22_phone", lang))
+        await callback.message.edit_text(t("q22_phone", lang), reply_markup=skip_kb(lang))
         await state.set_state(QuestionnaireStates.q22_parent_phone)
     elif value == "closed_face":
         await callback.message.edit_text(t("q21_closed_face_hint", lang))
@@ -489,7 +487,7 @@ async def q21_photo_upload(message: Message, state: FSMContext):
     photo = message.photo[-1]  # наибольшее разрешение
     await state.update_data(photo_file_id=photo.file_id)
     lang = await _lang(state)
-    await message.answer(t("q22_phone", lang))
+    await message.answer(t("q22_phone", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q22_parent_phone)
 
 
@@ -499,18 +497,32 @@ async def q21_photo_upload_invalid(message: Message, state: FSMContext):
     await message.answer(t("q21_upload", lang))
 
 
-# ── Q22: Контакты ──
+# ── Вспомогательная функция для форматирования телефона ──
+def format_phone(text: str) -> str:
+    digits = ''.join(filter(str.isdigit, text))
+    if len(digits) == 9:
+        return f"+998{digits}"
+    elif len(digits) == 12 and digits.startswith("998"):
+        return f"+{digits}"
+    return text
+
+
+# ── Q23: Контакты ──
 @router.message(QuestionnaireStates.q22_parent_phone)
 async def q22_phone(message: Message, state: FSMContext):
     lang = await _lang(state)
-    phone = message.text.strip()
-    # Простая валидация номера
-    if not re.match(r"^\+?998\d{9}$", phone.replace(" ", "").replace("-", "")):
-        await message.answer(t("invalid_phone", lang))
-        return
+    phone = format_phone(message.text.strip())
     await state.update_data(parent_phone=phone)
-    await message.answer(t("q22_parent_tg", lang))
+    await message.answer(t("q22_parent_tg", lang), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q22_parent_telegram)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.q22_parent_phone)
+async def q22_phone_skip(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    await callback.message.edit_text(t("q22_parent_tg", lang), reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.q22_parent_telegram)
+    await callback.answer()
 
 
 @router.message(QuestionnaireStates.q22_parent_telegram)
@@ -522,6 +534,17 @@ async def q22_parent_tg(message: Message, state: FSMContext):
     child = t("son_nom", lang) if ptype == "son" else t("daughter_nom", lang)
     await message.answer(t("q22_candidate_tg", lang, child=child), reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.q22_candidate_telegram)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.q22_parent_telegram)
+async def q22_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    ptype = data.get("profile_type", "son")
+    child = t("son_nom", lang) if ptype == "son" else t("daughter_nom", lang)
+    await callback.message.edit_text(t("q22_candidate_tg", lang, child=child), reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.q22_candidate_telegram)
+    await callback.answer()
 
 
 @router.message(QuestionnaireStates.q22_candidate_telegram)

@@ -16,7 +16,9 @@ from bot.db.models import (
 from bot.states import TariffStates, RequirementStates
 from bot.texts import t
 from bot.keyboards.inline import (
-    req_education_kb, req_residence_kb, req_nationality_kb,
+    req_age_kb, req_education_kb, req_residence_kb,
+    req_residence_simple_kb, req_residence_regions_kb,
+    req_nationality_kb,
     req_religiosity_kb, req_marital_kb, req_children_kb,
     req_car_kb, req_housing_kb, req_job_kb,
     skip_kb, confirm_profile_kb, main_menu_kb,
@@ -42,32 +44,30 @@ async def choose_tariff(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
 
     # Переходим к требованиям (Шаг 7)
-    await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age_from", lang))
-    await state.set_state(RequirementStates.age_from)
+    await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age", lang), reply_markup=req_age_kb(lang))
+    await state.set_state(RequirementStates.age)
     await callback.answer()
 
 
 # ── Шаг 7: Требования ──
-@router.message(RequirementStates.age_from)
-async def req_age_from(message: Message, state: FSMContext):
-    lang = await _lang(state)
-    if not message.text.strip().isdigit():
-        await message.answer(t("invalid_number", lang))
-        return
-    await state.update_data(req_age_from=int(message.text.strip()))
-    await message.answer(t("req_age_to", lang))
-    await state.set_state(RequirementStates.age_to)
+_AGE_MAP = {
+    "age_18_23": (18, 23),
+    "age_24_27": (24, 27),
+    "age_28_35": (28, 35),
+    "age_36_45": (36, 45),
+    "age_45_plus": (45, 99),
+    "age_any": (0, 0),
+}
 
 
-@router.message(RequirementStates.age_to)
-async def req_age_to(message: Message, state: FSMContext):
+@router.callback_query(F.data.startswith("age_"), RequirementStates.age)
+async def req_age(callback: CallbackQuery, state: FSMContext):
+    age_from, age_to = _AGE_MAP.get(callback.data, (0, 0))
+    await state.update_data(req_age_from=age_from, req_age_to=age_to)
     lang = await _lang(state)
-    if not message.text.strip().isdigit():
-        await message.answer(t("invalid_number", lang))
-        return
-    await state.update_data(req_age_to=int(message.text.strip()))
-    await message.answer(t("req_education", lang), reply_markup=req_education_kb(lang))
+    await callback.message.edit_text(t("req_education", lang), reply_markup=req_education_kb(lang))
     await state.set_state(RequirementStates.education)
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("reqedu:"), RequirementStates.education)
@@ -75,15 +75,39 @@ async def req_education(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_education=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_residence", lang), reply_markup=req_residence_kb(lang))
+    await callback.message.edit_text(t("req_residence", lang), reply_markup=req_residence_simple_kb(lang))
     await state.set_state(RequirementStates.residence)
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("reqres:"), RequirementStates.residence)
+@router.callback_query(F.data.startswith("rres_"), RequirementStates.residence)
 async def req_residence(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(req_residence=value)
+    value = callback.data
+    lang = await _lang(state)
+
+    if value == "rres_uzb":
+        # Show regions keyboard
+        await callback.message.edit_text(t("req_residence_region", lang), reply_markup=req_residence_regions_kb(lang))
+        await state.set_state(RequirementStates.residence_city)
+        await callback.answer()
+        return
+    elif value == "rres_other":
+        await state.update_data(req_residence="other")
+    else:  # rres_skip
+        await state.update_data(req_residence="")
+
+    await callback.message.edit_text(t("req_nationality", lang), reply_markup=req_nationality_kb(lang))
+    await state.set_state(RequirementStates.nationality)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("rregion_"), RequirementStates.residence_city)
+async def req_residence_region(callback: CallbackQuery, state: FSMContext):
+    region = callback.data.replace("rregion_", "")
+    if region == "any":
+        await state.update_data(req_residence="uzbekistan")
+    else:
+        await state.update_data(req_residence=region)
     lang = await _lang(state)
     await callback.message.edit_text(t("req_nationality", lang), reply_markup=req_nationality_kb(lang))
     await state.set_state(RequirementStates.nationality)
