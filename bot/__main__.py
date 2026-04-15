@@ -21,6 +21,14 @@ logger = logging.getLogger(__name__)
 async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Миграция: добавить anketa_lang если нет
+        from sqlalchemy import text
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS anketa_lang VARCHAR(5) DEFAULT 'ru'"
+            ))
+        except Exception:
+            pass  # Колонка уже существует или БД не поддерживает IF NOT EXISTS
     logger.info("Database tables ensured")
 
     # Устанавливаем команды бота (кнопка Меню в Telegram)

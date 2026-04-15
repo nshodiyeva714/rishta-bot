@@ -233,6 +233,7 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
         profile_type=ptype,
         status=ProfileStatus.PENDING,
         display_id=display_id,
+        anketa_lang=lang,
         name=data.get("name"),
         birth_year=data.get("birth_year"),
         height_cm=data.get("height_cm"),

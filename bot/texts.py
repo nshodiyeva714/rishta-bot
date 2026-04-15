@@ -37,9 +37,9 @@ T = {
             "🔐 <b>Qo'shimcha rozilik</b>\n\n"
             "Rishta maxsus toifadagi ma'lumotlarni yig'adi:\n"
             "• Millat\n"
-            "• Diniylik\n"
+            "• Dindorlik\n"
             "• Oilaviy holat\n"
-            "• Sog'liq holati\n"
+            "• Sog'lig'ining xususiyatlari\n"
             "• Fotosuratlar\n\n"
             "O'zR QRQ-547 qonuniga ko'ra sizning aniq roziligingiz talab qilinadi."
         ),
@@ -121,7 +121,7 @@ T = {
             "• Rishta platformasi shartlarini qabul qilasiz\n\n"
             "📄 <b>Maxfiylik siyosati</b>\n"
             "Rishta maxsus toifadagi ma'lumotlarni yig'adi:\n"
-            "• Millat, diniylik\n"
+            "• Millat, dindorlik\n"
             "• Oilaviy holat, sog'liq holati\n"
             "• Fotosuratlar\n"
             "Ma'lumotlar QRQ-547 qonuniga muvofiq qayta ishlanadi.\n\n"
@@ -195,7 +195,7 @@ T = {
     },
     "q5": {
         "ru": "🎓 <b>Вопрос 5</b>\n\nОбразование:",
-        "uz": "🎓 <b>5-savol</b>\n\nTa'lim:",
+        "uz": "🎓 <b>5-savol</b>\n\nMa'lumoti:",
     },
     "q5_university": {
         "ru": "🏫 Укажите название вуза и курс:",
@@ -279,7 +279,7 @@ T = {
     },
     "q16": {
         "ru": "🕌 <b>Вопрос 17</b>\n\nРелигиозность:",
-        "uz": "🕌 <b>17-savol</b>\n\nDiniylik:",
+        "uz": "🕌 <b>17-savol</b>\n\nDindorlik:",
     },
     "q17": {
         "ru": "💍 <b>Вопрос 18</b>\n\nСемейное положение:",
@@ -291,7 +291,7 @@ T = {
     },
     "q19": {
         "ru": "❤️ <b>Вопрос 20</b>\n\nОсобенности здоровья (деликатно, если важно):",
-        "uz": "❤️ <b>20-savol</b>\n\nSog'liq xususiyatlari (nozik, agar muhim bo'lsa):",
+        "uz": "❤️ <b>20-savol</b>\n\nSog'lig'ining xususiyatlari (biron bir nuqsoni agar bo'lsa):",
     },
     "q20": {
         "ru": "✨ <b>Вопрос 21</b>\n\nХарактер и увлечения (пара слов):",
@@ -311,7 +311,7 @@ T = {
     },
     "q20a_qualities": {
         "ru": "2️⃣ Какие качества в партнёре для вас самые важные?",
-        "uz": "2️⃣ Sherikdagi qaysi fazilatlar siz uchun eng muhim?",
+        "uz": "2️⃣ Nomzodning qanday fazilatlari siz uchun eng muhim?",
     },
     "q20a_plans": {
         "ru": "3️⃣ Ваши планы на ближайшие 5 лет?",
@@ -405,7 +405,7 @@ T = {
     },
     "req_education": {
         "ru": "Образование:",
-        "uz": "Ta'lim:",
+        "uz": "Ma'lumoti:",
     },
     "req_residence": {
         "ru": "Где проживает кандидат:",
@@ -417,7 +417,7 @@ T = {
     },
     "req_religiosity": {
         "ru": "Религиозность:",
-        "uz": "Diniylik:",
+        "uz": "Dindorlik:",
     },
     "req_marital": {
         "ru": "Семейное положение:",
@@ -524,7 +524,7 @@ T = {
             "{city}dan oila qizingizning anketasiga qiziqish bildirdi.\n\n"
             "Kuyov haqida:\n"
             "• Yoshi: {age}\n"
-            "• Ta'lim: {education}\n"
+            "• Ma'lumoti: {education}\n"
             "• Ish: {occupation}\n"
             "• Shahar: {requester_city}\n"
             "• Holat: {residence}\n\n"
@@ -757,8 +757,8 @@ T = {
     },
 
     # child labels (genitive)
-    "son": {"ru": "сына", "uz": "o'g'lingiz"},
-    "daughter": {"ru": "дочери", "uz": "qizingiz"},
+    "son": {"ru": "сына", "uz": "O'g'lingiz"},
+    "daughter": {"ru": "дочери", "uz": "Qizingiz"},
     # child labels (nominative)
     "son_nom": {"ru": "сын", "uz": "o'g'il"},
     "daughter_nom": {"ru": "дочь", "uz": "qiz"},

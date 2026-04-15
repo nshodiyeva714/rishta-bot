@@ -147,7 +147,7 @@ async def q2_birth_year(message: Message, state: FSMContext):
     await state.update_data(birth_year=year)
     from bot.utils.helpers import age_text
     await message.answer(
-        t("q2_confirm", lang, age=age_text(age)),
+        t("q2_confirm", lang, age=age_text(age, lang)),
         reply_markup=confirm_age_kb(lang),
     )
     await state.set_state(QuestionnaireStates.q2_confirm_age)

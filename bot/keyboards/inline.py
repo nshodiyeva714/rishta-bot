@@ -237,7 +237,7 @@ def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
 def children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["👶 Нет", "👶 Да — живут со мной", "👶 Да — живут с бывшей/им"],
-        "uz": ["👶 Yo'q", "👶 Ha — men bilan yashaydi", "👶 Ha — sobiq bilan yashaydi"],
+        "uz": ["👶 Yo'q", "👶 Ha — men bilan yashaydi", "👶 Ha — sobiq turmush o'rtoq bilan"],
     }
     values = ["no", "yes_with_me", "yes_with_ex"]
     return InlineKeyboardMarkup(inline_keyboard=[

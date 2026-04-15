@@ -263,6 +263,9 @@ class Profile(Base):
     location_lon = Column(Float, nullable=True)
     location_link = Column(Text, nullable=True)
 
+    # Language the anketa was filled in
+    anketa_lang = Column(String(5), default="ru")
+
     # Q23: active status
     is_active = Column(Boolean, default=True)
 

@@ -20,7 +20,10 @@ def calculate_age(birth_year: int) -> int:
     return datetime.datetime.now().year - birth_year
 
 
-def age_text(age: int) -> str:
+def age_text(age: int, lang: str = "ru") -> str:
+    """Age with correct word form. UZ uses 'da', RU uses год/года/лет."""
+    if lang == "uz":
+        return f"{age} da"
     if age % 10 == 1 and age % 100 != 11:
         return f"{age} год"
     elif age % 10 in (2, 3, 4) and age % 100 not in (12, 13, 14):
@@ -79,10 +82,16 @@ def _marital_map(is_male: bool, lang: str = "ru") -> dict:
 
 
 def _children_map(lang: str = "ru") -> dict:
+    if lang == "ru":
+        return {
+            "no": "Нет",
+            "yes_with_me": "Да, живут со мной",
+            "yes_with_ex": "Да, живут отдельно",
+        }
     return {
-        "no": "Нет" if lang == "ru" else "Yo'q",
-        "yes_with_me": "Да, живут со мной" if lang == "ru" else "Ha, men bilan yashaydi",
-        "yes_with_ex": "Да, живут отдельно" if lang == "ru" else "Ha, alohida yashaydi",
+        "no": "Yo'q",
+        "yes_with_me": "Ha, men bilan yashaydi",
+        "yes_with_ex": "Ha, sobiq turmush o'rtoq bilan yashaydi",
     }
 
 
@@ -122,39 +131,46 @@ def _ev(obj, attr: str) -> str:
     return val.value if hasattr(val, "value") else str(val)
 
 
+def _get_card_lang(profile: Profile) -> str:
+    """Get the language the anketa was filled in."""
+    return getattr(profile, "anketa_lang", None) or "ru"
+
+
 # ── Полная анкета для модератора ──
 
 def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
-    """Полная анкета для модератора — все 25 полей."""
+    """Полная анкета для модератора — все 25 полей.
+    Модератор всегда видит на русском (lang='ru').
+    """
     is_son = profile.profile_type == ProfileType.SON
     icon = "👦" if is_son else "👧"
-    type_label = ("Сын" if is_son else "Дочь") if lang == "ru" else ("O'g'il" if is_son else "Qiz")
+    type_label = "Сын" if is_son else "Дочь"
 
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
-    age_str = age_text(age) if isinstance(age, int) else str(age)
+    age_str = age_text(age, "ru") if isinstance(age, int) else str(age)
 
-    edu = _edu_map(lang).get(_ev(profile, "education"), "—")
+    edu = _edu_map("ru").get(_ev(profile, "education"), "—")
     if profile.university_info:
         edu += f", {profile.university_info}"
 
-    housing = _housing_map(lang).get(_ev(profile, "housing"), "—")
+    housing = _housing_map("ru").get(_ev(profile, "housing"), "—")
     if profile.parent_housing_type:
         ph = "дом" if profile.parent_housing_type.value == "house" else "квартира"
         housing += f" ({ph})"
 
-    car = _car_map(lang).get(_ev(profile, "car"), "—")
-    scope = _scope_map(lang).get(_ev(profile, "search_scope"), "—")
-    nat = _nat_map(lang).get(profile.nationality or "", profile.nationality or "—")
-    rel = _rel_map(lang).get(_ev(profile, "religiosity"), "—")
-    mar = _marital_map(is_son, lang).get(_ev(profile, "marital_status"), "—")
-    ch = _children_map(lang).get(_ev(profile, "children_status"), "—")
+    car = _car_map("ru").get(_ev(profile, "car"), "—")
+    scope = _scope_map("ru").get(_ev(profile, "search_scope"), "—")
+    nat = _nat_map("ru").get(profile.nationality or "", profile.nationality or "—")
+    rel = _rel_map("ru").get(_ev(profile, "religiosity"), "—")
+    mar = _marital_map(is_son, "ru").get(_ev(profile, "marital_status"), "—")
+    ch = _children_map("ru").get(_ev(profile, "children_status"), "—")
 
     position = ""
     if profile.family_position:
-        position = _position_map(lang).get(profile.family_position.value, "")
+        position = _position_map("ru").get(profile.family_position.value, "")
 
     # Геолокация
-    loc = "не указана" if lang == "ru" else "ko'rsatilmagan"
+    loc = "не указана"
     if profile.location_link:
         loc = profile.location_link
     elif profile.location_lat and profile.location_lon:
@@ -185,12 +201,14 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
         if profile.five_year_plans:
             compat += f"3️⃣ {profile.five_year_plans}\n"
 
-    header = "🆕 НОВАЯ АНКЕТА НА ПРОВЕРКУ" if lang == "ru" else "🆕 YANGI ANKETA TEKSHIRUVGA"
+    # Язык анкеты
+    anketa_lang = _get_card_lang(profile)
+    lang_label = "🇺🇿 UZ" if anketa_lang == "uz" else "🇷🇺 RU"
 
     text = (
-        f"<b>{header}</b>\n\n"
+        f"<b>🆕 НОВАЯ АНКЕТА НА ПРОВЕРКУ</b>\n\n"
         f"🔖 <b>{profile.display_id or '—'}</b>\n"
-        f"{icon} <b>Тип: {type_label}</b>\n"
+        f"{icon} <b>Тип: {type_label}</b> · {lang_label}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"1. Имя: {profile.name or '—'}\n"
         f"2. Возраст: {age_str} ({profile.birth_year or '?'})\n"
@@ -248,48 +266,68 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
 def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") -> str:
     """Публичная анкета для пользователей ДО оплаты.
     Показываем всё КРОМЕ: телефона, адреса, TG, фото.
+    Язык карточки = язык заполнения анкеты.
     """
+    card_lang = _get_card_lang(profile)
+
     is_son = profile.profile_type == ProfileType.SON
     icon = "👦" if is_son else "👧"
 
     vip = "⭐ VIP · " if profile.vip_status == VipStatus.ACTIVE else ""
-    verified = "✅ " if lang == "ru" else "✅ "
+    verified = "✅ "
 
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
-    age_str = age_text(age) if isinstance(age, int) else str(age)
+    age_str = age_text(age, card_lang) if isinstance(age, int) else str(age)
 
-    edu = _edu_map(lang).get(_ev(profile, "education"), "—")
+    edu_label = "🎓 " + ("Ma'lumoti" if card_lang == "uz" else "Образование")
+    edu = _edu_map(card_lang).get(_ev(profile, "education"), "—")
     if profile.university_info:
         edu += f", {profile.university_info}"
 
-    housing = _housing_map(lang).get(_ev(profile, "housing"), "—")
-    car = _car_map(lang).get(_ev(profile, "car"), "")
-    nat = _nat_map(lang).get(profile.nationality or "", profile.nationality or "—")
-    rel = _rel_map(lang).get(_ev(profile, "religiosity"), "—")
-    mar = _marital_map(is_son, lang).get(_ev(profile, "marital_status"), "—")
-    ch = _children_map(lang).get(_ev(profile, "children_status"), "—")
+    work_label = "💼" if card_lang == "uz" else "💼"
+    work_empty = "ko'rsatilmagan" if card_lang == "uz" else "не указано"
+
+    housing = _housing_map(card_lang).get(_ev(profile, "housing"), "—")
+    car = _car_map(card_lang).get(_ev(profile, "car"), "")
+    nat = _nat_map(card_lang).get(profile.nationality or "", profile.nationality or "—")
+    rel = _rel_map(card_lang).get(_ev(profile, "religiosity"), "—")
+    mar = _marital_map(is_son, card_lang).get(_ev(profile, "marital_status"), "—")
+    ch = _children_map(card_lang).get(_ev(profile, "children_status"), "—")
+
+    health_label = "Sog'lig'ining xususiyatlari" if card_lang == "uz" else "Здоровье"
 
     position = ""
     if profile.family_position:
-        position = _position_map(lang).get(profile.family_position.value, "")
+        position = _position_map(card_lang).get(profile.family_position.value, "")
 
-    siblings = f"{profile.brothers_count or 0} бр. / {profile.sisters_count or 0} сестр."
+    if card_lang == "uz":
+        siblings = f"{profile.brothers_count or 0} aka-uka / {profile.sisters_count or 0} opa-singil"
+    else:
+        siblings = f"{profile.brothers_count or 0} бр. / {profile.sisters_count or 0} сестр."
     if position:
         siblings += f" ({position})"
+
+    # Labels
+    father_l = "👨 Otasi" if card_lang == "uz" else "👨 Отец"
+    mother_l = "👩 Onasi" if card_lang == "uz" else "👩 Мать"
+    children_l = "👶 Farzandlari" if card_lang == "uz" else "👶 Дети"
+    views_l = "👁 Ko'rishlar" if card_lang == "uz" else "👁 Просмотров"
+    dindorlik_l = "🕌 Dindorlik" if card_lang == "uz" else "🕌 Религиозность"
 
     lines = [
         f"━━━━━━━━━━━━━━━",
         f"{vip}{verified}· 🔥 {score}%",
         f"🔖 {profile.display_id or '—'}",
-        f"{icon} {age_str} · {profile.height_cm or '?'} см / {profile.weight_kg or '?'} кг",
+        f"{icon} {age_str} · {profile.height_cm or '?'} {'sm' if card_lang == 'uz' else 'см'} / {profile.weight_kg or '?'} {'kg' if card_lang == 'uz' else 'кг'}",
         f"🎓 {edu}",
-        f"💼 {profile.occupation or ('не указано' if lang == 'ru' else 'ko`rsatilmagan')}",
+        f"💼 {profile.occupation or work_empty}",
         f"🏠 {housing}",
     ]
 
-    if car and car != "🚫 Нет" and car != "🚫 Yo'q":
+    if car and "🚫" not in car:
         lines.append(car)
 
+    # Город/район (без адреса — адрес в платной части)
     city_line = f"🏙 {profile.city or '—'}"
     if profile.district:
         city_line += f", {profile.district}"
@@ -301,24 +339,27 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     lines.append(f"🌍 {nat}")
 
     if profile.father_occupation:
-        lines.append(f"👨 Отец: {profile.father_occupation}")
+        lines.append(f"{father_l}: {profile.father_occupation}")
     if profile.mother_occupation:
-        lines.append(f"👩 Мать: {profile.mother_occupation}")
+        lines.append(f"{mother_l}: {profile.mother_occupation}")
 
     lines.append(f"👨‍👩‍👧‍👦 {siblings}")
     lines.append(f"{rel}")
     lines.append(f"💍 {mar}")
-    lines.append(f"👶 Дети: {ch}")
+    lines.append(f"{children_l}: {ch}")
+
+    if profile.health_notes:
+        lines.append(f"❤️ {health_label}: {profile.health_notes}")
 
     if profile.character_hobbies:
         lines.append(f"✨ {profile.character_hobbies}")
 
     lines.append(f"")
-    lines.append(f"👁 Просмотров: {profile.views_count or 0}")
+    lines.append(f"{views_l}: {profile.views_count or 0}")
     lines.append(f"")
 
-    lock_text = "🔒 Контакты · адрес · фото — после оплаты" if lang == "ru" \
-        else "🔒 Kontaktlar · manzil · foto — to'lovdan keyin"
+    lock_text = "🔒 Kontaktlar · manzil · foto — to'lovdan keyin" if card_lang == "uz" \
+        else "🔒 Контакты · адрес · фото — после оплаты"
     lines.append(lock_text)
 
     return "\n".join(lines)
@@ -327,29 +368,44 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
 # ── Приватная часть анкеты (после оплаты) ──
 
 def format_anketa_private(profile: Profile, lang: str = "ru") -> str:
-    """Закрытая часть анкеты ПОСЛЕ оплаты — контакты и адрес."""
+    """Закрытая часть анкеты ПОСЛЕ оплаты — контакты, адрес, геолокация."""
+    card_lang = _get_card_lang(profile)
+
     is_son = profile.profile_type == ProfileType.SON
-    child = ("сына" if is_son else "дочери") if lang == "ru" \
-        else ("o'g'il" if is_son else "qiz")
+    child = ("O'g'il" if is_son else "Qiz") if card_lang == "uz" \
+        else ("сына" if is_son else "дочери")
 
     loc = ""
     if profile.location_link:
-        loc = f"\n🗺 На карте: {profile.location_link}"
+        loc_label = "Xaritada" if card_lang == "uz" else "На карте"
+        loc = f"\n🗺 {loc_label}: {profile.location_link}"
     elif profile.location_lat and profile.location_lon:
-        loc = f"\n🗺 На карте: https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
+        loc_label = "Xaritada" if card_lang == "uz" else "На карте"
+        loc = f"\n🗺 {loc_label}: https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
 
-    header = "✅ <b>Контакты семьи:</b>" if lang == "ru" else "✅ <b>Oila kontaktlari:</b>"
+    if card_lang == "uz":
+        header = "✅ <b>Oila kontaktlari:</b>"
+        tg_parents_l = "📱 Ota-onaning TG"
+        tg_child_l = f"💬 {child}ning TG"
+        address_l = "🏠 Manzil"
+        address_empty = "ko'rsatilmagan"
+    else:
+        header = "✅ <b>Контакты семьи:</b>"
+        tg_parents_l = "📱 TG родителей"
+        tg_child_l = f"💬 TG {child}"
+        address_l = "🏠 Адрес"
+        address_empty = "не указан"
 
     text = (
         f"{header}\n\n"
         f"📞 {profile.parent_phone or '—'}\n"
-        f"📱 TG родителей: {profile.parent_telegram or '—'}\n"
-        f"💬 TG {child}: {profile.candidate_telegram or '—'}\n"
+        f"{tg_parents_l}: {profile.parent_telegram or '—'}\n"
+        f"{tg_child_l}: {profile.candidate_telegram or '—'}\n"
         f"📍 {profile.city or '—'}"
     )
     if profile.district:
         text += f", {profile.district}"
-    text += f"\n🏠 Адрес: {profile.address or 'не указан'}"
+    text += f"\n{address_l}: {profile.address or address_empty}"
     text += loc
 
     return text
