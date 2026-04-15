@@ -1,5 +1,6 @@
 """Шаг 2 — Главное меню, Шаг 3 — О платформе, Шаг 4 — Мои заявки."""
 
+import logging
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -16,6 +17,8 @@ from bot.keyboards.inline import (
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -322,43 +325,53 @@ async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession)
 @router.callback_query(F.data == "menu:son")
 async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 5А — Начало анкеты сына. Если анкета уже есть — переходим к поиску."""
-    lang = await get_lang(session, callback.from_user.id)
+    logger.info(f"menu:son от user {callback.from_user.id}")
+    try:
+        lang = await get_lang(session, callback.from_user.id)
 
-    # Проверяем, есть ли у пользователя уже анкета типа SON
-    result = await session.execute(
-        select(Profile).where(
-            Profile.user_id == callback.from_user.id,
-            Profile.profile_type == ProfileType.SON,
-            Profile.status != ProfileStatus.DELETED,
+        # Проверяем, есть ли у пользователя уже анкета типа SON
+        result = await session.execute(
+            select(Profile).where(
+                Profile.user_id == callback.from_user.id,
+                Profile.profile_type == ProfileType.SON,
+                Profile.status != ProfileStatus.DELETED,
+            )
         )
-    )
-    existing = result.scalar_one_or_none()
+        existing = result.scalar_one_or_none()
 
-    if existing:
-        # Уже есть анкета — показываем поиск невесток
-        callback.data = "search:browse"
-        from bot.handlers.search import search_browse_compat
-        await search_browse_compat(callback, session, state)
-        return
+        if existing:
+            # Уже есть анкета — показываем поиск невесток
+            callback.data = "search:browse"
+            from bot.handlers.search import search_browse_compat
+            await search_browse_compat(callback, session, state)
+            return
 
-    await state.update_data(lang=lang, profile_type="son")
-    await callback.message.edit_text(
-        t("quest_son_intro", lang),
-        reply_markup=quest_start_kb(lang),
-    )
-    await callback.answer()
+        await state.update_data(lang=lang, profile_type="son")
+        await callback.message.edit_text(
+            t("quest_son_intro", lang),
+            reply_markup=quest_start_kb(lang),
+        )
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Ошибка menu:son user {callback.from_user.id}: {e}", exc_info=True)
+        await callback.answer("Ошибка, попробуйте /start")
 
 
 @router.callback_query(F.data == "menu:daughter")
 async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 5Б — Начало анкеты дочери."""
-    lang = await get_lang(session, callback.from_user.id)
-    await state.update_data(lang=lang, profile_type="daughter")
-    await callback.message.edit_text(
-        t("quest_daughter_intro", lang),
-        reply_markup=quest_start_kb(lang),
-    )
-    await callback.answer()
+    logger.info(f"menu:daughter от user {callback.from_user.id}")
+    try:
+        lang = await get_lang(session, callback.from_user.id)
+        await state.update_data(lang=lang, profile_type="daughter")
+        await callback.message.edit_text(
+            t("quest_daughter_intro", lang),
+            reply_markup=quest_start_kb(lang),
+        )
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Ошибка menu:daughter user {callback.from_user.id}: {e}", exc_info=True)
+        await callback.answer("Ошибка, попробуйте /start")
 
 
 # ── Написать модератору ──

@@ -53,6 +53,13 @@ async def main():
 
     dp.update.middleware(DbSessionMiddleware())
 
+    # Логируем необработанные callback
+    from aiogram.types import CallbackQuery as _CQ
+
+    @dp.errors()
+    async def on_error(event, exception):
+        logger.error(f"Unhandled error: {exception}", exc_info=True)
+
     dp.include_router(start.router)
     dp.include_router(menu.router)
     dp.include_router(questionnaire.router)
