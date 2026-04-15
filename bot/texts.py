@@ -74,6 +74,7 @@ T = {
     },
     "btn_search_bride": {"ru": "👦 Ищем невестку", "uz": "👦 Kelin qidiramiz"},
     "btn_post_daughter": {"ru": "👧 Разместить анкету дочери", "uz": "👧 Qiz anketasini joylashtirish"},
+    "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
     "btn_my_applications": {"ru": "📋 Мои заявки", "uz": "📋 Mening arizalarim"},
     "btn_contact_moderator": {"ru": "💬 Связаться с модератором", "uz": "💬 Moderator bilan bog'lanish"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
@@ -495,13 +496,41 @@ T = {
     },
 
     # ── Step 10: Search ──
+    "search_title": {
+        "ru": "🔍 <b>Найти кандидата</b>\n\nВыберите режим поиска:",
+        "uz": "🔍 <b>Nomzod qidirish</b>\n\nQidirish usulini tanlang:",
+    },
+    "search_no_anketa": {
+        "ru": "🔍 <b>Найти кандидата</b>\n\n⚠️ Для поиска сначала разместите свою анкету.",
+        "uz": "🔍 <b>Nomzod qidirish</b>\n\n⚠️ Qidirish uchun avval o'z anketangizni joylashtiring.",
+    },
     "search_found": {
-        "ru": "🔍 Найдено {count} анкет:",
-        "uz": "🔍 {count} ta anketa topildi:",
+        "ru": "🔍 <b>Найдено анкет: {total}</b>\nПоказаны: {from_}–{to}",
+        "uz": "🔍 <b>Jami: {total} ta anketa topildi</b>\nKo'rsatilmoqda: {from_}–{to}",
     },
     "search_empty": {
-        "ru": "🔍 По вашим критериям анкет не найдено. Попробуйте изменить фильтры.",
-        "uz": "🔍 Sizning mezonlaringiz bo'yicha anketa topilmadi. Filtrlarni o'zgartirib ko'ring.",
+        "ru": "🔍 Анкеты не найдены.\n\nПопробуйте изменить фильтры.",
+        "uz": "🔍 Anketalar topilmadi.\n\nFiltrlarni o'zgartiring.",
+    },
+    "search_filters_title": {
+        "ru": "🔧 <b>Фильтры поиска</b>\n\n{summary}\n\nЧто настроить?",
+        "uz": "🔧 <b>Filtrlar</b>\n\n{summary}\n\nNimani o'zgartirmoqchisiz?",
+    },
+    "search_filters_empty": {
+        "ru": "Фильтры не выбраны — будут показаны все анкеты.",
+        "uz": "Filtrlar tanlanmagan — barcha anketalar ko'rsatiladi.",
+    },
+    "search_filters_cleared": {
+        "ru": "✅ Фильтры сброшены!",
+        "uz": "✅ Filtrlar tozalandi!",
+    },
+    "search_filter_age_prompt": {
+        "ru": "📅 Введите диапазон возраста (например: 20-30):",
+        "uz": "📅 Yosh oralig'ini kiriting (masalan: 20-30):",
+    },
+    "search_filter_age_error": {
+        "ru": "⚠️ Неверный формат. Введите как: 20-30",
+        "uz": "⚠️ Noto'g'ri format. Masalan: 20-30",
     },
 
     # ── Step 11: Notification to girl's family ──

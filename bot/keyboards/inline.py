@@ -29,6 +29,7 @@ def main_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:son")],
         [InlineKeyboardButton(text=t("btn_post_daughter", lang), callback_data="menu:daughter")],
+        [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search")],
         [InlineKeyboardButton(text=t("btn_my_applications", lang), callback_data="menu:my")],
         [InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator")],
         [InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about")],
@@ -554,6 +555,81 @@ def search_nav_kb(page: int, total_pages: int, lang: str = "ru") -> InlineKeyboa
     if page < total_pages - 1:
         buttons.append(InlineKeyboardButton(text="➡️", callback_data=f"search_page:{page + 1}"))
     return InlineKeyboardMarkup(inline_keyboard=[buttons, [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")]])
+
+
+# ── Search mode keyboards ──
+
+def search_mode_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """3 варианта поиска когда у пользователя есть анкета."""
+    if lang == "uz":
+        buttons = [
+            [InlineKeyboardButton(text="✅ Mening talablarim bo'yicha", callback_data="search:my_req")],
+            [InlineKeyboardButton(text="🔧 Filtrlarni qo'lda sozlash", callback_data="search:manual")],
+            [InlineKeyboardButton(text="👀 Barcha anketalarni ko'rish", callback_data="search:all")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
+        ]
+    else:
+        buttons = [
+            [InlineKeyboardButton(text="✅ По моим требованиям", callback_data="search:my_req")],
+            [InlineKeyboardButton(text="🔧 Настроить фильтры вручную", callback_data="search:manual")],
+            [InlineKeyboardButton(text="👀 Показать все анкеты", callback_data="search:all")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def search_no_anketa_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Если нет анкеты — предлагаем создать."""
+    if lang == "uz":
+        buttons = [
+            [InlineKeyboardButton(text="👦 Anketa joylashtirish", callback_data="menu:son")],
+            [InlineKeyboardButton(text="👧 Anketa joylashtirish", callback_data="menu:daughter")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
+        ]
+    else:
+        buttons = [
+            [InlineKeyboardButton(text="👦 Разместить анкету сына", callback_data="menu:son")],
+            [InlineKeyboardButton(text="👧 Разместить анкету дочери", callback_data="menu:daughter")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def search_filter_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Главное меню ручных фильтров."""
+    if lang == "uz":
+        buttons = [
+            [InlineKeyboardButton(text="📅 Yosh", callback_data="filter:age")],
+            [InlineKeyboardButton(text="🕌 Dindorlik", callback_data="filter:religion")],
+            [InlineKeyboardButton(text="🎓 Ma'lumoti", callback_data="filter:education")],
+            [InlineKeyboardButton(text="💍 Oilaviy holat", callback_data="filter:marital")],
+            [InlineKeyboardButton(text="👶 Farzandlar", callback_data="filter:children")],
+            [InlineKeyboardButton(text="🌍 Yashash joyi", callback_data="filter:residence")],
+            [InlineKeyboardButton(text="🔍 Qidirish", callback_data="filter:go")],
+            [InlineKeyboardButton(text="🔄 Tozalash", callback_data="filter:clear")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
+        ]
+    else:
+        buttons = [
+            [InlineKeyboardButton(text="📅 Возраст", callback_data="filter:age")],
+            [InlineKeyboardButton(text="🕌 Религиозность", callback_data="filter:religion")],
+            [InlineKeyboardButton(text="🎓 Образование", callback_data="filter:education")],
+            [InlineKeyboardButton(text="💍 Семейное положение", callback_data="filter:marital")],
+            [InlineKeyboardButton(text="👶 Дети", callback_data="filter:children")],
+            [InlineKeyboardButton(text="🌍 Где проживает", callback_data="filter:residence")],
+            [InlineKeyboardButton(text="🔍 Начать поиск", callback_data="filter:go")],
+            [InlineKeyboardButton(text="🔄 Сбросить фильтры", callback_data="filter:clear")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def filter_option_kb(options: list[tuple[str, str]], lang: str = "ru") -> InlineKeyboardMarkup:
+    """Клавиатура выбора значения фильтра. options = [(label, callback_data), ...]"""
+    buttons = [[InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in options]
+    back_label = "🔙 Orqaga" if lang == "uz" else "🔙 Назад к фильтрам"
+    buttons.append([InlineKeyboardButton(text=back_label, callback_data="search:manual")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 # ── Payment keyboards ──

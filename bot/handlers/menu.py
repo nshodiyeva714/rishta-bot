@@ -301,8 +301,8 @@ async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: A
     if existing:
         # Уже есть анкета — показываем поиск невесток
         callback.data = "search:browse"
-        from bot.handlers.search import search_profiles
-        await search_profiles(callback, session)
+        from bot.handlers.search import search_browse_compat
+        await search_browse_compat(callback, session, state)
         return
 
     await state.update_data(lang=lang, profile_type="son")

@@ -76,6 +76,7 @@ class RequirementStates(StatesGroup):
 
 class SearchStates(StatesGroup):
     browsing = State()
+    filter_age = State()  # ожидаем ввод возраста "20-30"
 
 
 class PaymentStates(StatesGroup):
