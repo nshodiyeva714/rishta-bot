@@ -99,6 +99,10 @@ class ComplaintStates(StatesGroup):
     details = State()
 
 
+class FeedbackSuggestionStates(StatesGroup):
+    awaiting_text = State()
+
+
 class ModeratorContactStates(StatesGroup):
     awaiting_message = State()
 

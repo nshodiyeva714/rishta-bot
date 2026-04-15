@@ -101,6 +101,6 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
     # Переходим в главное меню
     await callback.message.edit_text(
         t("main_menu", lang),
-        reply_markup=main_menu_kb(lang),
+        reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
     await callback.answer()

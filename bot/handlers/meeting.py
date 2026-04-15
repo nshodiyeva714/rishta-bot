@@ -73,18 +73,55 @@ async def meeting_time(message: Message, state: FSMContext, session: AsyncSessio
     session.add(meeting)
     await session.commit()
 
-    # Уведомляем модератора
-    if config.moderator_chat_id:
-        profile = await session.get(Profile, profile_id) if profile_id else None
-        mod_text = (
-            f"📅 <b>ЗАПРОС НА ВСТРЕЧУ</b>\n\n"
-            f"🔖 Анкета: {profile.display_id if profile else '—'}\n"
-            f"От: @{message.from_user.username or '—'}\n"
-            f"Дата: {date_str}\n"
-            f"Время: {time_str}"
-        )
+    # Уведомляем всех модераторов с полной информацией
+    target_profile = await session.get(Profile, profile_id) if profile_id else None
+
+    # Находим анкету запрашивающего
+    result = await session.execute(
+        select(Profile).where(Profile.user_id == message.from_user.id).limit(1)
+    )
+    my_profile = result.scalar_one_or_none()
+
+    from bot.utils.helpers import calculate_age, age_text
+    my_name = my_profile.name if my_profile else "—"
+    my_age = age_text(calculate_age(my_profile.birth_year)) if my_profile and my_profile.birth_year else "—"
+    my_city = my_profile.city or "—" if my_profile else "—"
+    my_phone = my_profile.parent_phone or "—" if my_profile else "—"
+    my_display = my_profile.display_id or "—" if my_profile else "—"
+
+    tgt_name = target_profile.name if target_profile else "—"
+    tgt_age = age_text(calculate_age(target_profile.birth_year)) if target_profile and target_profile.birth_year else "—"
+    tgt_city = target_profile.city or "—" if target_profile else "—"
+    tgt_phone = target_profile.parent_phone or "—" if target_profile else "—"
+    tgt_display = target_profile.display_id or "—" if target_profile else "—"
+
+    mod_text = (
+        f"📅 <b>ЗАПРОС НА ВСТРЕЧУ</b>\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"🕐 Дата: <b>{date_str}</b>\n"
+        f"⏰ Время: <b>{time_str}</b>\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 <b>КТО ЗАПРАШИВАЕТ:</b>\n"
+        f"🔖 {my_display}\n"
+        f"Имя: {my_name}\n"
+        f"Возраст: {my_age}\n"
+        f"Город: {my_city}\n"
+        f"Телефон: {my_phone}\n"
+        f"TG: @{message.from_user.username or '—'}\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"🎯 <b>С КЕМ ХОЧЕТ ВСТРЕТИТЬСЯ:</b>\n"
+        f"🔖 {tgt_display}\n"
+        f"Имя: {tgt_name}\n"
+        f"Возраст: {tgt_age}\n"
+        f"Город: {tgt_city}\n"
+        f"Телефон: {tgt_phone}\n"
+        f"━━━━━━━━━━━━━━━"
+    )
+
+    from bot.config import get_all_moderator_ids
+    for mod_id in get_all_moderator_ids():
         try:
-            await bot.send_message(config.moderator_chat_id, mod_text)
+            await bot.send_message(mod_id, mod_text)
         except Exception:
             pass
 

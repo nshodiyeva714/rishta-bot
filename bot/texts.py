@@ -77,7 +77,36 @@ T = {
     "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
     "btn_my_applications": {"ru": "📋 Мои заявки", "uz": "📋 Mening arizalarim"},
     "btn_contact_moderator": {"ru": "💬 Связаться с модератором", "uz": "💬 Moderator bilan bog'lanish"},
+    "btn_feedback": {"ru": "💡 Предложение/Обратная связь", "uz": "💡 Taklif yuborish"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
+    "user_feedback_prompt": {
+        "ru": (
+            "💡 <b>Предложения и обратная связь</b>\n\n"
+            "Напишите ваше предложение по улучшению бота.\n"
+            "Каждое предложение будет рассмотрено! 🙏"
+        ),
+        "uz": (
+            "💡 <b>Taklif va mulohazalar</b>\n\n"
+            "Botni yaxshilash bo'yicha takliflaringizni yozing.\n"
+            "Har bir taklif ko'rib chiqiladi! 🙏"
+        ),
+    },
+    "user_feedback_thanks": {
+        "ru": "✅ Спасибо за предложение! Обязательно рассмотрим 🙏",
+        "uz": "✅ Taklifingiz uchun rahmat! Ko'rib chiqamiz 🙏",
+    },
+    "choose_moderator": {
+        "ru": (
+            "💬 <b>Выберите модератора</b>\n\n"
+            "Выберите одного из двух модераторов.\n"
+            "Оба имеют одинаковые полномочия и помогут вам."
+        ),
+        "uz": (
+            "💬 <b>Moderator tanlang</b>\n\n"
+            "Ikki moderatordan birini tanlang.\n"
+            "Ikkisi ham teng huquqli va yordam bera oladi."
+        ),
+    },
 
     # ── Step 3: About ──
     "about": {
@@ -588,19 +617,17 @@ T = {
         "ru": (
             "💳 <b>Получить контакт и адрес</b>\n\n"
             "Анкета: {display_id}\n\n"
-            "💰 Стоимость: 50,000 сум\n\n"
-            "Выберите способ оплаты:"
+            "💰 Стоимость: 30,000 сум"
         ),
         "uz": (
             "💳 <b>Kontakt va manzil olish</b>\n\n"
             "Anketa: {display_id}\n\n"
-            "💰 Narxi: 50,000 so'm\n\n"
-            "To'lov usulini tanlang:"
+            "💰 Narxi: 30,000 so'm"
         ),
     },
     "payment_cis": {
-        "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: 75,000 сум (~$6)",
-        "uz": "💳 <b>Kontakt va manzil olish</b>\n\nAnketa: {display_id}\n\n💰 Narxi: 75,000 so'm (~$6)",
+        "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: 30,000 сум",
+        "uz": "💳 <b>Kontakt va manzil olish</b>\n\nAnketa: {display_id}\n\n💰 Narxi: 30,000 so'm",
     },
     "payment_intl": {
         "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: $15",
@@ -609,15 +636,17 @@ T = {
     "payment_card_transfer": {
         "ru": (
             "🏦 Переведите на карту:\n"
-            "<code>8600 XXXX XXXX XXXX</code>\n\n"
+            "<code>5614 6887 0899 8959</code>\n"
+            "Получатель: SHODIYEVA NASIBA\n\n"
             "После перевода пришлите скриншот сюда 👇\n\n"
-            "⚠️ Оплата невозвратна после передачи контакта"
+            "⚠️ <i>Оплата невозвратна после передачи контакта</i>"
         ),
         "uz": (
             "🏦 Kartaga o'tkazing:\n"
-            "<code>8600 XXXX XXXX XXXX</code>\n\n"
-            "O'tkazmadan keyin skrinshotni bu yerga yuboring 👇\n\n"
-            "⚠️ Kontakt berilgandan keyin to'lov qaytarilmaydi"
+            "<code>5614 6887 0899 8959</code>\n"
+            "Oluvchi: SHODIYEVA NASIBA\n\n"
+            "O'tkazgandan so'ng skrinshot yuboring 👇\n\n"
+            "⚠️ <i>Kontakt berilgandan keyin to'lov qaytarilmaydi</i>"
         ),
     },
 

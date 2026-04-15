@@ -101,7 +101,7 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
         )
         user_profile = result.scalar_one_or_none()
         residence = user_profile.residence_status.value if user_profile and user_profile.residence_status else "uzbekistan"
-        amount = 75000_00 if residence == "cis" else 50000_00
+        amount = 30000_00  # 30,000 сум
         await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer", pay_amount=amount, lang=lang)
         await callback.message.edit_text(t("payment_card_transfer", lang))
         await state.set_state(PaymentStates.awaiting_screenshot)
@@ -114,66 +114,11 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
             t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
             reply_markup=back_kb(lang),
         )
-    elif method in ("payme", "click", "uzum"):
-        # Интеграция с платёжными системами (заглушка)
-        # В реальности здесь будет генерация ссылки на оплату
-        from datetime import datetime
-        payment = Payment(
-            user_id=callback.from_user.id,
-            profile_id=profile_id,
-            amount=50000_00,  # 50,000 сум в тийинах
-            currency="UZS",
-            method=PaymentMethod(method),
-            status=PaymentStatus.PENDING,
-        )
-        session.add(payment)
-        await session.commit()
-
-        # Временно — сразу подтверждаем (когда будет интеграция, это будет через webhook)
-        payment.status = PaymentStatus.CONFIRMED
-        payment.confirmed_at = datetime.now()
-        await session.commit()
-
-        profile = await session.get(Profile, profile_id)
-        if profile:
-            await send_contact_details(callback.bot, session, callback.from_user.id, profile)
-            # Устанавливаем FSM для планирования встречи (Шаг 16)
-            await state.update_data(pay_profile_id=profile_id, lang=lang)
-            await state.set_state(MeetingStates.date)
-
-        # Уведомление модератору
-        if config.moderator_chat_id:
-            try:
-                auto_text = (
-                    f"📩 <b>ОПЛАТА ПОДТВЕРЖДЕНА АВТОМАТИЧЕСКИ</b>\n\n"
-                    f"От: @{callback.from_user.username or '—'}\n"
-                    f"🔖 Анкета: {profile.display_id if profile else '—'}\n"
-                    f"💰 Сумма: 50,000 сум\n"
-                    f"🧾 Метод: {method.upper()}\n"
-                    f"\n✅ Контакт выдан автоматически"
-                )
-                await callback.bot.send_message(config.moderator_chat_id, auto_text)
-            except Exception:
-                pass
-
-    elif method == "stripe":
-        # Stripe — заглушка
-        payment = Payment(
-            user_id=callback.from_user.id,
-            profile_id=profile_id,
-            amount=15_00,  # $15 в центах
-            currency="USD",
-            method=PaymentMethod.STRIPE,
-            status=PaymentStatus.PENDING,
-        )
-        session.add(payment)
-        await session.commit()
-
-        await callback.message.edit_text(
-            "💳 Оплата через Stripe будет доступна после настройки.\n"
-            "Свяжитесь с модератором для оплаты.",
-            reply_markup=back_kb(lang),
-        )
+    elif method in ("payme", "click", "uzum", "stripe"):
+        # Эти методы больше не доступны — направляем к карте
+        await callback.message.edit_text(t("payment_card_transfer", lang))
+        await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer", pay_amount=30000_00, lang=lang)
+        await state.set_state(PaymentStates.awaiting_screenshot)
 
     await callback.answer()
 
@@ -190,7 +135,7 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
     payment = Payment(
         user_id=message.from_user.id,
         profile_id=profile_id,
-        amount=50000_00,
+        amount=30000_00,
         currency="UZS",
         method=PaymentMethod.CARD_TRANSFER,
         status=PaymentStatus.PENDING,
@@ -201,17 +146,18 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
 
     profile = await session.get(Profile, profile_id) if profile_id else None
 
-    # Отправляем модератору
-    if config.moderator_chat_id:
-        mod_text = t("mod_payment_manual", "ru",
-            username=message.from_user.username or "—",
-            user_id=message.from_user.id,
-            display_id=profile.display_id if profile else "—",
-            amount="50,000 сум",
-        )
+    # Отправляем всем модераторам
+    from bot.config import get_all_moderator_ids
+    mod_text = t("mod_payment_manual", "ru",
+        username=message.from_user.username or "—",
+        user_id=message.from_user.id,
+        display_id=profile.display_id if profile else "—",
+        amount="30,000 сум",
+    )
+    for mod_id in get_all_moderator_ids():
         try:
-            await bot.send_message(config.moderator_chat_id, mod_text, reply_markup=mod_payment_kb(payment.id))
-            await bot.send_photo(config.moderator_chat_id, photo.file_id)
+            await bot.send_message(mod_id, mod_text, reply_markup=mod_payment_kb(payment.id))
+            await bot.send_photo(mod_id, photo.file_id)
         except Exception:
             pass
 

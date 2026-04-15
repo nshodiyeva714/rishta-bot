@@ -7,10 +7,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite, ProfileType
-from bot.states import ModeratorContactStates
+from bot.states import ModeratorContactStates, FeedbackSuggestionStates
 from bot.texts import t
-from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb, contact_moderator_kb, vip_duration_kb
+from bot.keyboards.inline import (
+    main_menu_kb, _full_menu_kb, back_kb, my_profile_kb,
+    quest_start_kb, contact_moderator_kb, vip_duration_kb,
+    choose_moderator_kb,
+)
 from bot.utils.helpers import age_text, calculate_age
+from bot.config import config, get_all_moderator_ids
 
 router = Router()
 
@@ -25,7 +30,7 @@ async def show_main_menu(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     await callback.message.edit_text(
         t("main_menu", lang),
-        reply_markup=main_menu_kb(lang),
+        reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
 
 
@@ -33,6 +38,15 @@ async def show_main_menu(callback: CallbackQuery, session: AsyncSession):
 async def back_to_menu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     await state.clear()
     await show_main_menu(callback, session)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "menu:main")
+async def show_user_full_menu(callback: CallbackQuery, session: AsyncSession):
+    """Обычный пользователь нажал '🏠 Главное меню' → показываем полное меню."""
+    lang = await get_lang(session, callback.from_user.id)
+    menu_title = "Bosh menyu:" if lang == "uz" else "Главное меню:"
+    await callback.message.edit_text(menu_title, reply_markup=_full_menu_kb(lang))
     await callback.answer()
 
 
@@ -146,7 +160,7 @@ async def activate_profile(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data.startswith("myedit:"))
 async def edit_profile(callback: CallbackQuery, session: AsyncSession):
-    """Редактирование анкеты — пока через модератора."""
+    """Редактирование — через модератора."""
     lang = await get_lang(session, callback.from_user.id)
     await callback.answer(
         "✏️ Свяжитесь с модератором для редактирования" if lang == "ru"
@@ -298,51 +312,11 @@ async def handle_reminder(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data == "menu:moderator")
 async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession):
-    """Шаг 12 — Связаться с модератором."""
-    from bot.config import config
+    """Связаться с модератором — выбор из двух."""
     lang = await get_lang(session, callback.from_user.id)
-
-    # Пытаемся определить регион пользователя по его анкете
-    result = await session.execute(
-        select(Profile).where(Profile.user_id == callback.from_user.id).limit(1)
-    )
-    profile = result.scalar_one_or_none()
-
-    mod_region = "tashkent"
-    if profile and profile.residence_status:
-        res = profile.residence_status.value
-        if res == "uzbekistan":
-            region = "🇺🇿 Узбекистан" if lang == "ru" else "🇺🇿 O'zbekiston"
-            moderator = config.moderator_tashkent
-            hours = "08:00–00:00 (UZT)"
-            mod_region = "tashkent"
-        elif res == "cis":
-            region = "🇷🇺 СНГ" if lang == "ru" else "🇷🇺 MDH"
-            moderator = config.moderator_cis
-            hours = "08:00–00:00 (MSK)"
-            mod_region = "cis"
-        elif res == "usa":
-            region = "🇺🇸 США" if lang == "ru" else "🇺🇸 AQSH"
-            moderator = config.moderator_usa
-            hours = "08:00–00:00 (EST)"
-            mod_region = "usa"
-        elif res == "europe":
-            region = "🌍 Европа" if lang == "ru" else "🌍 Yevropa"
-            moderator = config.moderator_europe
-            hours = "08:00–00:00 (CET)"
-            mod_region = "europe"
-        else:
-            region = "🇺🇿 Узбекистан"
-            moderator = config.moderator_tashkent
-            hours = "08:00–00:00 (UZT)"
-    else:
-        region = "🇺🇿 Узбекистан"
-        moderator = config.moderator_tashkent
-        hours = "08:00–00:00 (UZT)"
-
     await callback.message.edit_text(
-        t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
-        reply_markup=contact_moderator_kb(lang, mod_region),
+        t("choose_moderator", lang),
+        reply_markup=choose_moderator_kb(lang),
     )
     await callback.answer()
 
@@ -429,19 +403,63 @@ async def mod_write_forward(message: Message, state: FSMContext, session: AsyncS
         [InlineKeyboardButton(text="↩️ Ответить", callback_data=f"modreply:{message.from_user.id}")],
     ])
 
-    try:
-        await bot.send_message(config.moderator_chat_id, header + (message.text or ""), reply_markup=reply_kb)
-        if message.photo:
-            await bot.send_photo(config.moderator_chat_id, message.photo[-1].file_id)
-        if message.document:
-            await bot.send_document(config.moderator_chat_id, message.document.file_id)
-        if message.voice:
-            await bot.send_voice(config.moderator_chat_id, message.voice.file_id)
-        if message.video:
-            await bot.send_video(config.moderator_chat_id, message.video.file_id)
-    except Exception:
-        pass
+    for mod_id in get_all_moderator_ids():
+        try:
+            await bot.send_message(mod_id, header + (message.text or ""), reply_markup=reply_kb)
+            if message.photo:
+                await bot.send_photo(mod_id, message.photo[-1].file_id)
+            if message.document:
+                await bot.send_document(mod_id, message.document.file_id)
+            if message.voice:
+                await bot.send_voice(mod_id, message.voice.file_id)
+            if message.video:
+                await bot.send_video(mod_id, message.video.file_id)
+        except Exception:
+            pass
 
     ok = "✅ Сообщение отправлено модератору. Ожидайте ответа." if lang == "ru" else "✅ Xabar moderatorga yuborildi. Javobni kuting."
-    await message.answer(ok, reply_markup=main_menu_kb(lang))
+    await message.answer(ok, reply_markup=main_menu_kb(lang, message.from_user.id))
+    await state.clear()
+
+
+# ── Обратная связь / Предложения ──
+
+@router.callback_query(F.data == "menu:feedback")
+async def user_feedback_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    await callback.message.edit_text(
+        t("user_feedback_prompt", lang),
+        reply_markup=back_kb(lang),
+    )
+    await state.set_state(FeedbackSuggestionStates.awaiting_text)
+    await callback.answer()
+
+
+@router.message(FeedbackSuggestionStates.awaiting_text)
+async def user_feedback_receive(message: Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    lang = await get_lang(session, message.from_user.id)
+    user = message.from_user
+
+    # Находим анкету пользователя
+    result = await session.execute(
+        select(Profile).where(Profile.user_id == user.id).limit(1)
+    )
+    profile = result.scalar_one_or_none()
+    display_id = profile.display_id if profile else "—"
+
+    mod_text = (
+        f"💡 <b>НОВОЕ ПРЕДЛОЖЕНИЕ</b>\n\n"
+        f"От: @{user.username or '—'} (ID: {user.id})\n"
+        f"🔖 Анкета: {display_id}\n"
+        f"Язык: {lang}\n\n"
+        f"Текст:\n{message.text}"
+    )
+
+    for mod_id in get_all_moderator_ids():
+        try:
+            await bot.send_message(mod_id, mod_text)
+        except Exception:
+            pass
+
+    await message.answer(t("user_feedback_thanks", lang), reply_markup=main_menu_kb(lang, user.id))
     await state.clear()

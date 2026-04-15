@@ -25,13 +25,27 @@ def consent_special_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
-def main_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+def main_menu_kb(lang: str = "ru", user_id: int = 0) -> InlineKeyboardMarkup:
+    from bot.config import is_moderator
+    if user_id and not is_moderator(user_id):
+        # Обычный пользователь — одна кнопка «Главное меню»
+        label = "🏠 Bosh menyu" if lang == "uz" else "🏠 Главное меню"
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=label, callback_data="menu:main")],
+        ])
+    # Модераторы или когда user_id не передан — полное меню
+    return _full_menu_kb(lang)
+
+
+def _full_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Полное меню с все кнопками."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:son")],
         [InlineKeyboardButton(text=t("btn_post_daughter", lang), callback_data="menu:daughter")],
         [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search")],
         [InlineKeyboardButton(text=t("btn_my_applications", lang), callback_data="menu:my")],
         [InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator")],
+        [InlineKeyboardButton(text=t("btn_feedback", lang), callback_data="menu:feedback")],
         [InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about")],
     ])
 
@@ -712,26 +726,40 @@ def mod_vip_duration_kb(profile_id: int) -> InlineKeyboardMarkup:
 
 def payment_uz_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="💳 Payme", callback_data=f"pay:payme:{profile_id}"),
-            InlineKeyboardButton(text="💳 Click", callback_data=f"pay:click:{profile_id}"),
-        ],
-        [InlineKeyboardButton(text="💳 Uzum", callback_data=f"pay:uzum:{profile_id}")],
-        [InlineKeyboardButton(text="🏦 Перевод на карту" if lang == "ru" else "🏦 Kartaga o'tkazma", callback_data=f"pay:card:{profile_id}")],
+        [InlineKeyboardButton(
+            text="🏦 Перевод на карту (30,000 сум)" if lang == "ru" else "🏦 Kartaga o'tkazma (30,000 so'm)",
+            callback_data=f"pay:card:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="💬 Через модератора" if lang == "ru" else "💬 Moderator orqali",
+            callback_data=f"pay:moderator:{profile_id}",
+        )],
     ])
 
 
 def payment_cis_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Оплатить картой" if lang == "ru" else "💳 Karta bilan to'lash", callback_data=f"pay:card:{profile_id}")],
-        [InlineKeyboardButton(text="💬 Через модератора" if lang == "ru" else "💬 Moderator orqali", callback_data=f"pay:moderator:{profile_id}")],
+        [InlineKeyboardButton(
+            text="🏦 Перевод на карту (30,000 сум)" if lang == "ru" else "🏦 Kartaga o'tkazma (30,000 so'm)",
+            callback_data=f"pay:card:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="💬 Через модератора" if lang == "ru" else "💬 Moderator orqali",
+            callback_data=f"pay:moderator:{profile_id}",
+        )],
     ])
 
 
 def payment_intl_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 $15 (Visa/MC/Apple Pay)", callback_data=f"pay:stripe:{profile_id}")],
-        [InlineKeyboardButton(text="💬 Через модератора" if lang == "ru" else "💬 Moderator orqali", callback_data=f"pay:moderator:{profile_id}")],
+        [InlineKeyboardButton(
+            text="🏦 Оплата картой ($15)" if lang == "ru" else "🏦 Karta orqali to'lov ($15)",
+            callback_data=f"pay:card:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="💬 Через модератора" if lang == "ru" else "💬 Moderator orqali",
+            callback_data=f"pay:moderator:{profile_id}",
+        )],
     ])
 
 
@@ -787,10 +815,6 @@ def complaint_reason_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMark
 def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
-            text="✏️ Редактировать анкету" if lang == "ru" else "✏️ Anketani tahrirlash",
-            callback_data=f"myedit:{profile_id}",
-        )],
-        [InlineKeyboardButton(
             text="⭐ Перейти на VIP" if lang == "ru" else "⭐ VIPga o'tish",
             callback_data=f"myvip:{profile_id}",
         )],
@@ -825,4 +849,17 @@ def reminder_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=l[i], callback_data=f"remind:{values[i]}:{profile_id}")]
         for i in range(4)
+    ])
+
+
+def choose_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Выбор одного из двух модераторов."""
+    from bot.config import MODERATOR_USERNAMES
+    tash = MODERATOR_USERNAMES.get("tashkent", "rishta_manager_tashkent")
+    sam = MODERATOR_USERNAMES.get("samarkand", "rishta_manager_samarkand")
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"💬 @{tash}", url=f"https://t.me/{tash}")],
+        [InlineKeyboardButton(text=f"💬 @{sam}", url=f"https://t.me/{sam}")],
+        [InlineKeyboardButton(text=back, callback_data="back:menu")],
     ])

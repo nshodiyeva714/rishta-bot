@@ -54,24 +54,25 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
 
     await callback.message.edit_text(t("complaint_submitted", lang))
 
-    # Уведомляем модератора
-    if config.moderator_chat_id:
-        profile = await session.get(Profile, profile_id)
-        reason_labels = {
-            "wrong_data": "❗ Данные не соответствуют",
-            "suspicious": "🤖 Подозрительная / фейковая",
-            "stolen_photo": "📸 Чужое фото",
-            "bad_behavior": "⚠️ Некорректное поведение",
-            "other": "📵 Другая причина",
-        }
-        mod_text = (
-            f"🚩 <b>НОВАЯ ЖАЛОБА</b>\n\n"
-            f"🔖 Анкета: {profile.display_id if profile else '—'}\n"
-            f"От: @{callback.from_user.username or '—'} (ID: {callback.from_user.id})\n"
-            f"Причина: {reason_labels.get(reason_value, reason_value)}"
-        )
+    # Уведомляем всех модераторов
+    from bot.config import get_all_moderator_ids
+    profile = await session.get(Profile, profile_id)
+    reason_labels = {
+        "wrong_data": "❗ Данные не соответствуют",
+        "suspicious": "🤖 Подозрительная / фейковая",
+        "stolen_photo": "📸 Чужое фото",
+        "bad_behavior": "⚠️ Некорректное поведение",
+        "other": "📵 Другая причина",
+    }
+    mod_text = (
+        f"🚩 <b>НОВАЯ ЖАЛОБА</b>\n\n"
+        f"🔖 Анкета: {profile.display_id if profile else '—'}\n"
+        f"От: @{callback.from_user.username or '—'} (ID: {callback.from_user.id})\n"
+        f"Причина: {reason_labels.get(reason_value, reason_value)}"
+    )
+    for mod_id in get_all_moderator_ids():
         try:
-            await bot.send_message(config.moderator_chat_id, mod_text)
+            await bot.send_message(mod_id, mod_text)
         except Exception:
             pass
 

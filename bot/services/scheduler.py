@@ -71,7 +71,9 @@ def setup_scheduled_jobs(scheduler: AsyncIOScheduler, bot: Bot):
 
 async def daily_report(bot: Bot):
     """Шаг 20 — Дневной отчёт модератору."""
-    if not config.moderator_chat_id:
+    from bot.config import get_all_moderator_ids
+    mod_ids = get_all_moderator_ids()
+    if not mod_ids:
         return
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -134,10 +136,11 @@ async def daily_report(bot: Bot):
         favorites=favorites,
     )
 
-    try:
-        await bot.send_message(config.moderator_chat_id, report_text)
-    except Exception as e:
-        logger.error(f"Ошибка отправки дневного отчёта: {e}")
+    for mid in mod_ids:
+        try:
+            await bot.send_message(mid, report_text)
+        except Exception as e:
+            logger.error(f"Ошибка отправки дневного отчёта mod {mid}: {e}")
 
 
 async def send_30day_reminders(bot: Bot):

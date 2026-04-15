@@ -19,7 +19,7 @@ class Config:
         default_factory=lambda: int(os.environ.get("MOD_TASHKENT_ID", "0")) or 8400995899
     )
     mod_samarkand_id: int = field(
-        default_factory=lambda: int(os.environ.get("MOD_SAMARKAND_ID", "0")) or 8400995899
+        default_factory=lambda: int(os.environ.get("MOD_SAMARKAND_ID", "0")) or 6235004229
     )
     main_moderator_id: int = field(
         default_factory=lambda: int(os.environ.get("MAIN_MODERATOR_ID", "0")) or 8400995899
@@ -38,9 +38,13 @@ class Config:
     stripe_secret_key: str = field(default_factory=lambda: os.environ.get("STRIPE_SECRET_KEY", ""))
 
 
+# ── Реквизиты для оплаты ─────────────────────────────────
+CARD_NUMBER = "5614 6887 0899 8959"
+CARD_OWNER = "SHODIYEVA NASIBA"
+
 # ── Тарифы: получение контакта ───────────────────────────
-PRICE_UZB = 50_000       # сум — Узбекистан
-PRICE_SNG = 75_000       # сум — СНГ
+PRICE_UZB = 30_000       # сум — Узбекистан
+PRICE_SNG = 30_000       # сум — СНГ
 PRICE_USA_EUR = 1500     # центы ($15) — США/Европа
 
 # ── Тарифы VIP (в сумах) — Узбекистан ────────────────────
@@ -99,11 +103,17 @@ def is_moderator(user_id: int) -> bool:
 # Usernames модераторов (для кнопок с живыми ссылками)
 MODERATOR_USERNAMES = {
     "tashkent": os.environ.get("MOD_TASHKENT_USERNAME", "rishta_manager_tashkent"),
-    "samarkand": os.environ.get("MOD_SAMARKAND_USERNAME", "rishta_manager_tashkent"),
+    "samarkand": os.environ.get("MOD_SAMARKAND_USERNAME", "rishta_manager_samarkand"),
     "usa": os.environ.get("MOD_USA_USERNAME", ""),
     "cis": os.environ.get("MOD_CIS_USERNAME", ""),
     "europe": os.environ.get("MOD_EUROPE_USERNAME", ""),
 }
+
+
+def get_all_moderator_ids() -> list[int]:
+    """Все ID модераторов (для рассылки уведомлений)."""
+    ids = {config.moderator_chat_id, config.mod_tashkent_id, config.mod_samarkand_id, config.main_moderator_id}
+    return [mid for mid in ids if mid]
 
 
 def get_moderator_username(region: str = "tashkent") -> str:

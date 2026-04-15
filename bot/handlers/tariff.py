@@ -347,19 +347,18 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
     # Отправляем пользователю подтверждение
     await callback.message.edit_text(t("profile_submitted", lang, display_id=display_id))
 
-    # Шаг 9 — уведомляем модератора (ПОЛНАЯ анкета)
-    if config.moderator_chat_id:
-        mod_text = format_full_anketa(profile, lang="ru")
-
+    # Шаг 9 — уведомляем ВСЕХ модераторов (ПОЛНАЯ анкета)
+    from bot.config import get_all_moderator_ids
+    mod_text = format_full_anketa(profile, lang="ru")
+    for mod_id in get_all_moderator_ids():
         try:
             await bot.send_message(
-                config.moderator_chat_id,
+                mod_id,
                 mod_text,
                 reply_markup=mod_review_kb(profile.id),
             )
-            # Если есть фото — отправляем его модератору
             if profile.photo_file_id:
-                await bot.send_photo(config.moderator_chat_id, profile.photo_file_id)
+                await bot.send_photo(mod_id, profile.photo_file_id)
         except Exception:
             pass  # Модератор недоступен — не блокируем пользователя
 
