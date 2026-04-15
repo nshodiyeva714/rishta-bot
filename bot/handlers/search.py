@@ -208,11 +208,11 @@ async def search_profiles(callback: CallbackQuery, session: AsyncSession):
 
         if i == 0 and callback.message:
             try:
-                await callback.message.edit_text(text, reply_markup=profile_card_kb(profile.id, lang))
+                await callback.message.edit_text(text, reply_markup=profile_card_kb(profile.id, lang, profile.display_id or ""))
             except Exception:
-                await callback.message.answer(text, reply_markup=profile_card_kb(profile.id, lang))
+                await callback.message.answer(text, reply_markup=profile_card_kb(profile.id, lang, profile.display_id or ""))
         else:
-            await callback.message.answer(text, reply_markup=profile_card_kb(profile.id, lang))
+            await callback.message.answer(text, reply_markup=profile_card_kb(profile.id, lang, profile.display_id or ""))
 
     # Навигация
     if total_pages > 1:

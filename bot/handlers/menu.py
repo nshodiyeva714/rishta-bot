@@ -244,24 +244,29 @@ async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession)
     )
     profile = result.scalar_one_or_none()
 
+    mod_region = "tashkent"
     if profile and profile.residence_status:
         res = profile.residence_status.value
         if res == "uzbekistan":
             region = "🇺🇿 Узбекистан" if lang == "ru" else "🇺🇿 O'zbekiston"
             moderator = config.moderator_tashkent
             hours = "08:00–00:00 (UZT)"
+            mod_region = "tashkent"
         elif res == "cis":
             region = "🇷🇺 СНГ" if lang == "ru" else "🇷🇺 MDH"
             moderator = config.moderator_cis
             hours = "08:00–00:00 (MSK)"
+            mod_region = "cis"
         elif res == "usa":
             region = "🇺🇸 США" if lang == "ru" else "🇺🇸 AQSH"
             moderator = config.moderator_usa
             hours = "08:00–00:00 (EST)"
+            mod_region = "usa"
         elif res == "europe":
             region = "🌍 Европа" if lang == "ru" else "🌍 Yevropa"
             moderator = config.moderator_europe
             hours = "08:00–00:00 (CET)"
+            mod_region = "europe"
         else:
             region = "🇺🇿 Узбекистан"
             moderator = config.moderator_tashkent
@@ -273,7 +278,7 @@ async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession)
 
     await callback.message.edit_text(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
-        reply_markup=contact_moderator_kb(lang),
+        reply_markup=contact_moderator_kb(lang, mod_region),
     )
     await callback.answer()
 

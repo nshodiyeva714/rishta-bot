@@ -41,11 +41,15 @@ def back_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
-def contact_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    write = "✍️ Написать модератору" if lang == "ru" else "✍️ Moderatorga yozish"
+def contact_moderator_kb(lang: str = "ru", region: str = "tashkent") -> InlineKeyboardMarkup:
+    from bot.config import get_moderator_username
+    username = get_moderator_username(region)
+    write_bot = "✍️ Написать через бота" if lang == "ru" else "✍️ Bot orqali yozish"
+    write_tg = "💬 Написать в Telegram" if lang == "ru" else "💬 Telegramda yozish"
     back = t("btn_back", lang)
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=write, callback_data="mod:write")],
+        [InlineKeyboardButton(text=write_tg, url=f"https://t.me/{username}")],
+        [InlineKeyboardButton(text=write_bot, callback_data="mod:write")],
         [InlineKeyboardButton(text=back, callback_data="back:menu")],
     ])
 
@@ -443,18 +447,31 @@ def mod_payment_kb(payment_id: int) -> InlineKeyboardMarkup:
 
 # ── Search / browsing keyboards ──
 
-def profile_card_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["💬 Узнать подробнее у модератора", "❤️ В избранное", "🚩 Пожаловаться", "❌ Не подходит"],
-        "uz": ["💬 Moderatordan batafsil bilish", "❤️ Sevimlilarga", "🚩 Shikoyat qilish", "❌ Mos emas"],
-    }
-    l = labels.get(lang, labels["ru"])
+def profile_card_kb(profile_id: int, lang: str = "ru", display_id: str = "") -> InlineKeyboardMarkup:
+    from bot.config import get_moderator_username
+    username = get_moderator_username("tashkent")
+    if lang == "uz":
+        interest = "💬 Moderatordan so'rash"
+        fav = "❤️ Sevimlilarga"
+        report = "🚩 Shikoyat qilish"
+        skip = "❌ Mos emas"
+    else:
+        interest = "💬 Узнать подробнее у модератора"
+        fav = "❤️ В избранное"
+        report = "🚩 Пожаловаться"
+        skip = "❌ Не подходит"
+
+    # Живая ссылка на модератора с номером анкеты
+    mod_text = f"Анкета {display_id}" if display_id else "Анкета"
+    mod_url = f"https://t.me/{username}?text={mod_text.replace(' ', '+')}"
+
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=l[0], callback_data=f"interest:{profile_id}")],
-        [InlineKeyboardButton(text=l[1], callback_data=f"fav:{profile_id}")],
+        [InlineKeyboardButton(text=interest, callback_data=f"interest:{profile_id}")],
+        [InlineKeyboardButton(text=f"💬 @{username}", url=mod_url)],
+        [InlineKeyboardButton(text=fav, callback_data=f"fav:{profile_id}")],
         [
-            InlineKeyboardButton(text=l[2], callback_data=f"report:{profile_id}"),
-            InlineKeyboardButton(text=l[3], callback_data=f"skip_profile:{profile_id}"),
+            InlineKeyboardButton(text=report, callback_data=f"report:{profile_id}"),
+            InlineKeyboardButton(text=skip, callback_data=f"skip_profile:{profile_id}"),
         ],
     ])
 

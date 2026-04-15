@@ -4,8 +4,8 @@
   /start → выбор языка → главное меню (каждый раз с начала)
 """
 
-from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram import Router, F, Bot
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
@@ -17,6 +17,7 @@ from bot.keyboards.inline import (
     lang_kb,
     main_menu_kb,
 )
+from bot.config import config, is_moderator
 
 router = Router()
 
@@ -31,6 +32,33 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
         t("welcome", "ru"),
         reply_markup=lang_kb(),
     )
+
+
+@router.message(Command("test"))
+async def cmd_test(message: Message, bot: Bot):
+    """Проверка связи с модераторами."""
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Только для модераторов")
+        return
+
+    results = []
+    checks = [
+        ("tashkent", config.mod_tashkent_id),
+        ("samarkand", config.mod_samarkand_id),
+        ("main", config.main_moderator_id),
+        ("chat_id", config.moderator_chat_id),
+    ]
+    for name, mod_id in checks:
+        if not mod_id:
+            results.append(f"⚠️ {name}: не настроен")
+            continue
+        try:
+            await bot.send_chat_action(mod_id, "typing")
+            results.append(f"✅ {name} (ID: {mod_id}): работает")
+        except Exception as e:
+            results.append(f"❌ {name} (ID: {mod_id}): {e}")
+
+    await message.answer("🔧 <b>Тест модераторов:</b>\n\n" + "\n".join(results))
 
 
 @router.callback_query(F.data.startswith("lang:"))
