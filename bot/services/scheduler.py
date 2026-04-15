@@ -236,13 +236,34 @@ async def check_vip_expiry(bot: Bot):
         for profile in profiles:
             profile.vip_status = VipStatus.EXPIRED
 
+            # Определяем язык владельца
+            owner_lang = "ru"
             try:
-                await bot.send_message(
-                    profile.user_id,
-                    f"⭐ VIP-статус анкеты {profile.display_id} истёк. "
-                    f"Обновите через «Мои заявки» → «Перейти на VIP».",
-                )
+                user_result = await session.execute(select(User).where(User.id == profile.user_id))
+                user = user_result.scalar_one_or_none()
+                if user and user.language:
+                    owner_lang = user.language.value
             except Exception:
                 pass
+
+            display_id = profile.display_id or "—"
+
+            if owner_lang == "uz":
+                msg = (
+                    f"ℹ️ <b>{display_id}</b> anketangizning VIP muddati tugadi.\n\n"
+                    f"Davom ettirish uchun «Mening arizalarim» → «VIPga o'tish» bosing."
+                )
+            else:
+                msg = (
+                    f"ℹ️ VIP статус анкеты <b>{display_id}</b> истёк.\n\n"
+                    f"Для продления: «Мои заявки» → «Перейти на VIP»."
+                )
+
+            try:
+                await bot.send_message(profile.user_id, msg)
+            except Exception:
+                pass
+
+            logger.info(f"⭐ VIP expired: {display_id}")
 
         await session.commit()

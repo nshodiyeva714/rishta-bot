@@ -36,14 +36,52 @@ async def _lang(state: FSMContext) -> str:
 
 
 # ── Шаг 6: Тариф ──
-@router.callback_query(F.data.startswith("tariff:"), TariffStates.choose)
-async def choose_tariff(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    is_vip = value == "vip"
-    await state.update_data(is_vip=is_vip)
+@router.callback_query(F.data == "tariff:free", TariffStates.choose)
+async def choose_tariff_free(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(is_vip=False, vip_days=0)
     lang = await _lang(state)
+    await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age", lang), reply_markup=req_age_kb(lang))
+    await state.set_state(RequirementStates.age)
+    await callback.answer()
 
-    # Переходим к требованиям (Шаг 7)
+
+@router.callback_query(F.data == "tariff:vip", TariffStates.choose)
+async def choose_tariff_vip(callback: CallbackQuery, state: FSMContext):
+    """Показываем выбор срока VIP."""
+    lang = await _lang(state)
+    data = await state.get_data()
+
+    # Определяем регион по residence_status из анкеты (если уже заполнен)
+    region = "uzb"
+    res = data.get("residence_status")
+    if res in ("usa", "europe", "citizenship_other", "other_country"):
+        region = "usa"
+    elif res == "cis":
+        region = "sng"
+
+    from bot.keyboards.inline import vip_duration_kb
+    text = (
+        "⭐ <b>VIP анкета</b>\n\n"
+        "• Показывается первой в поиске\n"
+        "• Выделена значком ⭐\n\n"
+        "Выберите срок:"
+    ) if lang == "ru" else (
+        "⭐ <b>VIP anketa</b>\n\n"
+        "• Qidirishda birinchi ko'rinadi\n"
+        "• ⭐ belgisi bilan ajratiladi\n\n"
+        "Muddatni tanlang:"
+    )
+    await callback.message.edit_text(text, reply_markup=vip_duration_kb(lang, region))
+    # Остаёмся в TariffStates.choose — ждём vip_dur:N
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("vip_dur:"), TariffStates.choose)
+async def choose_vip_duration(callback: CallbackQuery, state: FSMContext):
+    """Пользователь выбрал срок VIP — переходим к требованиям."""
+    days = int(callback.data.split(":")[1])
+    await state.update_data(is_vip=True, vip_days=days)
+    lang = await _lang(state)
     await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age", lang), reply_markup=req_age_kb(lang))
     await state.set_state(RequirementStates.age)
     await callback.answer()
@@ -280,8 +318,9 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
 
     # VIP
     if data.get("is_vip"):
+        vip_days = data.get("vip_days", 30)
         profile.vip_status = VipStatus.ACTIVE
-        profile.vip_expires_at = datetime.now() + timedelta(days=30)
+        profile.vip_expires_at = datetime.now() + timedelta(days=vip_days)
 
     session.add(profile)
     await session.flush()

@@ -13,7 +13,7 @@ from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, 
 from bot.states import ModeratorReplyStates
 from bot.texts import t
 from bot.config import config, is_moderator
-from bot.keyboards.inline import mod_review_kb, mod_found_kb
+from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
 from bot.utils.helpers import format_full_anketa
 
 router = Router()
@@ -390,7 +390,8 @@ async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
         kb = mod_review_kb(profile.id)
     else:
         is_published = profile.status == ProfileStatus.PUBLISHED
-        kb = mod_found_kb(profile.id, is_published)
+        is_vip = profile.vip_status == VipStatus.ACTIVE
+        kb = mod_found_kb(profile.id, is_published, is_vip)
 
     # Отправляем
     try:
@@ -503,4 +504,151 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
             except Exception:
                 pass
 
+    elif action == "vip_add":
+        # Показать выбор срока VIP
+        await callback.message.edit_text(
+            f"⭐ <b>Присвоить VIP</b>\n\n"
+            f"Анкета: <b>{display_id}</b>\n\n"
+            f"Выберите срок:",
+            reply_markup=mod_vip_duration_kb(profile.id),
+        )
+
+    elif action == "vip_remove":
+        profile.vip_status = VipStatus.NONE
+        profile.vip_expires_at = None
+        await session.commit()
+
+        await callback.message.edit_text(
+            f"⭐ VIP статус снят с анкеты <b>{display_id}</b>.",
+        )
+        if owner_id:
+            try:
+                msg = (
+                    f"ℹ️ <b>{display_id}</b> anketangizning VIP maqomi olib tashlandi."
+                    if owner_lang == "uz" else
+                    f"ℹ️ VIP статус анкеты <b>{display_id}</b> снят."
+                )
+                await bot.send_message(owner_id, msg)
+            except Exception:
+                pass
+
+    await callback.answer()
+
+
+# ── Модератор выбрал срок VIP ──
+
+@router.callback_query(F.data.startswith("modvip:"))
+async def mod_vip_set_duration(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """modvip:30:123 — модератор присваивает VIP на N дней."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    parts = callback.data.split(":")
+    days = int(parts[1])
+    profile_id = int(parts[2])
+
+    from datetime import timedelta
+    from bot.config import VIP_DURATION_LABELS
+
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+
+    profile.vip_status = VipStatus.ACTIVE
+    profile.vip_expires_at = datetime.now() + timedelta(days=days)
+    # Если анкета ещё не опубликована — публикуем
+    if profile.status in (ProfileStatus.PENDING, ProfileStatus.PAUSED):
+        profile.status = ProfileStatus.PUBLISHED
+        profile.is_active = True
+        if not profile.published_at:
+            profile.published_at = datetime.now()
+    await session.commit()
+
+    display_id = profile.display_id or "—"
+    days_label = VIP_DURATION_LABELS.get(days, {}).get("ru", f"{days} дней")
+    vip_until = profile.vip_expires_at.strftime("%d.%m.%Y")
+
+    await callback.message.edit_text(
+        f"⭐ <b>VIP статус присвоен!</b>\n\n"
+        f"Анкета: <b>{display_id}</b>\n"
+        f"Срок: {days_label}\n"
+        f"Действует до: {vip_until}",
+    )
+
+    # Уведомляем владельца
+    if profile.user_id:
+        owner_lang = "ru"
+        result = await session.execute(select(User).where(User.id == profile.user_id))
+        owner_user = result.scalar_one_or_none()
+        if owner_user and owner_user.language:
+            owner_lang = owner_user.language.value
+
+        days_label_uz = VIP_DURATION_LABELS.get(days, {}).get("uz", f"{days} kun")
+
+        if owner_lang == "uz":
+            msg = (
+                f"⭐ <b>Tabriklaymiz!</b>\n\n"
+                f"<b>{display_id}</b> anketangizga VIP maqomi berildi!\n\n"
+                f"Anketangiz:\n"
+                f"• Qidirishda birinchi ko'rinadi\n"
+                f"• ⭐ belgisi bilan ajratiladi\n\n"
+                f"Muddat: {days_label_uz}\n"
+                f"Amal qilish: {vip_until} gacha 🎉"
+            )
+        else:
+            msg = (
+                f"⭐ <b>Поздравляем!</b>\n\n"
+                f"Вашей анкете <b>{display_id}</b> присвоен статус VIP!\n\n"
+                f"Ваша анкета:\n"
+                f"• Показывается первой в поиске\n"
+                f"• Выделена значком ⭐\n\n"
+                f"Срок: {days_label}\n"
+                f"Действует до: {vip_until} 🎉"
+            )
+        try:
+            await bot.send_message(profile.user_id, msg)
+        except Exception:
+            pass
+
+    await callback.answer()
+
+
+# ── Опубликовать как VIP при модерации ──
+
+@router.callback_query(F.data.startswith("mod:publish_vip:"))
+async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Модератор публикует анкету и сразу ставит VIP — выбор срока."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    profile_id = int(callback.data.split(":")[2])
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("Анкета не найдена")
+        return
+
+    # Публикуем
+    profile.status = ProfileStatus.PUBLISHED
+    profile.published_at = datetime.now()
+    profile.is_active = True
+    await session.commit()
+
+    # Уведомляем пользователя о публикации
+    try:
+        result = await session.execute(select(User).where(User.id == profile.user_id))
+        user = result.scalar_one_or_none()
+        lang = user.language.value if user and user.language else "ru"
+        await bot.send_message(profile.user_id, t("mod_profile_published", lang, display_id=profile.display_id))
+    except Exception:
+        pass
+
+    # Показываем выбор срока VIP
+    await callback.message.edit_text(
+        f"✅ Анкета <b>{profile.display_id}</b> опубликована!\n\n"
+        f"⭐ Выберите срок VIP:",
+        reply_markup=mod_vip_duration_kb(profile.id),
+    )
     await callback.answer()

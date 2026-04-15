@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite, ProfileType
 from bot.states import ModeratorContactStates
 from bot.texts import t
-from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb, contact_moderator_kb
+from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb, contact_moderator_kb, vip_duration_kb
 from bot.utils.helpers import age_text, calculate_age
 
 router = Router()
@@ -155,8 +155,8 @@ async def edit_profile(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("myvip:"))
-async def upgrade_to_vip(callback: CallbackQuery, session: AsyncSession):
-    """Переход на VIP — оплата через модератора."""
+async def upgrade_to_vip(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Переход на VIP — показываем выбор срока с ценами."""
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
     lang = await get_lang(session, callback.from_user.id)
@@ -166,24 +166,88 @@ async def upgrade_to_vip(callback: CallbackQuery, session: AsyncSession):
         return
 
     if profile.vip_status == VipStatus.ACTIVE:
-        await callback.answer("⭐ VIP уже активен" if lang == "ru" else "⭐ VIP allaqachon faol")
+        expires = ""
+        if profile.vip_expires_at:
+            expires = profile.vip_expires_at.strftime("%d.%m.%Y")
+        msg = f"⭐ VIP активен до {expires}" if lang == "ru" else f"⭐ VIP {expires} gacha faol"
+        await callback.answer(msg, show_alert=True)
         return
+
+    # Определяем регион для цен
+    region = "uzb"
+    if profile.residence_status:
+        res = profile.residence_status.value
+        if res in ("usa", "europe", "citizenship_other", "other_country"):
+            region = "usa"
+        elif res == "cis":
+            region = "sng"
+
+    await state.update_data(vip_profile_id=profile_id, vip_region=region)
+
+    text = (
+        f"⭐ <b>VIP анкета</b>\n\n"
+        f"🔖 Анкета: {profile.display_id or '—'}\n\n"
+        f"Ваша анкета будет:\n"
+        f"• Показываться первой в поиске\n"
+        f"• Выделена значком ⭐\n"
+        f"• Привлекать больше внимания\n\n"
+        f"Выберите срок:"
+    ) if lang == "ru" else (
+        f"⭐ <b>VIP anketa</b>\n\n"
+        f"🔖 Anketa: {profile.display_id or '—'}\n\n"
+        f"Anketangiz:\n"
+        f"• Qidirishda birinchi ko'rinadi\n"
+        f"• ⭐ belgisi bilan ajratiladi\n"
+        f"• Ko'proq e'tibor tortadi\n\n"
+        f"Muddatni tanlang:"
+    )
+
+    await callback.message.edit_text(text, reply_markup=vip_duration_kb(lang, region))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("vip_dur:"))
+async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Пользователь выбрал срок VIP — направляем к модератору для оплаты."""
+    days = int(callback.data.split(":")[1])
+    lang = await get_lang(session, callback.from_user.id)
+    data = await state.get_data()
+    profile_id = data.get("vip_profile_id")
+    region = data.get("vip_region", "uzb")
+
+    from bot.config import VIP_PRICES_UZB, VIP_PRICES_USD, VIP_PRICES_SNG, VIP_DURATION_LABELS
+
+    prices = {"uzb": VIP_PRICES_UZB, "sng": VIP_PRICES_SNG, "usa": VIP_PRICES_USD}.get(region, VIP_PRICES_UZB)
+    price = prices.get(str(days), 0)
+
+    days_label = VIP_DURATION_LABELS.get(days, {}).get(lang, f"{days}")
+
+    if region == "usa":
+        price_str = f"${price // 100}"
+    else:
+        price_str = f"{price:,} сум".replace(",", " ")
 
     from bot.config import config
     moderator = config.moderator_tashkent
+
+    profile = await session.get(Profile, profile_id) if profile_id else None
+    display_id = profile.display_id if profile else "—"
+
     text = (
-        f"⭐ <b>Перейти на VIP</b>\n\n"
-        f"🔖 Анкета: {profile.display_id or '—'}\n"
-        f"💰 Стоимость: 100,000 сум/мес\n\n"
-        f"Для оплаты VIP свяжитесь с модератором:\n{moderator}"
+        f"⭐ <b>VIP — {days_label}</b>\n\n"
+        f"🔖 Анкета: {display_id}\n"
+        f"💰 Стоимость: <b>{price_str}</b>\n\n"
+        f"Для оплаты свяжитесь с модератором:\n{moderator}"
     ) if lang == "ru" else (
-        f"⭐ <b>VIPga o'tish</b>\n\n"
-        f"🔖 Anketa: {profile.display_id or '—'}\n"
-        f"💰 Narxi: 100,000 so'm/oy\n\n"
-        f"VIP to'lovi uchun moderator bilan bog'laning:\n{moderator}"
+        f"⭐ <b>VIP — {days_label}</b>\n\n"
+        f"🔖 Anketa: {display_id}\n"
+        f"💰 Narxi: <b>{price_str}</b>\n\n"
+        f"To'lov uchun moderator bilan bog'laning:\n{moderator}"
     )
 
-    await callback.message.answer(text)
+    from bot.keyboards.inline import back_kb
+    await callback.message.edit_text(text, reply_markup=back_kb(lang))
+    await state.clear()
     await callback.answer()
 
 

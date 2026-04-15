@@ -312,13 +312,14 @@ def profile_status_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["⭐ VIP анкета", "📋 Обычная — бесплатно"],
-        "uz": ["⭐ VIP anketa", "📋 Oddiy — bepul"],
-    }
+    if lang == "uz":
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⭐ VIP anketa — narxlar", callback_data="tariff:vip")],
+            [InlineKeyboardButton(text="📋 Oddiy anketa — bepul", callback_data="tariff:free")],
+        ])
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[0], callback_data="tariff:vip")],
-        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[1], callback_data="tariff:free")],
+        [InlineKeyboardButton(text="⭐ VIP анкета — выбрать срок", callback_data="tariff:vip")],
+        [InlineKeyboardButton(text="📋 Обычная анкета — бесплатно", callback_data="tariff:free")],
     ])
 
 
@@ -494,12 +495,18 @@ def mod_review_kb(profile_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"mod:reject:{profile_id}"),
         ],
         [InlineKeyboardButton(text="📸 Отклонить фото", callback_data=f"mod:reject_photo:{profile_id}")],
+        [InlineKeyboardButton(text="⭐ Опубликовать как VIP", callback_data=f"mod:publish_vip:{profile_id}")],
     ])
 
 
-def mod_found_kb(profile_id: int, is_published: bool = True) -> InlineKeyboardMarkup:
+def mod_found_kb(profile_id: int, is_published: bool = True, is_vip: bool = False) -> InlineKeyboardMarkup:
     """Кнопки управления после /find — для уже проверенных анкет."""
     rows = []
+    # VIP toggle
+    if is_vip:
+        rows.append([InlineKeyboardButton(text="⭐ Убрать VIP", callback_data=f"modfind:vip_remove:{profile_id}")])
+    else:
+        rows.append([InlineKeyboardButton(text="⭐ Присвоить VIP", callback_data=f"modfind:vip_add:{profile_id}")])
     if is_published:
         rows.append([InlineKeyboardButton(text="⏸ Поставить на паузу", callback_data=f"modfind:pause:{profile_id}")])
     else:
@@ -641,6 +648,64 @@ def filter_option_kb(options: list[tuple[str, str]], lang: str = "ru") -> Inline
     back_label = "🔙 Orqaga" if lang == "uz" else "🔙 Назад к фильтрам"
     buttons.append([InlineKeyboardButton(text=back_label, callback_data="search:manual")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+# ── VIP duration keyboards ──
+
+def _fmt_price(price: int, region: str) -> str:
+    if region == "usa":
+        return f"${price // 100}"
+    return f"{price:,} сум".replace(",", " ")
+
+
+def vip_duration_kb(lang: str = "ru", region: str = "uzb") -> InlineKeyboardMarkup:
+    """Выбор срока VIP с ценами для пользователя."""
+    from bot.config import VIP_PRICES_UZB, VIP_PRICES_USD, VIP_PRICES_SNG
+    prices = {"uzb": VIP_PRICES_UZB, "sng": VIP_PRICES_SNG, "usa": VIP_PRICES_USD}.get(region, VIP_PRICES_UZB)
+
+    durations = [
+        (7,   {"ru": "7 дней",    "uz": "7 kun"}),
+        (14,  {"ru": "14 дней",   "uz": "14 kun"}),
+        (30,  {"ru": "1 месяц",   "uz": "1 oy"}),
+        (90,  {"ru": "3 месяца",  "uz": "3 oy"}),
+        (180, {"ru": "6 месяцев", "uz": "6 oy"}),
+        (365, {"ru": "1 год",     "uz": "1 yil"}),
+    ]
+
+    rows = []
+    pair = []
+    for days, labels in durations:
+        price_str = _fmt_price(prices[str(days)], region)
+        text = f"{labels[lang]} — {price_str}"
+        pair.append(InlineKeyboardButton(text=text, callback_data=f"vip_dur:{days}"))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    if pair:
+        rows.append(pair)
+
+    cancel = "❌ Bekor qilish" if lang == "uz" else "❌ Отмена"
+    rows.append([InlineKeyboardButton(text=cancel, callback_data="back:menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def mod_vip_duration_kb(profile_id: int) -> InlineKeyboardMarkup:
+    """Выбор срока VIP модератором."""
+    durations = [
+        (7, "7 дней"), (14, "14 дней"), (30, "1 месяц"),
+        (90, "3 месяца"), (180, "6 месяцев"), (365, "1 год"),
+    ]
+    rows = []
+    pair = []
+    for days, label in durations:
+        pair.append(InlineKeyboardButton(text=label, callback_data=f"modvip:{days}:{profile_id}"))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    if pair:
+        rows.append(pair)
+    rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data="back:menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 # ── Payment keyboards ──
