@@ -90,8 +90,17 @@ T = {
             "✅ Модератор сопровождает весь процесс\n"
             "✅ Два языка — русский и узбекский\n"
             "✅ Фото защищены от скриншотов 🔒\n\n"
-            "📄 Политика конфиденциальности\n"
-            "📄 Пользовательское соглашение\n"
+            "📄 <b>Пользовательское соглашение</b>\n"
+            "Продолжая использование бота вы подтверждаете:\n"
+            "• Вам исполнилось 18 лет\n"
+            "• Вы согласны на обработку персональных данных\n"
+            "• Вы принимаете условия платформы Rishta\n\n"
+            "📄 <b>Политика конфиденциальности</b>\n"
+            "Rishta собирает специальные категории данных:\n"
+            "• Национальность, религиозность\n"
+            "• Семейное положение, состояние здоровья\n"
+            "• Фотографии\n"
+            "Обработка данных осуществляется в соответствии с ЗРУ-547.\n\n"
             "⚠️ Платформа 18+\n\n"
             "📢 @Rishta_uz · 💬 @Rishta_chat"
         ),
@@ -105,8 +114,17 @@ T = {
             "✅ Moderator butun jarayonni kuzatib boradi\n"
             "✅ Ikki til — rus va o'zbek\n"
             "✅ Fotosuratlar skrinshotdan himoyalangan 🔒\n\n"
-            "📄 Maxfiylik siyosati\n"
-            "📄 Foydalanish shartnomasi\n"
+            "📄 <b>Foydalanish shartnomasi</b>\n"
+            "Botdan foydalanishni davom ettirib siz tasdiqlaysiz:\n"
+            "• Siz 18 yoshdan oshgansiz\n"
+            "• Shaxsiy ma'lumotlarni qayta ishlashga rozisiz\n"
+            "• Rishta platformasi shartlarini qabul qilasiz\n\n"
+            "📄 <b>Maxfiylik siyosati</b>\n"
+            "Rishta maxsus toifadagi ma'lumotlarni yig'adi:\n"
+            "• Millat, diniylik\n"
+            "• Oilaviy holat, sog'liq holati\n"
+            "• Fotosuratlar\n"
+            "Ma'lumotlar QRQ-547 qonuniga muvofiq qayta ishlanadi.\n\n"
             "⚠️ Platforma 18+\n\n"
             "📢 @Rishta_uz · 💬 @Rishta_chat"
         ),
@@ -156,52 +174,52 @@ T = {
 
     # ── Questions ──
     "q1": {
-        "ru": "👤 <b>Вопрос 1/23</b>\n\nКак зовут вашего {child}?\n(можно вымышленное имя):",
-        "uz": "👤 <b>1/23-savol</b>\n\n{child}ningizning ismi?\n(to'qilgan ism ham bo'lishi mumkin):",
+        "ru": "👤 <b>Вопрос 1</b>\n\nКак зовут вашего {child}?\n(можно вымышленное имя):",
+        "uz": "👤 <b>1-savol</b>\n\n{child}ning ismi?\n(to'qilgan ism ham bo'lishi mumkin):",
     },
     "q2": {
-        "ru": "🗓 <b>Вопрос 2/23</b>\n\nГод рождения (например: 1998):",
-        "uz": "🗓 <b>2/23-savol</b>\n\nTug'ilgan yili (masalan: 1998):",
+        "ru": "🗓 <b>Вопрос 2</b>\n\nГод рождения (например: 1998):",
+        "uz": "🗓 <b>2-savol</b>\n\nTug'ilgan yili (masalan: 1998):",
     },
     "q2_confirm": {
         "ru": "✅ Возраст: {age} — верно?",
         "uz": "✅ Yoshi: {age} — to'g'rimi?",
     },
     "q3": {
-        "ru": "📏 <b>Вопрос 3/23</b>\n\nРост (в см, например: 175):",
-        "uz": "📏 <b>3/23-savol</b>\n\nBo'yi (sm da, masalan: 175):",
+        "ru": "📏 <b>Вопрос 3</b>\n\nРост (в см, например: 175):",
+        "uz": "📏 <b>3-savol</b>\n\nBo'yi (sm da, masalan: 175):",
     },
     "q4": {
-        "ru": "⚖️ <b>Вопрос 4/23</b>\n\nВес (в кг, например: 70):",
-        "uz": "⚖️ <b>4/23-savol</b>\n\nVazni (kg da, masalan: 70):",
+        "ru": "⚖️ <b>Вопрос 4</b>\n\nВес (в кг, например: 70):",
+        "uz": "⚖️ <b>4-savol</b>\n\nVazni (kg da, masalan: 70):",
     },
     "q5": {
-        "ru": "🎓 <b>Вопрос 5/23</b>\n\nОбразование:",
-        "uz": "🎓 <b>5/23-savol</b>\n\nTa'lim:",
+        "ru": "🎓 <b>Вопрос 5</b>\n\nОбразование:",
+        "uz": "🎓 <b>5-savol</b>\n\nTa'lim:",
     },
     "q5_university": {
         "ru": "🏫 Укажите название вуза и курс:",
         "uz": "🏫 OTM nomi va kursini kiriting:",
     },
     "q6": {
-        "ru": "💼 <b>Вопрос 6/23</b>\n\nГде работает / чем занимается:",
-        "uz": "💼 <b>6/23-savol</b>\n\nQayerda ishlaydi / nima bilan shug'ullanadi:",
+        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается:",
+        "uz": "💼 <b>6-savol</b>\n\nQayerda ishlaydi / nima bilan shug'ullanadi:",
     },
     "q7": {
-        "ru": "🏠 <b>Вопрос 7/23</b>\n\nЖилищные условия:",
-        "uz": "🏠 <b>7/23-savol</b>\n\nYashash sharoiti:",
+        "ru": "🏠 <b>Вопрос 7</b>\n\nЖилищные условия:",
+        "uz": "🏠 <b>7-savol</b>\n\nYashash sharoiti:",
     },
     "q7_parent_housing": {
         "ru": "🏠 Уточните тип жилья родителей:",
         "uz": "🏠 Ota-onaning uy turini aniqlashtiring:",
     },
     "q8": {
-        "ru": "🚗 <b>Вопрос 8/23</b>\n\nНаличие автомобиля:",
-        "uz": "🚗 <b>8/23-savol</b>\n\nAvtomobil mavjudligi:",
+        "ru": "🚗 <b>Вопрос 8</b>\n\nНаличие автомобиля:",
+        "uz": "🚗 <b>8-savol</b>\n\nAvtomobil mavjudligi:",
     },
     "q9_city": {
-        "ru": "🏙 <b>Вопрос 9/23</b>\n\nВаш город:",
-        "uz": "🏙 <b>9/23-savol</b>\n\nShahringiz:",
+        "ru": "🏙 <b>Вопрос 9</b>\n\nВаш город:",
+        "uz": "🏙 <b>9-savol</b>\n\nShahringiz/Tumaningiz:",
     },
     "q9_district": {
         "ru": "Район:",
@@ -212,8 +230,8 @@ T = {
         "uz": "Manzil (ko'cha/mahalla):\n\n⚠️ Manzil faqat to'lovdan keyin beriladi — maxfiy 🔒",
     },
     "q10": {
-        "ru": "🌍 <b>Вопрос 10/23</b>\n\nСтатус проживания:",
-        "uz": "🌍 <b>10/23-savol</b>\n\nYashash holati:",
+        "ru": "🌍 <b>Вопрос 10</b>\n\nСтатус проживания:",
+        "uz": "🌍 <b>10-savol</b>\n\nYashash holati:",
     },
     "q10b": {
         "ru": "✈️ <b>Вопрос 10Б</b>\n\nГде ищете кандидата?",
@@ -232,24 +250,24 @@ T = {
         "uz": "🌍 Qayerdan qidiryapsiz?",
     },
     "q11": {
-        "ru": "🗺 <b>Вопрос 11/23</b>\n\nРегион происхождения семьи:",
-        "uz": "🗺 <b>11/23-savol</b>\n\nOila kelib chiqqan hudud:",
+        "ru": "🗺 <b>Вопрос 11</b>\n\nРегион происхождения семьи:",
+        "uz": "🗺 <b>11-savol</b>\n\nOila kelib chiqqan hudud:",
     },
     "q12": {
-        "ru": "👥 <b>Вопрос 12/23</b>\n\nНациональность семьи:",
-        "uz": "👥 <b>12/23-savol</b>\n\nOila millati:",
+        "ru": "👥 <b>Вопрос 12</b>\n\nНациональность семьи:",
+        "uz": "👥 <b>12-savol</b>\n\nOila millati:",
     },
     "q13": {
-        "ru": "👨 <b>Вопрос 13/23</b>\n\nОтец — чем занимается:",
-        "uz": "👨 <b>13/23-savol</b>\n\nOtasi — nima bilan shug'ullanadi:",
+        "ru": "👨 <b>Вопрос 13</b>\n\nОтец — чем занимается:",
+        "uz": "👨 <b>13-savol</b>\n\nOtasi — nima bilan shug'ullanadi:",
     },
     "q14": {
-        "ru": "👩 <b>Вопрос 14/23</b>\n\nМать — чем занимается:",
-        "uz": "👩 <b>14/23-savol</b>\n\nOnasi — nima bilan shug'ullanadi:",
+        "ru": "👩 <b>Вопрос 14</b>\n\nМать — чем занимается:",
+        "uz": "👩 <b>14-savol</b>\n\nOnasi — nima bilan shug'ullanadi:",
     },
     "q15_brothers": {
-        "ru": "👨‍👩‍👧‍👦 <b>Вопрос 15/23</b>\n\nКоличество братьев (0 если нет):",
-        "uz": "👨‍👩‍👧‍👦 <b>15/23-savol</b>\n\nAkalar/ukalar soni (0 bo'lsa yo'q):",
+        "ru": "👨‍👩‍👧‍👦 <b>Вопрос 15</b>\n\nКоличество братьев (0 если нет):",
+        "uz": "👨‍👩‍👧‍👦 <b>15-savol</b>\n\nAkalar/ukalar soni (0 bo'lsa yo'q):",
     },
     "q15_sisters": {
         "ru": "Количество сестёр (0 если нет):",
@@ -260,24 +278,24 @@ T = {
         "uz": "Oiladagi o'rni:",
     },
     "q16": {
-        "ru": "🕌 <b>Вопрос 16/23</b>\n\nРелигиозность:",
-        "uz": "🕌 <b>16/23-savol</b>\n\nDiniylik:",
+        "ru": "🕌 <b>Вопрос 16</b>\n\nРелигиозность:",
+        "uz": "🕌 <b>16-savol</b>\n\nDiniylik:",
     },
     "q17": {
-        "ru": "💍 <b>Вопрос 17/23</b>\n\nСемейное положение:",
-        "uz": "💍 <b>17/23-savol</b>\n\nOilaviy holat:",
+        "ru": "💍 <b>Вопрос 17</b>\n\nСемейное положение:",
+        "uz": "💍 <b>17-savol</b>\n\nOilaviy holat:",
     },
     "q18": {
-        "ru": "👶 <b>Вопрос 18/23</b>\n\nЕсть ли дети:",
-        "uz": "👶 <b>18/23-savol</b>\n\nFarzandlari bormi:",
+        "ru": "👶 <b>Вопрос 18</b>\n\nЕсть ли дети:",
+        "uz": "👶 <b>18-savol</b>\n\nFarzandlari bormi:",
     },
     "q19": {
-        "ru": "❤️ <b>Вопрос 19/23</b>\n\nОсобенности здоровья (деликатно, если важно):",
-        "uz": "❤️ <b>19/23-savol</b>\n\nSog'liq xususiyatlari (nozik, agar muhim bo'lsa):",
+        "ru": "❤️ <b>Вопрос 19</b>\n\nОсобенности здоровья (деликатно, если важно):",
+        "uz": "❤️ <b>19-savol</b>\n\nSog'liq xususiyatlari (nozik, agar muhim bo'lsa):",
     },
     "q20": {
-        "ru": "✨ <b>Вопрос 20/23</b>\n\nХарактер и увлечения (пара слов):",
-        "uz": "✨ <b>20/23-savol</b>\n\nXarakter va qiziqishlar (bir necha so'z):",
+        "ru": "✨ <b>Вопрос 20</b>\n\nХарактер и увлечения (пара слов):",
+        "uz": "✨ <b>20-savol</b>\n\nXarakter va qiziqishlar (bir necha so'z):",
     },
     "q20a_intro": {
         "ru": (
@@ -301,13 +319,13 @@ T = {
     },
     "q21": {
         "ru": (
-            "📸 <b>Вопрос 21/23 — Фото</b>\n\n"
+            "📸 <b>Вопрос 21 — Фото</b>\n\n"
             "Как хотите разместить фото?\n\n"
             "🔒 Фото защищено от скриншотов\n"
             "🔒 Видно только после оплаты"
         ),
         "uz": (
-            "📸 <b>21/23-savol — Fotosurat</b>\n\n"
+            "📸 <b>21-savol — Fotosurat</b>\n\n"
             "Fotosuratni qanday joylashtirmoqchisiz?\n\n"
             "🔒 Fotosurat skrinshotdan himoyalangan\n"
             "🔒 Faqat to'lovdan keyin ko'rinadi"
@@ -334,8 +352,8 @@ T = {
         ),
     },
     "q22_phone": {
-        "ru": "📞 <b>Вопрос 22/23</b>\n\nНомер телефона родителей:\n→ +998__________",
-        "uz": "📞 <b>22/23-savol</b>\n\nOta-onaning telefon raqami:\n→ +998__________",
+        "ru": "📞 <b>Вопрос 22</b>\n\nНомер телефона родителей:\n→ +998__________",
+        "uz": "📞 <b>22-savol</b>\n\nOta-onaning telefon raqami:\n→ +998__________",
     },
     "q22_parent_tg": {
         "ru": "📱 Telegram родителей:\n→ @__________",
@@ -350,8 +368,8 @@ T = {
         "uz": "📍 Joylashuv (ixtiyoriy):",
     },
     "q23": {
-        "ru": "🔍 <b>Вопрос 23/23</b>\n\nСтатус вашей анкеты:",
-        "uz": "🔍 <b>23/23-savol</b>\n\nAnketangiz holati:",
+        "ru": "🔍 <b>Вопрос 23</b>\n\nСтатус вашей анкеты:",
+        "uz": "🔍 <b>23-savol</b>\n\nAnketangiz holati:",
     },
 
     # ── Step 6: Tariff ──
@@ -743,8 +761,8 @@ T = {
     },
 
     # child labels
-    "son": {"ru": "сына", "uz": "o'g'lingiz"},
-    "daughter": {"ru": "дочери", "uz": "qizingiz"},
+    "son": {"ru": "сына", "uz": "O'g'lingiz"},
+    "daughter": {"ru": "дочери", "uz": "Qizingiz"},
     "son_nom": {"ru": "сын", "uz": "o'g'il"},
     "daughter_nom": {"ru": "дочь", "uz": "qiz"},
 }

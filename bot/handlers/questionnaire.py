@@ -136,8 +136,9 @@ async def q5_education(callback: CallbackQuery, state: FSMContext):
 async def q5_university(message: Message, state: FSMContext):
     await state.update_data(university_info=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q6", lang))
-    await state.set_state(QuestionnaireStates.q6_occupation)
+    # Если учится — пропускаем Q6 (работа), переходим к Q7
+    await message.answer(t("q7", lang), reply_markup=housing_kb(lang))
+    await state.set_state(QuestionnaireStates.q7_housing)
 
 
 # ── Q6: Работа ──
