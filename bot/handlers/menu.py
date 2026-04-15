@@ -29,9 +29,18 @@ async def get_lang(session: AsyncSession, user_id: int) -> str:
     return user.language.value if user and user.language else "ru"
 
 
+async def _safe_edit(callback: CallbackQuery, text: str, reply_markup=None):
+    """Безопасная отправка — edit или answer если edit не удался."""
+    try:
+        await callback.message.edit_text(text, reply_markup=reply_markup)
+    except Exception:
+        await callback.message.answer(text, reply_markup=reply_markup)
+
+
 async def show_main_menu(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    await callback.message.edit_text(
+    await _safe_edit(
+        callback,
         t("main_menu", lang),
         reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
@@ -45,23 +54,26 @@ async def back_to_menu(callback: CallbackQuery, state: FSMContext, session: Asyn
 
 
 @router.callback_query(F.data == "menu:main")
-async def menu_main_compat(callback: CallbackQuery, session: AsyncSession):
+async def menu_main_compat(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Совместимость: старая кнопка '🏠 Главное меню' → полное меню."""
+    await state.clear()
     await show_main_menu(callback, session)
     await callback.answer()
 
 
 @router.callback_query(F.data == "menu:about")
-async def about_platform(callback: CallbackQuery, session: AsyncSession):
+async def about_platform(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 3 — О платформе."""
+    await state.clear()
     lang = await get_lang(session, callback.from_user.id)
-    await callback.message.edit_text(t("about", lang), reply_markup=back_kb(lang))
+    await _safe_edit(callback, t("about", lang), reply_markup=back_kb(lang))
     await callback.answer()
 
 
 @router.callback_query(F.data == "menu:my")
-async def my_applications(callback: CallbackQuery, session: AsyncSession):
+async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 4 — Мои заявки."""
+    await state.clear()
     lang = await get_lang(session, callback.from_user.id)
     user_id = callback.from_user.id
 
@@ -74,7 +86,7 @@ async def my_applications(callback: CallbackQuery, session: AsyncSession):
     profiles = result.scalars().all()
 
     if not profiles:
-        await callback.message.edit_text(t("no_profiles", lang), reply_markup=back_kb(lang))
+        await _safe_edit(callback, t("no_profiles", lang), reply_markup=back_kb(lang))
         await callback.answer()
         return
 
@@ -125,8 +137,8 @@ async def my_applications(callback: CallbackQuery, session: AsyncSession):
                 text += f"\n• {target.display_id if target else '—'} — {icon}"
 
         is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
-        await callback.message.edit_text(
-            text,
+        await _safe_edit(
+            callback, text,
             reply_markup=my_profile_kb(profile.id, lang, is_active),
         )
 
@@ -217,7 +229,7 @@ async def upgrade_to_vip(callback: CallbackQuery, state: FSMContext, session: As
         f"Muddatni tanlang:"
     )
 
-    await callback.message.edit_text(text, reply_markup=vip_duration_kb(lang, region))
+    await _safe_edit(callback, text, reply_markup=vip_duration_kb(lang, region))
     await callback.answer()
 
 
@@ -261,7 +273,7 @@ async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, sess
     )
 
     from bot.keyboards.inline import back_kb
-    await callback.message.edit_text(text, reply_markup=back_kb(lang))
+    await _safe_edit(callback, text, reply_markup=back_kb(lang))
     await state.clear()
     await callback.answer()
 
@@ -312,10 +324,12 @@ async def handle_reminder(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data == "menu:moderator")
-async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession):
+async def contact_moderator_menu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Связаться с модератором — выбор из двух."""
+    await state.clear()
     lang = await get_lang(session, callback.from_user.id)
-    await callback.message.edit_text(
+    await _safe_edit(
+        callback,
         t("choose_moderator", lang),
         reply_markup=choose_moderator_kb(lang),
     )
@@ -327,6 +341,7 @@ async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: A
     """Шаг 5А — Начало анкеты сына. Если анкета уже есть — переходим к поиску."""
     logger.info(f"menu:son от user {callback.from_user.id}")
     try:
+        await state.clear()
         lang = await get_lang(session, callback.from_user.id)
 
         # Проверяем, есть ли у пользователя уже анкета типа SON
@@ -341,13 +356,14 @@ async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: A
 
         if existing:
             # Уже есть анкета — показываем поиск невесток
-            callback.data = "search:browse"
-            from bot.handlers.search import search_browse_compat
-            await search_browse_compat(callback, session, state)
+            await state.update_data(search_filters={}, search_offset=0, search_type="daughter")
+            from bot.handlers.search import _show_search_results
+            await _show_search_results(callback, session, state, lang)
             return
 
         await state.update_data(lang=lang, profile_type="son")
-        await callback.message.edit_text(
+        await _safe_edit(
+            callback,
             t("quest_son_intro", lang),
             reply_markup=quest_start_kb(lang),
         )
@@ -362,9 +378,11 @@ async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, sessi
     """Шаг 5Б — Начало анкеты дочери."""
     logger.info(f"menu:daughter от user {callback.from_user.id}")
     try:
+        await state.clear()
         lang = await get_lang(session, callback.from_user.id)
         await state.update_data(lang=lang, profile_type="daughter")
-        await callback.message.edit_text(
+        await _safe_edit(
+            callback,
             t("quest_daughter_intro", lang),
             reply_markup=quest_start_kb(lang),
         )
@@ -379,7 +397,7 @@ async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, sessi
 async def mod_write_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     prompt = "✍️ Напишите ваше сообщение модератору:" if lang == "ru" else "✍️ Moderatorga xabaringizni yozing:"
-    await callback.message.edit_text(prompt, reply_markup=back_kb(lang))
+    await _safe_edit(callback, prompt, reply_markup=back_kb(lang))
     await state.set_state(ModeratorContactStates.awaiting_message)
     await callback.answer()
 
@@ -437,8 +455,10 @@ async def mod_write_forward(message: Message, state: FSMContext, session: AsyncS
 
 @router.callback_query(F.data == "menu:feedback")
 async def user_feedback_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await state.clear()
     lang = await get_lang(session, callback.from_user.id)
-    await callback.message.edit_text(
+    await _safe_edit(
+        callback,
         t("user_feedback_prompt", lang),
         reply_markup=back_kb(lang),
     )
