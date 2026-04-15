@@ -15,6 +15,9 @@ class Config:
     moderator_tashkent: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_TASHKENT", "@rishta_manager_tashkent")
     )
+    mod_tashkent_id: int = field(
+        default_factory=lambda: int(os.environ.get("MOD_TASHKENT_ID", "8400995899"))
+    )
     moderator_usa: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_USA", "@rishta_manager_usa")
     )
