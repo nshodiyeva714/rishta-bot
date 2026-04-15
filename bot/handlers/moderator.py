@@ -9,11 +9,12 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User
+from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus
 from bot.states import ModeratorReplyStates
 from bot.texts import t
 from bot.config import config, is_moderator
-from bot.keyboards.inline import mod_review_kb
+from bot.keyboards.inline import mod_review_kb, mod_found_kb
+from bot.utils.helpers import format_full_anketa
 
 router = Router()
 
@@ -298,3 +299,208 @@ async def mod_reply_send(message: Message, state: FSMContext, bot: Bot):
         await message.answer(f"❌ Ошибка отправки: {e}")
 
     await state.clear()
+
+
+# ══════════════════════════════════════════════════════════
+#  /find — Поиск анкеты по номеру для модератора
+# ══════════════════════════════════════════════════════════
+
+@router.message(Command("find"))
+async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
+    """
+    /find ДД-2026-00023
+    /find СН-2026-00001
+    /find 00023
+    /find #ДД-2026-00023
+    """
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Только для модераторов")
+        return
+
+    # Получаем аргумент
+    parts = message.text.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer(
+            "❓ Укажите номер анкеты.\n\n"
+            "Пример:\n"
+            "/find ДД-2026-00023\n"
+            "/find СН-2026-00001\n"
+            "/find 00023"
+        )
+        return
+
+    search_query = parts[1].strip()
+
+    # Нормализуем: убираем # если есть
+    q = search_query.lstrip("#").upper()
+
+    # Пробуем точный поиск по display_id
+    profile = None
+
+    # Полный формат: ДД-2026-00023 или СН-2026-00001
+    if q.startswith(("ДД-", "СН-")):
+        result = await session.execute(
+            select(Profile).where(Profile.display_id == f"#{q}")
+        )
+        profile = result.scalar_one_or_none()
+
+    # Только число: 00023 или 23
+    if not profile:
+        # Ищем по LIKE
+        result = await session.execute(
+            select(Profile).where(
+                Profile.display_id.ilike(f"%{q}%")
+            ).order_by(Profile.created_at.desc()).limit(1)
+        )
+        profile = result.scalar_one_or_none()
+
+    if not profile:
+        await message.answer(
+            f"❌ Анкета не найдена: <b>{search_query}</b>\n\n"
+            f"Проверьте номер и попробуйте снова.\n"
+            f"Пример: /find ДД-2026-00023"
+        )
+        return
+
+    # Нашли — формируем полную анкету
+    full_text = format_full_anketa(profile, lang="ru")
+
+    # Статус
+    status_map = {
+        ProfileStatus.DRAFT: "📝 Черновик",
+        ProfileStatus.PENDING: "⏳ На проверке",
+        ProfileStatus.PUBLISHED: "✅ Активна",
+        ProfileStatus.REJECTED: "❌ Отклонена",
+        ProfileStatus.PAUSED: "⏸ На паузе",
+        ProfileStatus.DELETED: "🗑 Удалена",
+    }
+    status_label = status_map.get(profile.status, "—")
+    vip_label = " · ⭐ VIP" if profile.vip_status == VipStatus.ACTIVE else ""
+
+    header = (
+        f"🔎 <b>РЕЗУЛЬТАТ ПОИСКА</b>\n"
+        f"Статус: {status_label}{vip_label}\n"
+        f"👁 Просмотров: {profile.views_count or 0} · 💬 Запросов: {profile.requests_count or 0}\n"
+        f"━━━━━━━━━━━━━━━\n"
+    )
+    full_text = header + full_text
+
+    # Кнопки
+    if profile.status == ProfileStatus.PENDING:
+        kb = mod_review_kb(profile.id)
+    else:
+        is_published = profile.status == ProfileStatus.PUBLISHED
+        kb = mod_found_kb(profile.id, is_published)
+
+    # Отправляем
+    try:
+        if profile.photo_file_id:
+            if len(full_text) <= 1024:
+                await bot.send_photo(
+                    message.from_user.id,
+                    profile.photo_file_id,
+                    caption=full_text,
+                    reply_markup=kb,
+                )
+            else:
+                await bot.send_photo(message.from_user.id, profile.photo_file_id)
+                await message.answer(full_text, reply_markup=kb)
+        else:
+            await message.answer(full_text, reply_markup=kb)
+    except Exception:
+        if len(full_text) > 4096:
+            await message.answer(full_text[:4096])
+            await message.answer(full_text[4096:], reply_markup=kb)
+        else:
+            await message.answer(full_text, reply_markup=kb)
+
+
+# ── Действия модератора с найденной анкетой ──
+
+@router.callback_query(F.data.startswith("modfind:"))
+async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """modfind:pause:123 / modfind:activate:123 / modfind:block:123"""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    parts = callback.data.split(":")
+    action = parts[1]
+    profile_id = int(parts[2])
+
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+
+    display_id = profile.display_id or "—"
+    owner_id = profile.user_id
+
+    # Язык владельца
+    owner_lang = "ru"
+    if owner_id:
+        result = await session.execute(select(User).where(User.id == owner_id))
+        owner_user = result.scalar_one_or_none()
+        if owner_user and owner_user.language:
+            owner_lang = owner_user.language.value
+
+    if action == "pause":
+        profile.status = ProfileStatus.PAUSED
+        profile.is_active = False
+        await session.commit()
+
+        await callback.message.edit_text(
+            f"⏸ Анкета <b>{display_id}</b> поставлена на паузу.",
+        )
+        if owner_id:
+            try:
+                msg = (
+                    f"⏸ Sizning anketangiz <b>{display_id}</b> moderator tomonidan pauzaga qo'yildi."
+                    if owner_lang == "uz" else
+                    f"⏸ Ваша анкета <b>{display_id}</b> поставлена на паузу модератором."
+                )
+                await bot.send_message(owner_id, msg)
+            except Exception:
+                pass
+
+    elif action == "activate":
+        profile.status = ProfileStatus.PUBLISHED
+        profile.is_active = True
+        if not profile.published_at:
+            profile.published_at = datetime.now()
+        await session.commit()
+
+        await callback.message.edit_text(
+            f"🟢 Анкета <b>{display_id}</b> активирована.",
+        )
+        if owner_id:
+            try:
+                msg = (
+                    f"🟢 Sizning anketangiz <b>{display_id}</b> yana faol!"
+                    if owner_lang == "uz" else
+                    f"🟢 Ваша анкета <b>{display_id}</b> снова активна!"
+                )
+                await bot.send_message(owner_id, msg)
+            except Exception:
+                pass
+
+    elif action == "block":
+        profile.status = ProfileStatus.REJECTED
+        profile.is_active = False
+        await session.commit()
+
+        await callback.message.edit_text(
+            f"❌ Анкета <b>{display_id}</b> заблокирована.",
+        )
+        if owner_id:
+            try:
+                msg = (
+                    f"❌ Sizning anketangiz <b>{display_id}</b> moderator tomonidan bloklandi."
+                    if owner_lang == "uz" else
+                    f"❌ Ваша анкета <b>{display_id}</b> заблокирована модератором."
+                )
+                await bot.send_message(owner_id, msg)
+            except Exception:
+                pass
+
+    await callback.answer()

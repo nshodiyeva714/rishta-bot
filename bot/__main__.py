@@ -34,6 +34,9 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
     # Устанавливаем команды бота (кнопка Меню в Telegram)
     await bot.set_my_commands([
         BotCommand(command="start", description="Главное меню / Bosh menyu"),
+        BotCommand(command="find", description="Найти анкету по номеру (модератор)"),
+        BotCommand(command="ankety", description="Анкеты на проверке (модератор)"),
+        BotCommand(command="stats", description="Статистика (модератор)"),
     ])
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
     logger.info("Bot commands set")

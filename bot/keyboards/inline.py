@@ -497,6 +497,17 @@ def mod_review_kb(profile_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def mod_found_kb(profile_id: int, is_published: bool = True) -> InlineKeyboardMarkup:
+    """Кнопки управления после /find — для уже проверенных анкет."""
+    rows = []
+    if is_published:
+        rows.append([InlineKeyboardButton(text="⏸ Поставить на паузу", callback_data=f"modfind:pause:{profile_id}")])
+    else:
+        rows.append([InlineKeyboardButton(text="🟢 Активировать", callback_data=f"modfind:activate:{profile_id}")])
+    rows.append([InlineKeyboardButton(text="❌ Заблокировать анкету", callback_data=f"modfind:block:{profile_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def mod_payment_kb(payment_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
