@@ -1,18 +1,90 @@
-"""Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям."""
+"""Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям, /ankety, /stats."""
 
 from datetime import datetime
 
 from aiogram import Router, F, Bot
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus
+from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User
 from bot.states import ModeratorReplyStates
 from bot.texts import t
 from bot.config import config, is_moderator
+from bot.keyboards.inline import mod_review_kb
 
 router = Router()
+
+
+# ── /ankety — список анкет на модерации ──
+@router.message(Command("ankety"))
+async def cmd_ankety(message: Message, session: AsyncSession, bot: Bot):
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Только для модераторов")
+        return
+
+    result = await session.execute(
+        select(Profile).where(Profile.status == ProfileStatus.PENDING).order_by(Profile.created_at)
+    )
+    profiles = result.scalars().all()
+
+    if not profiles:
+        await message.answer("✅ Нет анкет на модерации.")
+        return
+
+    await message.answer(f"📋 Анкет на модерации: <b>{len(profiles)}</b>")
+
+    for p in profiles[:20]:  # макс 20 чтобы не спамить
+        age = datetime.now().year - p.birth_year if p.birth_year else "?"
+        icon = "👦" if p.profile_type and p.profile_type.value == "son" else "👧"
+        text = (
+            f"🔖 {p.display_id or '—'}\n"
+            f"{icon} {p.name or '—'} · {age}\n"
+            f"📍 {p.city or '—'}\n"
+            f"📞 {p.parent_phone or '—'}\n"
+            f"📸 {'Есть' if p.photo_file_id else 'Нет'}"
+        )
+        await message.answer(text, reply_markup=mod_review_kb(p.id))
+
+
+# ── /stats — статистика платформы ──
+@router.message(Command("stats"))
+async def cmd_stats(message: Message, session: AsyncSession):
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Только для модераторов")
+        return
+
+    total_users = (await session.execute(select(func.count(User.id)))).scalar() or 0
+    total_profiles = (await session.execute(select(func.count(Profile.id)))).scalar() or 0
+    pending = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PENDING)
+    )).scalar() or 0
+    published = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PUBLISHED)
+    )).scalar() or 0
+    rejected = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.REJECTED)
+    )).scalar() or 0
+    paused = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PAUSED)
+    )).scalar() or 0
+    total_payments = (await session.execute(
+        select(func.count(Payment.id)).where(Payment.status == PaymentStatus.CONFIRMED)
+    )).scalar() or 0
+
+    text = (
+        "📊 <b>Статистика платформы</b>\n\n"
+        f"👥 Пользователей: {total_users}\n"
+        f"📋 Всего анкет: {total_profiles}\n\n"
+        f"⏳ На модерации: {pending}\n"
+        f"✅ Опубликовано: {published}\n"
+        f"❌ Отклонено: {rejected}\n"
+        f"⏸ На паузе: {paused}\n\n"
+        f"💰 Подтверждённых оплат: {total_payments}"
+    )
+    await message.answer(text)
 
 
 @router.callback_query(F.data.startswith("mod:publish:"))

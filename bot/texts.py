@@ -201,9 +201,13 @@ T = {
         "ru": "🏫 Укажите название вуза и курс:",
         "uz": "🏫 OTM nomi va kursini kiriting:",
     },
+    "q6_choice": {
+        "ru": "💼 <b>Вопрос 6</b>\n\nРабота / занятость:",
+        "uz": "💼 <b>6-savol</b>\n\nIsh / bandlik:",
+    },
     "q6": {
-        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается:",
-        "uz": "💼 <b>6-savol</b>\n\nQayerda ishlaydi / nima bilan shug'ullanadi:",
+        "ru": "💼 Укажите место работы / род деятельности:",
+        "uz": "💼 Ish joyini / faoliyat turini ko'rsating:",
     },
     "q7": {
         "ru": "🏠 <b>Вопрос 7</b>\n\nЖилищные условия:",
@@ -752,11 +756,23 @@ T = {
         "uz": "❌ Raqamni +998XXXXXXXXX formatda kiriting",
     },
 
-    # child labels
-    "son": {"ru": "сына", "uz": "O'g'lingiz"},
-    "daughter": {"ru": "дочери", "uz": "Qizingiz"},
+    # child labels (genitive)
+    "son": {"ru": "сына", "uz": "o'g'lingiz"},
+    "daughter": {"ru": "дочери", "uz": "qizingiz"},
+    # child labels (nominative)
     "son_nom": {"ru": "сын", "uz": "o'g'il"},
     "daughter_nom": {"ru": "дочь", "uz": "qiz"},
+    # gender-specific verbs/adjectives
+    "works_m": {"ru": "работает", "uz": "ishlaydi"},
+    "works_f": {"ru": "работает", "uz": "ishlaydi"},
+    "q6_choice_son": {
+        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается ваш сын:",
+        "uz": "💼 <b>6-savol</b>\n\nO'g'lingiz qayerda ishlaydi / nima bilan shug'ullanadi:",
+    },
+    "q6_choice_daughter": {
+        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается ваша дочь:",
+        "uz": "💼 <b>6-savol</b>\n\nQizingiz qayerda ishlaydi / nima bilan shug'ullanadi:",
+    },
 }
 
 

@@ -70,8 +70,8 @@ def confirm_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🎓 Среднее", "🎓 Среднее специальное", "🎓 Высшее", "🎓 Учится в вузе"],
-        "uz": ["🎓 O'rta", "🎓 O'rta maxsus", "🎓 Oliy", "🎓 OTMda o'qiydi"],
+        "ru": ["📚 Среднее", "📖 Среднее специальное", "🎓 Высшее", "🏛 Учится в вузе"],
+        "uz": ["📚 O'rta", "📖 O'rta maxsus", "🎓 Oliy", "🏛 OTMda o'qiydi"],
     }
     values = ["secondary", "vocational", "higher", "studying"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -252,6 +252,23 @@ def skip_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def back_step_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back_step")],
+    ])
+
+
+def work_choice_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    labels = {
+        "ru": ["💼 Указать место работы", "⏭ Не важно / пропустить"],
+        "uz": ["💼 Ish joyini ko'rsatish", "⏭ Muhim emas / o'tkazish"],
+    }
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[0], callback_data="work:specify")],
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[1], callback_data="work:skip")],
+    ])
+
+
 def photo_type_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["🖼 Обычное фото", "😊 Фото с закрытым лицом", "👤 Силуэт / в полный рост", "⏭ Без фото"],
@@ -324,8 +341,8 @@ def req_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def req_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🎓 Высшее обязательно", "🎓 Среднее специальное", "✅ Не важно"],
-        "uz": ["🎓 Oliy majburiy", "🎓 O'rta maxsus", "✅ Muhim emas"],
+        "ru": ["🎓 Высшее обязательно", "📖 Среднее специальное", "✅ Не важно"],
+        "uz": ["🎓 Oliy majburiy", "📖 O'rta maxsus", "✅ Muhim emas"],
     }
     values = ["higher", "vocational", "any"]
     return InlineKeyboardMarkup(inline_keyboard=[

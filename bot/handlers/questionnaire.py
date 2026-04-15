@@ -17,7 +17,7 @@ from bot.keyboards.inline import (
     religiosity_kb, marital_kb, children_kb,
     skip_kb, photo_type_kb, profile_status_kb,
     location_kb, location_reply_kb, confirm_age_kb, back_kb,
-    tariff_kb,
+    tariff_kb, work_choice_kb,
 )
 
 router = Router()
@@ -34,6 +34,85 @@ async def _child_label(state: FSMContext) -> str:
     lang = data.get("lang", "ru")
     ptype = data.get("profile_type", "son")
     return t("son", lang) if ptype == "son" else t("daughter", lang)
+
+
+async def _ptype(state: FSMContext) -> str:
+    data = await state.get_data()
+    return data.get("profile_type", "son")
+
+
+async def _gendered_key(state: FSMContext, base_key: str) -> str:
+    """Return gender-specific text key if exists, else base key."""
+    ptype = await _ptype(state)
+    return f"{base_key}_{ptype}"
+
+
+# ── Кнопка «Назад» — универсальный шаг назад ──
+BACK_MAP = {
+    QuestionnaireStates.q2_birth_year: ("q1", QuestionnaireStates.q1_name, None),
+    QuestionnaireStates.q3_height: ("q2", QuestionnaireStates.q2_birth_year, None),
+    QuestionnaireStates.q4_weight: ("q3", QuestionnaireStates.q3_height, None),
+    QuestionnaireStates.q5_education: ("q4", QuestionnaireStates.q4_weight, None),
+    QuestionnaireStates.q6_work_choice: ("q5", QuestionnaireStates.q5_education, "education_kb"),
+    QuestionnaireStates.q6_occupation: ("q6_choice", QuestionnaireStates.q6_work_choice, "work_choice_kb"),
+    QuestionnaireStates.q7_housing: ("q6_choice", QuestionnaireStates.q6_work_choice, "work_choice_kb"),
+    QuestionnaireStates.q8_car: ("q7", QuestionnaireStates.q7_housing, "housing_kb"),
+    QuestionnaireStates.q9_city_district: ("q8", QuestionnaireStates.q8_car, "car_kb"),
+    QuestionnaireStates.q10b_search_scope: ("q9_city_district", QuestionnaireStates.q9_city_district, None),
+    QuestionnaireStates.q11_family_region: ("q10b", QuestionnaireStates.q10b_search_scope, "search_scope_kb"),
+    QuestionnaireStates.q12_nationality: ("q11", QuestionnaireStates.q11_family_region, "region_kb"),
+    QuestionnaireStates.q13_father: ("q12", QuestionnaireStates.q12_nationality, "nationality_kb"),
+    QuestionnaireStates.q14_mother: ("q13", QuestionnaireStates.q13_father, None),
+    QuestionnaireStates.q15_brothers: ("q14", QuestionnaireStates.q14_mother, None),
+    QuestionnaireStates.q16_religiosity: ("q15_position", QuestionnaireStates.q15_position, "family_position_kb"),
+    QuestionnaireStates.q17_marital: ("q16", QuestionnaireStates.q16_religiosity, "religiosity_kb"),
+    QuestionnaireStates.q18_children: ("q17", QuestionnaireStates.q17_marital, None),
+    QuestionnaireStates.q19_health: ("q18", QuestionnaireStates.q18_children, "children_kb"),
+    QuestionnaireStates.q20_character: ("q19", QuestionnaireStates.q19_health, "skip_kb"),
+    QuestionnaireStates.q21_photo_type: ("q20", QuestionnaireStates.q20_character, "skip_kb"),
+    QuestionnaireStates.q22_parent_phone: ("q21", QuestionnaireStates.q21_photo_type, "photo_type_kb"),
+    QuestionnaireStates.q23_status: ("q22_location", QuestionnaireStates.q22_location, None),
+}
+
+KB_MAP = {
+    "education_kb": education_kb,
+    "work_choice_kb": work_choice_kb,
+    "housing_kb": housing_kb,
+    "car_kb": car_kb,
+    "search_scope_kb": search_scope_kb,
+    "region_kb": region_kb,
+    "nationality_kb": nationality_kb,
+    "family_position_kb": family_position_kb,
+    "religiosity_kb": religiosity_kb,
+    "children_kb": children_kb,
+    "skip_kb": skip_kb,
+    "photo_type_kb": photo_type_kb,
+}
+
+
+@router.callback_query(F.data == "back_step")
+async def back_step(callback: CallbackQuery, state: FSMContext):
+    current = await state.get_state()
+    lang = await _lang(state)
+    ptype = await _ptype(state)
+
+    for st, (text_key, prev_state, kb_name) in BACK_MAP.items():
+        if current == st.state:
+            kb = KB_MAP[kb_name](lang) if kb_name else None
+            child = await _child_label(state)
+            # Try gendered key first (e.g. q6_choice_son), fall back to base key
+            gendered = f"{text_key}_{ptype}"
+            from bot.texts import T
+            msg_text = t(gendered, lang, child=child) if gendered in T else t(text_key, lang, child=child)
+            if kb:
+                await callback.message.edit_text(msg_text, reply_markup=kb)
+            else:
+                await callback.message.edit_text(msg_text)
+            await state.set_state(prev_state)
+            await callback.answer()
+            return
+
+    await callback.answer("🔙")
 
 
 # ── Старт анкеты ──
@@ -127,8 +206,9 @@ async def q5_education(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(t("q5_university", lang))
         await state.set_state(QuestionnaireStates.q5_university)
     else:
-        await callback.message.edit_text(t("q6", lang))
-        await state.set_state(QuestionnaireStates.q6_occupation)
+        gkey = await _gendered_key(state, "q6_choice")
+        await callback.message.edit_text(t(gkey, lang), reply_markup=work_choice_kb(lang))
+        await state.set_state(QuestionnaireStates.q6_work_choice)
     await callback.answer()
 
 
@@ -141,7 +221,24 @@ async def q5_university(message: Message, state: FSMContext):
     await state.set_state(QuestionnaireStates.q7_housing)
 
 
-# ── Q6: Работа ──
+# ── Q6: Работа (выбор → текст) ──
+@router.callback_query(F.data == "work:specify", QuestionnaireStates.q6_work_choice)
+async def q6_work_specify(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    await callback.message.edit_text(t("q6", lang))
+    await state.set_state(QuestionnaireStates.q6_occupation)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "work:skip", QuestionnaireStates.q6_work_choice)
+async def q6_work_skip(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    await state.update_data(occupation="—")
+    await callback.message.edit_text(t("q7", lang), reply_markup=housing_kb(lang))
+    await state.set_state(QuestionnaireStates.q7_housing)
+    await callback.answer()
+
+
 @router.message(QuestionnaireStates.q6_occupation)
 async def q6_occupation(message: Message, state: FSMContext):
     await state.update_data(occupation=message.text.strip())

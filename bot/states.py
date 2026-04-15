@@ -18,6 +18,7 @@ class QuestionnaireStates(StatesGroup):
     q4_weight = State()
     q5_education = State()
     q5_university = State()
+    q6_work_choice = State()
     q6_occupation = State()
     q7_housing = State()
     q7_parent_housing = State()
