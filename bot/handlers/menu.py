@@ -41,6 +41,13 @@ async def back_to_menu(callback: CallbackQuery, state: FSMContext, session: Asyn
     await callback.answer()
 
 
+@router.callback_query(F.data == "menu:main")
+async def menu_main_compat(callback: CallbackQuery, session: AsyncSession):
+    """Совместимость: старая кнопка '🏠 Главное меню' → полное меню."""
+    await show_main_menu(callback, session)
+    await callback.answer()
+
+
 @router.callback_query(F.data == "menu:about")
 async def about_platform(callback: CallbackQuery, session: AsyncSession):
     """Шаг 3 — О платформе."""
