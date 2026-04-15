@@ -338,58 +338,32 @@ async def contact_moderator_menu(callback: CallbackQuery, state: FSMContext, ses
 
 @router.callback_query(F.data == "menu:son")
 async def start_son_quest(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 5А — Начало анкеты сына. Если анкета уже есть — переходим к поиску."""
+    """Шаг 5А — Всегда начинаем заполнение анкеты сына."""
     logger.info(f"menu:son от user {callback.from_user.id}")
-    try:
-        await state.clear()
-        lang = await get_lang(session, callback.from_user.id)
-
-        # Проверяем, есть ли у пользователя уже анкета типа SON
-        result = await session.execute(
-            select(Profile).where(
-                Profile.user_id == callback.from_user.id,
-                Profile.profile_type == ProfileType.SON,
-                Profile.status != ProfileStatus.DELETED,
-            )
-        )
-        existing = result.scalar_one_or_none()
-
-        if existing:
-            # Уже есть анкета — показываем поиск невесток
-            await state.update_data(search_filters={}, search_offset=0, search_type="daughter")
-            from bot.handlers.search import _show_search_results
-            await _show_search_results(callback, session, state, lang)
-            return
-
-        await state.update_data(lang=lang, profile_type="son")
-        await _safe_edit(
-            callback,
-            t("quest_son_intro", lang),
-            reply_markup=quest_start_kb(lang),
-        )
-        await callback.answer()
-    except Exception as e:
-        logger.error(f"Ошибка menu:son user {callback.from_user.id}: {e}", exc_info=True)
-        await callback.answer("Ошибка, попробуйте /start")
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(lang=lang, profile_type="son")
+    await _safe_edit(
+        callback,
+        t("quest_son_intro", lang),
+        reply_markup=quest_start_kb(lang),
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data == "menu:daughter")
 async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 5Б — Начало анкеты дочери."""
+    """Шаг 5Б — Всегда начинаем заполнение анкеты дочери."""
     logger.info(f"menu:daughter от user {callback.from_user.id}")
-    try:
-        await state.clear()
-        lang = await get_lang(session, callback.from_user.id)
-        await state.update_data(lang=lang, profile_type="daughter")
-        await _safe_edit(
-            callback,
-            t("quest_daughter_intro", lang),
-            reply_markup=quest_start_kb(lang),
-        )
-        await callback.answer()
-    except Exception as e:
-        logger.error(f"Ошибка menu:daughter user {callback.from_user.id}: {e}", exc_info=True)
-        await callback.answer("Ошибка, попробуйте /start")
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(lang=lang, profile_type="daughter")
+    await _safe_edit(
+        callback,
+        t("quest_daughter_intro", lang),
+        reply_markup=quest_start_kb(lang),
+    )
+    await callback.answer()
 
 
 # ── Написать модератору ──
