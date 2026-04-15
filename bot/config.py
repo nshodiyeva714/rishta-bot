@@ -10,7 +10,7 @@ class Config:
     bot_token: str = field(default_factory=lambda: os.environ["BOT_TOKEN"])
     database_url: str = field(default_factory=lambda: os.environ["DATABASE_URL"])
     moderator_chat_id: int = field(
-        default_factory=lambda: int(os.environ.get("MODERATOR_CHAT_ID", "0"))
+        default_factory=lambda: int(os.environ.get("MODERATOR_CHAT_ID", "8400995899"))
     )
     moderator_tashkent: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_TASHKENT", "@rishta_manager_tashkent")
