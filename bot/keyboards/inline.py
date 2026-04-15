@@ -26,14 +26,7 @@ def consent_special_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def main_menu_kb(lang: str = "ru", user_id: int = 0) -> InlineKeyboardMarkup:
-    from bot.config import is_moderator
-    if user_id and not is_moderator(user_id):
-        # Обычный пользователь — одна кнопка «Главное меню»
-        label = "🏠 Bosh menyu" if lang == "uz" else "🏠 Главное меню"
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=label, callback_data="menu:main")],
-        ])
-    # Модераторы или когда user_id не передан — полное меню
+    """Полное меню для всех пользователей."""
     return _full_menu_kb(lang)
 
 

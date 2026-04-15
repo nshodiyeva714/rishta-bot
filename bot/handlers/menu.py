@@ -41,15 +41,6 @@ async def back_to_menu(callback: CallbackQuery, state: FSMContext, session: Asyn
     await callback.answer()
 
 
-@router.callback_query(F.data == "menu:main")
-async def show_user_full_menu(callback: CallbackQuery, session: AsyncSession):
-    """Обычный пользователь нажал '🏠 Главное меню' → показываем полное меню."""
-    lang = await get_lang(session, callback.from_user.id)
-    menu_title = "Bosh menyu:" if lang == "uz" else "Главное меню:"
-    await callback.message.edit_text(menu_title, reply_markup=_full_menu_kb(lang))
-    await callback.answer()
-
-
 @router.callback_query(F.data == "menu:about")
 async def about_platform(callback: CallbackQuery, session: AsyncSession):
     """Шаг 3 — О платформе."""
