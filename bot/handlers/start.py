@@ -82,6 +82,7 @@ async def cmd_test(message: Message, bot: Bot):
 @router.callback_query(F.data.startswith("lang:"))
 async def choose_language(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 1 — пользователь выбрал язык → главное меню."""
+    await state.clear()
     lang = callback.data.split(":")[1]
 
     result = await session.execute(select(User).where(User.id == callback.from_user.id))
