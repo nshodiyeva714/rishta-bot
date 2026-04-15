@@ -41,6 +41,15 @@ def back_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def contact_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    write = "✍️ Написать модератору" if lang == "ru" else "✍️ Moderatorga yozish"
+    back = t("btn_back", lang)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=write, callback_data="mod:write")],
+        [InlineKeyboardButton(text=back, callback_data="back:menu")],
+    ])
+
+
 def quest_start_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_start", lang), callback_data="quest:start")],

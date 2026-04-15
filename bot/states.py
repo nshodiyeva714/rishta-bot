@@ -98,3 +98,7 @@ class FeedbackStates(StatesGroup):
 class ComplaintStates(StatesGroup):
     reason = State()
     details = State()
+
+
+class ModeratorContactStates(StatesGroup):
+    awaiting_message = State()

@@ -1,14 +1,15 @@
 """Шаг 2 — Главное меню, Шаг 3 — О платформе, Шаг 4 — Мои заявки."""
 
-from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram import Router, F, Bot
+from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite, ProfileType
+from bot.states import ModeratorContactStates
 from bot.texts import t
-from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb
+from bot.keyboards.inline import main_menu_kb, back_kb, my_profile_kb, quest_start_kb, contact_moderator_kb
 from bot.utils.helpers import age_text, calculate_age
 
 router = Router()
@@ -272,7 +273,7 @@ async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession)
 
     await callback.message.edit_text(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
-        reply_markup=back_kb(lang),
+        reply_markup=contact_moderator_kb(lang),
     )
     await callback.answer()
 
@@ -317,3 +318,57 @@ async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, sessi
         reply_markup=quest_start_kb(lang),
     )
     await callback.answer()
+
+
+# ── Написать модератору ──
+@router.callback_query(F.data == "mod:write")
+async def mod_write_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    prompt = "✍️ Напишите ваше сообщение модератору:" if lang == "ru" else "✍️ Moderatorga xabaringizni yozing:"
+    await callback.message.edit_text(prompt, reply_markup=back_kb(lang))
+    await state.set_state(ModeratorContactStates.awaiting_message)
+    await callback.answer()
+
+
+@router.message(ModeratorContactStates.awaiting_message)
+async def mod_write_forward(message: Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    from bot.config import config
+    lang = await get_lang(session, message.from_user.id)
+
+    if not config.moderator_chat_id:
+        err = "⚠️ Модератор временно недоступен." if lang == "ru" else "⚠️ Moderator vaqtincha mavjud emas."
+        await message.answer(err)
+        await state.clear()
+        return
+
+    # Находим анкету пользователя
+    result = await session.execute(
+        select(Profile).where(Profile.user_id == message.from_user.id).limit(1)
+    )
+    profile = result.scalar_one_or_none()
+    display_id = profile.display_id if profile else "—"
+
+    header = (
+        f"📩 <b>СООБЩЕНИЕ ОТ ПОЛЬЗОВАТЕЛЯ</b>\n\n"
+        f"👤 @{message.from_user.username or '—'} (ID: {message.from_user.id})\n"
+        f"🔖 Анкета: {display_id}\n"
+        f"━━━━━━━━━━━━━━━\n"
+    )
+
+    try:
+        await bot.send_message(config.moderator_chat_id, header + (message.text or ""))
+        # Пересылаем фото/документ если есть
+        if message.photo:
+            await bot.send_photo(config.moderator_chat_id, message.photo[-1].file_id)
+        if message.document:
+            await bot.send_document(config.moderator_chat_id, message.document.file_id)
+        if message.voice:
+            await bot.send_voice(config.moderator_chat_id, message.voice.file_id)
+        if message.video:
+            await bot.send_video(config.moderator_chat_id, message.video.file_id)
+    except Exception:
+        pass
+
+    ok = "✅ Сообщение отправлено модератору. Ожидайте ответа." if lang == "ru" else "✅ Xabar moderatorga yuborildi. Javobni kuting."
+    await message.answer(ok, reply_markup=main_menu_kb(lang))
+    await state.clear()
