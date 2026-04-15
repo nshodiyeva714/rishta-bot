@@ -322,22 +322,22 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
     from bot.handlers.menu import get_lang as get_lang_fn
     region = "🇺🇿 Узбекистан"
     moderator = config.moderator_tashkent
-    hours = "09:00–21:00 (UZT)"
+    hours = "08:00–00:00 (UZT)"
 
     if requester_profile and requester_profile.residence_status:
         res = requester_profile.residence_status.value
         if res == "cis":
             region = "🇷🇺 СНГ"
             moderator = config.moderator_cis
-            hours = "09:00–21:00 (MSK)"
+            hours = "08:00–00:00 (MSK)"
         elif res == "usa":
             region = "🇺🇸 США"
             moderator = config.moderator_usa
-            hours = "09:00–21:00 (EST)"
+            hours = "08:00–00:00 (EST)"
         elif res == "europe":
             region = "🌍 Европа"
             moderator = config.moderator_europe
-            hours = "09:00–21:00 (CET)"
+            hours = "08:00–00:00 (CET)"
 
     await callback.message.answer(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),

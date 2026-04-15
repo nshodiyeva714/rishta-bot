@@ -102,7 +102,7 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
         # Через модератора
         region = "🇺🇿 Узбекистан"
         moderator = config.moderator_tashkent
-        hours = "09:00–21:00"
+        hours = "08:00–00:00"
         await callback.message.edit_text(
             t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
             reply_markup=back_kb(lang),

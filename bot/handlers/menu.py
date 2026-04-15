@@ -248,27 +248,27 @@ async def contact_moderator_menu(callback: CallbackQuery, session: AsyncSession)
         if res == "uzbekistan":
             region = "🇺🇿 Узбекистан" if lang == "ru" else "🇺🇿 O'zbekiston"
             moderator = config.moderator_tashkent
-            hours = "09:00–21:00 (UZT)"
+            hours = "08:00–00:00 (UZT)"
         elif res == "cis":
             region = "🇷🇺 СНГ" if lang == "ru" else "🇷🇺 MDH"
             moderator = config.moderator_cis
-            hours = "09:00–21:00 (MSK)"
+            hours = "08:00–00:00 (MSK)"
         elif res == "usa":
             region = "🇺🇸 США" if lang == "ru" else "🇺🇸 AQSH"
             moderator = config.moderator_usa
-            hours = "09:00–21:00 (EST)"
+            hours = "08:00–00:00 (EST)"
         elif res == "europe":
             region = "🌍 Европа" if lang == "ru" else "🌍 Yevropa"
             moderator = config.moderator_europe
-            hours = "09:00–21:00 (CET)"
+            hours = "08:00–00:00 (CET)"
         else:
             region = "🇺🇿 Узбекистан"
             moderator = config.moderator_tashkent
-            hours = "09:00–21:00 (UZT)"
+            hours = "08:00–00:00 (UZT)"
     else:
         region = "🇺🇿 Узбекистан"
         moderator = config.moderator_tashkent
-        hours = "09:00–21:00 (UZT)"
+        hours = "08:00–00:00 (UZT)"
 
     await callback.message.edit_text(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
