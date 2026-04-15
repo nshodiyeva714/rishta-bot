@@ -355,9 +355,13 @@ async def mod_write_forward(message: Message, state: FSMContext, session: AsyncS
         f"━━━━━━━━━━━━━━━\n"
     )
 
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    reply_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="↩️ Ответить", callback_data=f"modreply:{message.from_user.id}")],
+    ])
+
     try:
-        await bot.send_message(config.moderator_chat_id, header + (message.text or ""))
-        # Пересылаем фото/документ если есть
+        await bot.send_message(config.moderator_chat_id, header + (message.text or ""), reply_markup=reply_kb)
         if message.photo:
             await bot.send_photo(config.moderator_chat_id, message.photo[-1].file_id)
         if message.document:

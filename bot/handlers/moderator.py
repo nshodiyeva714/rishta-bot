@@ -1,14 +1,16 @@
-"""Шаг 9 — Модератор: проверка анкет и оплат."""
+"""Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям."""
 
 from datetime import datetime
 
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus
+from bot.states import ModeratorReplyStates
 from bot.texts import t
-from bot.config import config
+from bot.config import config, is_moderator
 
 router = Router()
 
@@ -16,7 +18,7 @@ router = Router()
 @router.callback_query(F.data.startswith("mod:publish:"))
 async def mod_publish(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     """Модератор публикует анкету."""
-    if callback.from_user.id != config.moderator_chat_id:
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
 
@@ -56,7 +58,7 @@ async def mod_publish(callback: CallbackQuery, session: AsyncSession, bot: Bot):
 @router.callback_query(F.data.startswith("mod:reject:"))
 async def mod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     """Модератор отклоняет анкету."""
-    if callback.from_user.id != config.moderator_chat_id:
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
 
@@ -94,7 +96,7 @@ async def mod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
 @router.callback_query(F.data.startswith("mod:reject_photo:"))
 async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     """Модератор отклоняет фото."""
-    if callback.from_user.id != config.moderator_chat_id:
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
 
@@ -127,7 +129,7 @@ async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: 
 # ── Подтверждение оплаты модератором ──
 @router.callback_query(F.data.startswith("modpay:confirm:"))
 async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    if callback.from_user.id != config.moderator_chat_id:
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
 
@@ -155,7 +157,7 @@ async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bo
 
 @router.callback_query(F.data.startswith("modpay:reject:"))
 async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    if callback.from_user.id != config.moderator_chat_id:
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
 
@@ -180,3 +182,47 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
         callback.message.text + "\n\n❌ ОПЛАТА ОТКЛОНЕНА",
     )
     await callback.answer("❌ Отклонено")
+
+
+# ── Ответ пользователю от модератора ──
+@router.callback_query(F.data.startswith("modreply:"))
+async def mod_reply_start(callback: CallbackQuery, state: FSMContext):
+    """Модератор нажал «Ответить» — ожидаем текст."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    user_id = int(callback.data.split(":")[1])
+    await state.update_data(reply_to_user_id=user_id)
+    await callback.message.answer(f"✍️ Напишите ответ для пользователя (ID: {user_id}):")
+    await state.set_state(ModeratorReplyStates.awaiting_reply)
+    await callback.answer()
+
+
+@router.message(ModeratorReplyStates.awaiting_reply)
+async def mod_reply_send(message: Message, state: FSMContext, bot: Bot):
+    """Модератор написал ответ — пересылаем пользователю."""
+    if not is_moderator(message.from_user.id):
+        await state.clear()
+        return
+
+    data = await state.get_data()
+    user_id = data.get("reply_to_user_id")
+    if not user_id:
+        await state.clear()
+        return
+
+    try:
+        header = "💬 <b>Ответ от модератора:</b>\n\n"
+        await bot.send_message(user_id, header + (message.text or ""))
+        if message.photo:
+            await bot.send_photo(user_id, message.photo[-1].file_id)
+        if message.document:
+            await bot.send_document(user_id, message.document.file_id)
+        if message.voice:
+            await bot.send_voice(user_id, message.voice.file_id)
+        await message.answer(f"✅ Ответ отправлен пользователю (ID: {user_id})")
+    except Exception as e:
+        await message.answer(f"❌ Ошибка отправки: {e}")
+
+    await state.clear()

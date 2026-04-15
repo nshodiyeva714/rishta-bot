@@ -102,3 +102,7 @@ class ComplaintStates(StatesGroup):
 
 class ModeratorContactStates(StatesGroup):
     awaiting_message = State()
+
+
+class ModeratorReplyStates(StatesGroup):
+    awaiting_reply = State()

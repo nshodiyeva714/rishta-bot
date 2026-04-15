@@ -33,3 +33,8 @@ class Config:
 
 
 config = Config()
+
+
+def is_moderator(user_id: int) -> bool:
+    """Проверяет, является ли пользователь модератором."""
+    return user_id in (config.moderator_chat_id, config.mod_tashkent_id)
