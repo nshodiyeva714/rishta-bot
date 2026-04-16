@@ -249,39 +249,11 @@ async def q2_birth_year(message: Message, state: FSMContext):
     await state.update_data(birth_year=year, age=age)
     data = await state.get_data()
     bar = progress_bar(2, 10)
-    from bot.utils.helpers import age_text
-    q_text = t("q2_confirm", lang, age=age_text(age, lang), bar=bar)
-    full_text = _with_card(data, lang, q_text)
-    sent = await message.answer(full_text, reply_markup=confirm_age_kb(lang))
-    await state.update_data(last_bot_msg=sent.message_id)
-    await state.set_state(QuestionnaireStates.q2_confirm_age)
-
-
-# ── 2B. Подтверждение возраста → рост ──
-@router.callback_query(F.data == "age:confirm", QuestionnaireStates.q2_confirm_age)
-async def q2_confirm(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = progress_bar(2, 10)
     q_text = t("q2_height", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
-    await state.update_data(last_bot_msg=callback.message.message_id)
+    sent = await message.answer(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q3_height)
-    await callback.answer()
-
-
-@router.callback_query(F.data == "age:fix", QuestionnaireStates.q2_confirm_age)
-async def q2_fix(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = progress_bar(2, 10)
-    q_text = t("q2", lang, bar=bar)
-    full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
-    await state.update_data(last_bot_msg=callback.message.message_id)
-    await state.set_state(QuestionnaireStates.q2_birth_year)
-    await callback.answer()
 
 
 # ── 2C. Рост ──
@@ -693,10 +665,6 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         QuestionnaireStates.q2_birth_year.state: (
             "q1", QuestionnaireStates.q1_name, None,
             lambda l, c: t("q1", l, child=c, bar=progress_bar(1, 10))
-        ),
-        QuestionnaireStates.q2_confirm_age.state: (
-            "q2", QuestionnaireStates.q2_birth_year, None,
-            lambda l, c: _with_card(data, l, t("q2", l, bar=progress_bar(2, 10)))
         ),
         QuestionnaireStates.q3_height.state: (
             "q2", QuestionnaireStates.q2_birth_year, None,
