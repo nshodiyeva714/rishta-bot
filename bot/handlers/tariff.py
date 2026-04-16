@@ -23,6 +23,8 @@ from bot.keyboards.inline import (
     req_car_kb, req_housing_kb, req_job_kb,
     skip_kb, confirm_profile_kb, main_menu_kb,
     mod_review_kb,
+    anketa_finish_kb, enhance_or_publish_kb, after_publish_kb,
+    housing_kb,
 )
 from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa
 from bot.config import config
@@ -233,31 +235,228 @@ async def req_job(callback: CallbackQuery, state: FSMContext):
 @router.message(RequirementStates.other_wishes)
 async def req_other_wishes(message: Message, state: FSMContext):
     await state.update_data(req_other=message.text.strip())
-    lang = await _lang(state)
-    confirm_text = "✅ Подтвердить анкету?" if lang == "ru" else "✅ Anketani tasdiqlaysizmi?"
-    await message.answer(confirm_text, reply_markup=confirm_profile_kb(lang))
-    await state.set_state(RequirementStates.confirm)
+    await _show_summary(message, state)
 
 
 @router.callback_query(F.data == "skip", RequirementStates.other_wishes)
 async def req_other_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    confirm_text = "✅ Подтвердить анкету?" if lang == "ru" else "✅ Anketani tasdiqlaysizmi?"
-    await callback.message.edit_text(confirm_text, reply_markup=confirm_profile_kb(lang))
+    await _show_summary(callback, state, is_callback=True)
+
+
+# ══════════════════════════════════════
+# Экран резюме анкеты
+# ══════════════════════════════════════
+
+_EDU_LABELS = {
+    "ru": {"secondary": "Среднее", "vocational": "Среднее спец.", "higher": "Высшее", "studying": "Студент/ка"},
+    "uz": {"secondary": "O'rta", "vocational": "O'rta maxsus", "higher": "Oliy", "studying": "Talaba"},
+}
+_REL_LABELS = {
+    "ru": {"practicing": "🕌 Практикующий/ая", "moderate": "☪️ Умеренный/ая", "secular": "🌐 Светский/ая"},
+    "uz": {"practicing": "🕌 Amaliyotchi", "moderate": "☪️ Mo'tadil", "secular": "🌐 Dunyoviy"},
+}
+_MAR_LABELS = {
+    "ru": {"never_married": "💍 Не был(а) в браке", "divorced": "💔 Разведён/а", "widowed": "🖤 Вдовец/Вдова"},
+    "uz": {"never_married": "💍 Turmush qurmagan", "divorced": "💔 Ajrashgan", "widowed": "🖤 Beva"},
+}
+
+
+async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False):
+    """Показать резюме анкеты с кнопками «Опубликовать» / «Сделать ярче»."""
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    L = lang if lang in ("ru", "uz") else "ru"
+    ptype = data.get("profile_type", "son")
+
+    name = data.get("name", "—")
+    birth_year = data.get("birth_year")
+    age = (datetime.now().year - birth_year) if birth_year else "?"
+    city = data.get("city", "—")
+
+    edu_raw = data.get("education", "")
+    edu = _EDU_LABELS.get(L, _EDU_LABELS["ru"]).get(edu_raw, "—")
+    uni = data.get("university_info")
+    if uni:
+        edu += f", {uni}"
+
+    work = data.get("occupation") or "—"
+    rel = _REL_LABELS.get(L, _REL_LABELS["ru"]).get(data.get("religiosity", ""), "—")
+    mar = _MAR_LABELS.get(L, _MAR_LABELS["ru"]).get(data.get("marital_status", ""), "—")
+
+    emoji = "👦" if ptype == "son" else "👧"
+
+    if L == "uz":
+        summary = (
+            f"━━━━━━━━━━━━━━━\n"
+            f"✅ <b>Anketa to'ldirildi!</b>\n\n"
+            f"{emoji} {name} · {age} yosh\n"
+            f"🏙 {city}\n"
+            f"🎓 {edu}\n"
+            f"💼 {work}\n"
+            f"{rel}\n"
+            f"{mar}\n\n"
+            f"Keyingi qadam:"
+        )
+    else:
+        summary = (
+            f"━━━━━━━━━━━━━━━\n"
+            f"✅ <b>Анкета заполнена!</b>\n\n"
+            f"{emoji} {name} · {age} лет\n"
+            f"🏙 {city}\n"
+            f"🎓 {edu}\n"
+            f"💼 {work}\n"
+            f"{rel}\n"
+            f"{mar}\n\n"
+            f"Что делаем дальше?"
+        )
+
+    kb = anketa_finish_kb(lang)
+
+    if is_callback:
+        await msg_or_cb.message.edit_text(summary, reply_markup=kb)
+        await msg_or_cb.answer()
+    else:
+        await msg_or_cb.answer(summary, reply_markup=kb)
+
+    await state.set_state(RequirementStates.summary)
+
+
+# ── «✨ Сделать анкету ярче» ──
+@router.callback_query(F.data == "profile:enhance", RequirementStates.summary)
+async def profile_enhance(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    if lang == "uz":
+        text = (
+            "✨ <b>Anketani boyiting</b>\n\n"
+            "Qo'shimcha ma'lumotlar qo'shing —\n"
+            "va anketangiz boshqalardan ajralib turadi:\n\n"
+            "🏠 Turar joy va avtomobil\n"
+            "👨‍👩‍👧 Oila haqida (ota, ona, aka-ukalar)\n"
+            "✨ Xarakter va qiziqishlar\n"
+            "🔮 Kelajak rejalari\n\n"
+            "Taxminan 5 daqiqa vaqt oladi 🕐"
+        )
+    else:
+        text = (
+            "✨ <b>Сделайте анкету ярче</b>\n\n"
+            "Добавьте детали — и ваша анкета\n"
+            "будет выделяться среди остальных:\n\n"
+            "🏠 Жильё и автомобиль\n"
+            "👨‍👩‍👧 О семье (отец, мать, братья)\n"
+            "✨ Характер и увлечения\n"
+            "🔮 Планы на будущее\n\n"
+            "Займёт около 5 минут 🕐"
+        )
+
+    await callback.message.edit_text(text, reply_markup=enhance_or_publish_kb(lang))
+    await callback.answer()
+
+
+# ── «✏️ Дополнить сейчас» — сначала публикуем, потом Этап 2 ──
+@router.callback_query(F.data == "profile:extend_now", RequirementStates.summary)
+async def profile_extend_now(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Сохраняем анкету → отправляем модератору → запускаем Этап 2."""
+    profile, display_id = await _save_profile(callback, state, session, bot)
+    if not profile:
+        return
+
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    # Сохраняем profile_id для Этапа 2
+    await state.update_data(ext_profile_id=profile.id)
+
+    # Запускаем Этап 2
+    await callback.message.edit_text(
+        t("ext_housing", lang),
+        reply_markup=housing_kb(lang),
+    )
+    from bot.states import QuestionnaireStates
+    await state.set_state(QuestionnaireStates.ext_housing)
+    await callback.answer()
+
+
+# ── «🚀 Отправить на публикацию» ──
+@router.callback_query(F.data == "profile:publish", RequirementStates.summary)
+async def publish_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Сохраняем и публикуем анкету."""
+    profile, display_id = await _save_profile(callback, state, session, bot)
+    if not profile:
+        return
+
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    # Сохраняем profile_id на случай «Дополнить позже»
+    await state.update_data(ext_profile_id=profile.id)
+
+    if lang == "uz":
+        submitted_text = (
+            f"🎉 <b>Anketa yuborildi!</b>\n\n"
+            f"🔖 #{display_id}\n\n"
+            f"Moderator 24 soat ichida tekshiradi\n"
+            f"va nashr etadi 🤝\n\n"
+            f"Kutayotganda — anketangizni\n"
+            f"boyitishingiz mumkin 👇"
+        )
+    else:
+        submitted_text = (
+            f"🎉 <b>Анкета отправлена!</b>\n\n"
+            f"🔖 #{display_id}\n\n"
+            f"Модератор проверит в течение\n"
+            f"24 часов и опубликует 🤝\n\n"
+            f"Пока ждёте — можете\n"
+            f"сделать анкету ярче 👇"
+        )
+
+    await callback.message.edit_text(submitted_text, reply_markup=after_publish_kb(lang))
     await state.set_state(RequirementStates.confirm)
     await callback.answer()
 
 
-# ── Шаг 8: Подтверждение — создаём анкету в БД ──
-@router.callback_query(F.data == "profile:confirm", RequirementStates.confirm)
-async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+# ── «✨ Дополнить анкету» после публикации ──
+@router.callback_query(F.data == "after:extend", RequirementStates.confirm)
+async def after_extend(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "ru")
-    ptype = ProfileType(data.get("profile_type", "son"))
+    profile_id = data.get("ext_profile_id")
 
+    if not profile_id:
+        await callback.message.edit_text(
+            t("main_menu", lang), reply_markup=main_menu_kb(lang, callback.from_user.id))
+        await state.clear()
+        await callback.answer()
+        return
+
+    await callback.message.edit_text(
+        t("ext_housing", lang),
+        reply_markup=housing_kb(lang),
+    )
+    from bot.states import QuestionnaireStates
+    await state.set_state(QuestionnaireStates.ext_housing)
+    await callback.answer()
+
+
+# ══════════════════════════════════════
+# Общая функция сохранения профиля
+# ══════════════════════════════════════
+
+async def _save_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Создать Profile + Requirement в БД, уведомить модераторов. Возвращает (profile, display_id)."""
+    data = await state.get_data()
+
+    # Если уже сохранён — не дублировать
+    if data.get("ext_profile_id"):
+        profile = await session.get(Profile, data["ext_profile_id"])
+        if profile:
+            return profile, profile.display_id
+
+    lang = data.get("lang", "ru")
+    ptype = ProfileType(data.get("profile_type", "son"))
     display_id = await generate_display_id(session, ptype)
 
-    # Безопасное преобразование enum-значений
     def safe_enum(enum_cls, val):
         if val is None:
             return None
@@ -316,7 +515,6 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
         is_active=data.get("is_active", True),
     )
 
-    # VIP
     if data.get("is_vip"):
         vip_days = data.get("vip_days", 30)
         profile.vip_status = VipStatus.ACTIVE
@@ -325,7 +523,6 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
     session.add(profile)
     await session.flush()
 
-    # Создаём требования
     requirement = Requirement(
         profile_id=profile.id,
         age_from=data.get("req_age_from"),
@@ -344,33 +541,20 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
     session.add(requirement)
     await session.commit()
 
-    # Отправляем пользователю подтверждение
-    await callback.message.edit_text(t("profile_submitted", lang, display_id=display_id))
+    await state.update_data(ext_profile_id=profile.id)
 
-    # Шаг 9 — уведомляем ВСЕХ модераторов (ПОЛНАЯ анкета)
+    # Уведомляем модераторов
     from bot.config import get_all_moderator_ids
     mod_text = format_full_anketa(profile, lang="ru")
     for mod_id in get_all_moderator_ids():
         try:
-            await bot.send_message(
-                mod_id,
-                mod_text,
-                reply_markup=mod_review_kb(profile.id),
-            )
+            await bot.send_message(mod_id, mod_text, reply_markup=mod_review_kb(profile.id))
             if profile.photo_file_id:
                 await bot.send_photo(mod_id, profile.photo_file_id)
         except Exception:
-            pass  # Модератор недоступен — не блокируем пользователя
+            pass
 
-    # Запланировать приглашение дополнить анкету через 10 минут
-    try:
-        from bot.services.scheduler import schedule_extend_invite
-        schedule_extend_invite(bot, callback.from_user.id, profile.id, display_id, lang)
-    except Exception:
-        pass
-
-    await state.clear()
-    await callback.answer()
+    return profile, display_id
 
 
 @router.callback_query(F.data == "profile:cancel", RequirementStates.confirm)

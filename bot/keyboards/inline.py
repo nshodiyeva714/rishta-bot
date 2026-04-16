@@ -324,6 +324,45 @@ def profile_status_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Экран завершения Этапа 1: опубликовать или дополнить."""
+    if lang == "uz":
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
+            [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
+        [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
+    ])
+
+
+def enhance_or_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """После описания Этапа 2: дополнить сейчас или опубликовать."""
+    if lang == "uz":
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="profile:extend_now")],
+            [InlineKeyboardButton(text="🚀 Shundayicha nashr etish", callback_data="profile:publish")],
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Дополнить сейчас", callback_data="profile:extend_now")],
+        [InlineKeyboardButton(text="🚀 Опубликовать как есть", callback_data="profile:publish")],
+    ])
+
+
+def after_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """После публикации — предложить дополнить."""
+    if lang == "uz":
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="after:extend")],
+            [InlineKeyboardButton(text="🏠 Bosh menyu", callback_data="menu:main")],
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✨ Дополнить анкету", callback_data="after:extend")],
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:main")],
+    ])
+
+
 def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[

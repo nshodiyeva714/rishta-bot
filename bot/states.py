@@ -65,6 +65,7 @@ class RequirementStates(StatesGroup):
     housing_required = State()
     job_required = State()
     other_wishes = State()
+    summary = State()           # Экран резюме анкеты
     confirm = State()
 
 
