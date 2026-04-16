@@ -23,6 +23,8 @@ from bot.keyboards.inline import (
 
 router = Router()
 
+SEP = "\n\n━━━━━━━━━━━━━\n\n"
+
 
 # ══════════════════════════════════════
 # Утилиты
@@ -35,6 +37,124 @@ def progress_bar(current: int, total: int) -> str:
     bar = "▓" * filled + "░" * empty
     pct = round(current / total * 100)
     return f"{bar}  {pct}%"
+
+
+def build_card(data: dict, lang: str = "ru") -> str:
+    """Строит накопленную карточку из заполненных данных."""
+    lines = []
+    L = lang if lang in ("ru", "uz") else "ru"
+
+    # Имя + возраст + рост
+    name = data.get("name")
+    age = data.get("age")
+    height = data.get("height_cm")
+    header = []
+    if name:
+        header.append(name)
+    if age:
+        header.append(f"{age} {'лет' if L == 'ru' else 'yosh'}")
+    if height:
+        header.append(f"{height} {'см' if L == 'ru' else 'sm'}")
+    if header:
+        lines.append("👤 " + " · ".join(header))
+
+    # Фото
+    pt = data.get("photo_type")
+    if pt and pt != "none":
+        photo_map = {
+            "ru": {"regular": "📸 Фото загружено", "closed_face": "📸 Фото (закрытое лицо)", "silhouette": "📸 Силуэт"},
+            "uz": {"regular": "📸 Foto yuklangan", "closed_face": "📸 Foto (yuz yopiq)", "silhouette": "📸 Siluet"},
+        }
+        lines.append(photo_map[L].get(pt, f"📸 {pt}"))
+
+    # Телосложение
+    body_map = {
+        "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+    }
+    body = data.get("body_type")
+    if body:
+        lines.append(body_map[L].get(body, body))
+
+    # Национальность
+    nat_map = {
+        "ru": {"uzbek": "Узбек", "russian": "Русский", "korean": "Кореец", "tajik": "Таджик", "kazakh": "Казах", "other": "Другая"},
+        "uz": {"uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys", "tajik": "Tojik", "kazakh": "Qozoq", "other": "Boshqa"},
+    }
+    nat = data.get("nationality")
+    if nat:
+        nat_label = nat_map[L].get(nat, nat)
+        lines.append(f"{'Нац.' if L == 'ru' else 'Millat'}: {nat_label}")
+
+    # Город
+    city = data.get("city")
+    if city:
+        lines.append(f"📍 {city}")
+
+    # Образование
+    edu_map = {
+        "ru": {"secondary": "Среднее", "vocational": "Среднее спец.", "higher": "Высшее", "studying": "Студент/ка"},
+        "uz": {"secondary": "O'rta", "vocational": "O'rta maxsus", "higher": "Oliy", "studying": "Talaba"},
+    }
+    edu = data.get("education")
+    if edu:
+        edu_label = edu_map[L].get(edu, edu)
+        uni = data.get("university_info")
+        if uni:
+            edu_label += f", {uni}"
+        lines.append(f"🎓 {edu_label}")
+
+    # Занятость
+    occ = data.get("occupation")
+    occ_type = data.get("occupation_type")
+    if occ and occ not in ("—",):
+        occ_type_map = {
+            "ru": {"student": "Студент", "housewife": "Домохозяйка", "works": "Работает", "business": "Свой бизнес", "other": "Другое"},
+            "uz": {"student": "Talaba", "housewife": "Uy bekasi", "works": "Ishlaydi", "business": "O'z biznesi", "other": "Boshqa"},
+        }
+        if occ_type in ("student", "housewife"):
+            lines.append(f"💼 {occ_type_map[L].get(occ_type, occ)}")
+        else:
+            lines.append(f"💼 {occ}")
+
+    # Религиозность
+    rel_map = {
+        "ru": {"practicing": "🕌 Практикующий/ая", "moderate": "☪️ Умеренный/ая", "secular": "🌐 Светский/ая"},
+        "uz": {"practicing": "🕌 Amaliyotchi", "moderate": "☪️ Mo'tadil", "secular": "🌐 Dunyoviy"},
+    }
+    rel = data.get("religiosity")
+    if rel:
+        lines.append(rel_map[L].get(rel, rel))
+
+    # Семейное положение
+    mar_map = {
+        "ru": {"never_married": "Не был(а) в браке", "divorced": "Разведён/а", "widowed": "Вдовец/Вдова"},
+        "uz": {"never_married": "Turmush qurmagan", "divorced": "Ajrashgan", "widowed": "Beva"},
+    }
+    mar = data.get("marital_status")
+    if mar:
+        lines.append(f"💍 {mar_map[L].get(mar, mar)}")
+
+    # Дети
+    ch = data.get("children_status")
+    if ch and ch != "no" and mar and mar != "never_married":
+        lines.append("👶 Есть дети" if L == "ru" else "👶 Farzand bor")
+    elif ch == "no" and mar and mar != "never_married":
+        lines.append("👶 Детей нет" if L == "ru" else "👶 Farzand yo'q")
+
+    if not lines:
+        return ""
+
+    header_line = "📋 Анкета:" if L == "ru" else "📋 Anketa:"
+    return header_line + "\n" + "\n".join(lines)
+
+
+def _with_card(data: dict, lang: str, question_text: str) -> str:
+    """Объединяет карточку + разделитель + вопрос."""
+    card = build_card(data, lang)
+    if card:
+        return card + SEP + question_text
+    return question_text
 
 
 async def _lang(state: FSMContext) -> str:
@@ -82,11 +202,11 @@ async def quest_start(callback: CallbackQuery, state: FSMContext):
 async def q1_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
     lang = await _lang(state)
+    data = await state.get_data()
     bar = progress_bar(2, 10)
-    await message.answer(
-        t("q2", lang, bar=bar),
-        reply_markup=back_step_kb(lang),
-    )
+    q_text = t("q2", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await message.answer(full_text, reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q2_birth_year)
 
 
@@ -107,12 +227,12 @@ async def q2_birth_year(message: Message, state: FSMContext):
         await message.answer(err)
         return
     await state.update_data(birth_year=year, age=age)
+    data = await state.get_data()
     bar = progress_bar(2, 10)
     from bot.utils.helpers import age_text
-    await message.answer(
-        t("q2_confirm", lang, age=age_text(age, lang), bar=bar),
-        reply_markup=confirm_age_kb(lang),
-    )
+    q_text = t("q2_confirm", lang, age=age_text(age, lang), bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await message.answer(full_text, reply_markup=confirm_age_kb(lang))
     await state.set_state(QuestionnaireStates.q2_confirm_age)
 
 
@@ -120,11 +240,11 @@ async def q2_birth_year(message: Message, state: FSMContext):
 @router.callback_query(F.data == "age:confirm", QuestionnaireStates.q2_confirm_age)
 async def q2_confirm(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
+    data = await state.get_data()
     bar = progress_bar(2, 10)
-    await callback.message.edit_text(
-        t("q2_height", lang, bar=bar),
-        reply_markup=back_step_kb(lang),
-    )
+    q_text = t("q2_height", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q3_height)
     await callback.answer()
 
@@ -132,11 +252,11 @@ async def q2_confirm(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "age:fix", QuestionnaireStates.q2_confirm_age)
 async def q2_fix(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
+    data = await state.get_data()
     bar = progress_bar(2, 10)
-    await callback.message.edit_text(
-        t("q2", lang, bar=bar),
-        reply_markup=back_step_kb(lang),
-    )
+    q_text = t("q2", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q2_birth_year)
     await callback.answer()
 
@@ -159,16 +279,16 @@ async def q3_height(message: Message, state: FSMContext):
 # ── 3. Фото с мотивацией ──
 async def _ask_photo(message_or_callback, state: FSMContext, lang: str):
     """Показать вопрос 3 — фото с мотивационным текстом."""
+    data = await state.get_data()
     bar = progress_bar(3, 10)
-    text = t("q3_photo", lang, bar=bar)
+    q_text = t("q3_photo", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     kb = add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False)
 
     if hasattr(message_or_callback, "message"):
-        # это CallbackQuery
-        await message_or_callback.message.edit_text(text, reply_markup=kb)
+        await message_or_callback.message.edit_text(full_text, reply_markup=kb)
     else:
-        # это Message
-        await message_or_callback.answer(text, reply_markup=kb)
+        await message_or_callback.answer(full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.q21_photo_type)
 
 
@@ -209,16 +329,17 @@ async def photo_upload_invalid(message: Message, state: FSMContext):
 # ── 4. Телосложение ──
 async def _ask_body_type(message_or_callback, state: FSMContext, lang: str):
     """Показать вопрос 4 — телосложение."""
-    bar = progress_bar(4, 10)
-    text = t("q4_body_type", lang, bar=bar)
     data = await state.get_data()
+    bar = progress_bar(4, 10)
+    q_text = t("q4_body_type", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     gender = data.get("profile_type", "son")
     kb = add_nav(body_type_kb(lang, gender).inline_keyboard, lang, "back_step", show_main=False)
 
     if hasattr(message_or_callback, "message"):
-        await message_or_callback.message.edit_text(text, reply_markup=kb)
+        await message_or_callback.message.edit_text(full_text, reply_markup=kb)
     else:
-        await message_or_callback.answer(text, reply_markup=kb)
+        await message_or_callback.answer(full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.q4_body_type)
 
 
@@ -227,10 +348,13 @@ async def q4_body_type(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(body_type=value)
     lang = await _lang(state)
+    data = await state.get_data()
     # → 5. Национальность
     bar = progress_bar(5, 10)
+    q_text = t("q12", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(
-        t("q12", lang, bar=bar),
+        full_text,
         reply_markup=add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     )
     await state.set_state(QuestionnaireStates.q12_nationality)
@@ -243,12 +367,12 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(nationality=value)
     lang = await _lang(state)
+    data = await state.get_data()
     # → 6. Город
     bar = progress_bar(6, 10)
-    await callback.message.edit_text(
-        t("q9_city_district", lang, bar=bar),
-        reply_markup=back_step_kb(lang),
-    )
+    q_text = t("q9_city_district", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q9_city_district)
     await callback.answer()
 
@@ -258,10 +382,13 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
 async def q6_city(message: Message, state: FSMContext):
     await state.update_data(city=message.text.strip())
     lang = await _lang(state)
+    data = await state.get_data()
     # → 7. Образование
     bar = progress_bar(7, 10)
+    q_text = t("q5", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     await message.answer(
-        t("q5", lang, bar=bar),
+        full_text,
         reply_markup=add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     )
     await state.set_state(QuestionnaireStates.q5_education)
@@ -275,10 +402,11 @@ async def q7_education(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
 
     if value == "studying":
-        await callback.message.edit_text(
-            t("q5_university", lang),
-            reply_markup=back_step_kb(lang),
-        )
+        data = await state.get_data()
+        card = build_card(data, lang)
+        q_text = t("q5_university", lang)
+        full_text = (card + SEP + q_text) if card else q_text
+        await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
         await state.set_state(QuestionnaireStates.q5_university)
     else:
         # → 8. Занятость (кнопки)
@@ -298,16 +426,17 @@ async def q7_university(message: Message, state: FSMContext):
 # ── 8. Занятость (кнопки) ──
 async def _ask_occupation(message_or_callback, state: FSMContext, lang: str):
     """Показать вопрос 8 — занятость с кнопками."""
-    bar = progress_bar(8, 10)
     data = await state.get_data()
+    bar = progress_bar(8, 10)
     gender = data.get("profile_type", "son")
-    text = t("q8_occupation", lang, bar=bar)
+    q_text = t("q8_occupation", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     kb = add_nav(occupation_kb(lang, gender).inline_keyboard, lang, "back_step", show_main=False)
 
     if hasattr(message_or_callback, "message"):
-        await message_or_callback.message.edit_text(text, reply_markup=kb)
+        await message_or_callback.message.edit_text(full_text, reply_markup=kb)
     else:
-        await message_or_callback.answer(text, reply_markup=kb)
+        await message_or_callback.answer(full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.q6_work_choice)
 
 
@@ -319,11 +448,11 @@ async def q8_occupation_choice(callback: CallbackQuery, state: FSMContext):
     if choice in ("works", "business", "other"):
         # Спросить подробнее
         await state.update_data(occupation_type=choice)
+        data = await state.get_data()
         bar = progress_bar(8, 10)
-        await callback.message.edit_text(
-            t("q8_occupation_detail", lang, bar=bar),
-            reply_markup=back_step_kb(lang),
-        )
+        q_text = t("q8_occupation_detail", lang, bar=bar)
+        full_text = _with_card(data, lang, q_text)
+        await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
         await state.set_state(QuestionnaireStates.q6_occupation)
     else:
         # student / housewife → сохранить и перейти к религиозности
@@ -337,11 +466,11 @@ async def q8_occupation_choice(callback: CallbackQuery, state: FSMContext):
 async def q8_work_specify(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await state.update_data(occupation_type="works")
+    data = await state.get_data()
     bar = progress_bar(8, 10)
-    await callback.message.edit_text(
-        t("q8_occupation_detail", lang, bar=bar),
-        reply_markup=back_step_kb(lang),
-    )
+    q_text = t("q8_occupation_detail", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q6_occupation)
     await callback.answer()
 
@@ -365,14 +494,16 @@ async def q8_occupation_detail(message: Message, state: FSMContext):
 # ── 9. Религиозность ──
 async def _ask_religion(message_or_callback, state: FSMContext, lang: str):
     """Показать вопрос 9 — религиозность."""
+    data = await state.get_data()
     bar = progress_bar(9, 10)
-    text = t("q16", lang, bar=bar)
+    q_text = t("q16", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     kb = add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False)
 
     if hasattr(message_or_callback, "message"):
-        await message_or_callback.message.edit_text(text, reply_markup=kb)
+        await message_or_callback.message.edit_text(full_text, reply_markup=kb)
     else:
-        await message_or_callback.answer(text, reply_markup=kb)
+        await message_or_callback.answer(full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.q16_religiosity)
 
 
@@ -385,8 +516,10 @@ async def q9_religiosity(callback: CallbackQuery, state: FSMContext):
     is_male = data.get("profile_type") == "son"
     # → 10. Семейное положение
     bar = progress_bar(10, 10)
+    q_text = t("q_marital_status", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(
-        t("q_marital_status", lang, bar=bar),
+        full_text,
         reply_markup=add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False),
     )
     await state.set_state(QuestionnaireStates.q_marital_status)
@@ -406,8 +539,12 @@ async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
         await _show_stage1_complete(callback, state)
     else:
         # Разведён/а или Вдовец/Вдова → спросить про детей
+        data = await state.get_data()
+        card = build_card(data, lang)
+        q_text = t("q_children", lang)
+        full_text = (card + SEP + q_text) if card else q_text
         await callback.message.edit_text(
-            t("q_children", lang),
+            full_text,
             reply_markup=add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
         )
         await state.set_state(QuestionnaireStates.q_children)
@@ -430,19 +567,22 @@ async def q10_children(callback: CallbackQuery, state: FSMContext):
 # ══════════════════════════════════════
 
 async def _show_stage1_complete(callback: CallbackQuery, state: FSMContext):
-    """Показать экран завершения Этапа 1 с именем и возрастом."""
+    """Показать экран завершения Этапа 1 — полная карточка + кнопки."""
     data = await state.get_data()
     lang = data.get("lang", "ru")
     name = data.get("name", "—")
     age = data.get("age", "?")
 
-    text = t("stage1_complete", lang, name=name, age=age)
+    card = build_card(data, lang)
+    finish_text = t("stage1_complete", lang, name=name, age=age)
+    full_text = (card + SEP + finish_text) if card else finish_text
+
     kb = anketa_finish_kb(lang)
 
     try:
-        await callback.message.edit_text(text, reply_markup=kb)
+        await callback.message.edit_text(full_text, reply_markup=kb)
     except Exception:
-        await callback.message.answer(text, reply_markup=kb)
+        await callback.message.answer(full_text, reply_markup=kb)
 
     await state.set_state(QuestionnaireStates.stage1_complete)
 
@@ -481,9 +621,6 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
     is_male = data.get("profile_type") == "son"
     gender = data.get("profile_type", "son")
 
-    # Маппинг: текущий state → (text_key, prev_state, keyboard_func)
-    # None для keyboard = back_step_kb (текстовый ввод)
-
     # Определяем куда вернуться из stage1_complete
     marital = data.get("marital_status")
     if marital and marital != "never_married":
@@ -493,7 +630,7 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         complete_back = ("q_marital_status", QuestionnaireStates.q_marital_status,
                          lambda: add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False))
 
-    # Определяем куда вернуться из q16_religiosity (зависит от education)
+    # Определяем куда вернуться из q16_religiosity
     edu = data.get("education")
     if edu == "studying":
         religion_back = ("q5_university", QuestionnaireStates.q5_university, None)
@@ -508,67 +645,67 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         ),
         QuestionnaireStates.q2_confirm_age.state: (
             "q2", QuestionnaireStates.q2_birth_year, None,
-            lambda l, c: t("q2", l, bar=progress_bar(2, 10))
+            lambda l, c: _with_card(data, l, t("q2", l, bar=progress_bar(2, 10)))
         ),
         QuestionnaireStates.q3_height.state: (
             "q2", QuestionnaireStates.q2_birth_year, None,
-            lambda l, c: t("q2", l, bar=progress_bar(2, 10))
+            lambda l, c: _with_card(data, l, t("q2", l, bar=progress_bar(2, 10)))
         ),
         QuestionnaireStates.q21_photo_type.state: (
             "q2_height", QuestionnaireStates.q3_height, None,
-            lambda l, c: t("q2_height", l, bar=progress_bar(2, 10))
+            lambda l, c: _with_card(data, l, t("q2_height", l, bar=progress_bar(2, 10)))
         ),
         QuestionnaireStates.q4_body_type.state: (
             "q3_photo", QuestionnaireStates.q21_photo_type,
             lambda: add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q3_photo", l, bar=progress_bar(3, 10))
+            lambda l, c: _with_card(data, l, t("q3_photo", l, bar=progress_bar(3, 10)))
         ),
         QuestionnaireStates.q12_nationality.state: (
             "q4_body_type", QuestionnaireStates.q4_body_type,
             lambda: add_nav(body_type_kb(lang, gender).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q4_body_type", l, bar=progress_bar(4, 10))
+            lambda l, c: _with_card(data, l, t("q4_body_type", l, bar=progress_bar(4, 10)))
         ),
         QuestionnaireStates.q9_city_district.state: (
             "q12", QuestionnaireStates.q12_nationality,
             lambda: add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q12", l, bar=progress_bar(5, 10))
+            lambda l, c: _with_card(data, l, t("q12", l, bar=progress_bar(5, 10)))
         ),
         QuestionnaireStates.q5_education.state: (
             "q9_city_district", QuestionnaireStates.q9_city_district, None,
-            lambda l, c: t("q9_city_district", l, bar=progress_bar(6, 10))
+            lambda l, c: _with_card(data, l, t("q9_city_district", l, bar=progress_bar(6, 10)))
         ),
         QuestionnaireStates.q5_university.state: (
             "q5", QuestionnaireStates.q5_education,
             lambda: add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q5", l, bar=progress_bar(7, 10))
+            lambda l, c: _with_card(data, l, t("q5", l, bar=progress_bar(7, 10)))
         ),
         QuestionnaireStates.q6_work_choice.state: (
             "q5", QuestionnaireStates.q5_education,
             lambda: add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q5", l, bar=progress_bar(7, 10))
+            lambda l, c: _with_card(data, l, t("q5", l, bar=progress_bar(7, 10)))
         ),
         QuestionnaireStates.q6_occupation.state: (
             "q8_occupation", QuestionnaireStates.q6_work_choice,
             lambda: add_nav(occupation_kb(lang, gender).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q8_occupation", l, bar=progress_bar(8, 10))
+            lambda l, c: _with_card(data, l, t("q8_occupation", l, bar=progress_bar(8, 10)))
         ),
         QuestionnaireStates.q16_religiosity.state: (
             religion_back[0], religion_back[1], religion_back[2],
-            lambda l, c: t(religion_back[0], l, bar=progress_bar(8 if edu != "studying" else 7, 10))
+            lambda l, c: _with_card(data, l, t(religion_back[0], l, bar=progress_bar(8 if edu != "studying" else 7, 10)))
         ),
         QuestionnaireStates.q_marital_status.state: (
             "q16", QuestionnaireStates.q16_religiosity,
             lambda: add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q16", l, bar=progress_bar(9, 10))
+            lambda l, c: _with_card(data, l, t("q16", l, bar=progress_bar(9, 10)))
         ),
         QuestionnaireStates.q_children.state: (
             "q_marital_status", QuestionnaireStates.q_marital_status,
             lambda: add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False),
-            lambda l, c: t("q_marital_status", l, bar=progress_bar(10, 10))
+            lambda l, c: _with_card(data, l, t("q_marital_status", l, bar=progress_bar(10, 10)))
         ),
         QuestionnaireStates.stage1_complete.state: (
             complete_back[0], complete_back[1], complete_back[2],
-            None
+            lambda l, c: _with_card(data, l, t(complete_back[0], l, bar=progress_bar(10, 10)))
         ),
     }
 
@@ -578,7 +715,7 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         if text_func:
             msg_text = text_func(lang, child)
         else:
-            msg_text = t(text_key, lang, child=child, bar=progress_bar(10, 10))
+            msg_text = t(text_key, lang, child=child, bar=progress_bar(1, 10))
         if kb_func:
             kb = kb_func()
         else:
