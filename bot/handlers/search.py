@@ -193,6 +193,8 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
     if not filters:
         return ""
 
+    L = lang if lang in ("ru", "uz") else "ru"
+
     labels = {
         "ru": {
             "age":         "Возраст",
@@ -202,6 +204,7 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "region":      "Регион",
             "nationality": "Национальность",
             "marital":     "Семейное положение",
+            "children":    "Дети",
         },
         "uz": {
             "age":         "Yosh",
@@ -211,12 +214,13 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "region":      "Hudud",
             "nationality": "Millat",
             "marital":     "Oilaviy holat",
+            "children":    "Farzandlar",
         },
     }
 
     value_labels = {
         "ru": {
-            # Возраст
+            # Возраст (кнопки)
             "18_23": "18–23", "24_27": "24–27", "28_35": "28–35",
             "36_45": "36–45", "45plus": "45+",
             # Религиозность
@@ -226,20 +230,25 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "higher": "Высшее", "studying": "Студент",
             # Проживание
             "uzbekistan": "Узбекистан", "cis": "СНГ", "usa": "США",
-            "europe": "Европа", "other_country": "Другое",
+            "europe": "Европа", "other_country": "Другое", "other": "Другое",
             # Регионы Узбекистана
             "tashkent": "Ташкент", "samarkand": "Самарканд",
             "fergana": "Фергана", "bukhara": "Бухара",
             "namangan": "Наманган", "andijan": "Андижан", "nukus": "Нукус",
             # Национальность
             "uzbek": "Узбек", "russian": "Русский", "korean": "Кореец",
-            "tajik": "Таджик", "kazakh": "Казах", "other": "Другая",
+            "tajik": "Таджик", "kazakh": "Казах",
             # Семейное положение
             "never_married": "Не был(а) в браке", "divorced": "Разведён/а",
             "widowed": "Вдовец/Вдова",
+            # Дети
+            "no": "Нет", "no_children": "Нет",
+            "yes_with_me": "Есть, живут вместе",
+            "yes_with_ex": "Есть, живут с бывшим",
+            "has_children": "Есть",
         },
         "uz": {
-            # Возраст
+            # Возраст (кнопки)
             "18_23": "18–23", "24_27": "24–27", "28_35": "28–35",
             "36_45": "36–45", "45plus": "45+",
             # Религиозность
@@ -249,24 +258,45 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "higher": "Oliy", "studying": "Talaba",
             # Проживание
             "uzbekistan": "O'zbekiston", "cis": "MDH", "usa": "AQSH",
-            "europe": "Yevropa", "other_country": "Boshqa",
+            "europe": "Yevropa", "other_country": "Boshqa", "other": "Boshqa",
             # Регионы Узбекистана
             "tashkent": "Toshkent", "samarkand": "Samarqand",
             "fergana": "Farg'ona", "bukhara": "Buxoro",
             "namangan": "Namangan", "andijan": "Andijon", "nukus": "Nukus",
             # Национальность
             "uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys",
-            "tajik": "Tojik", "kazakh": "Qozoq", "other": "Boshqa",
+            "tajik": "Tojik", "kazakh": "Qozoq",
             # Семейное положение
             "never_married": "Turmush qurmagan", "divorced": "Ajrashgan",
             "widowed": "Beva",
+            # Дети
+            "no": "Yo'q", "no_children": "Yo'q",
+            "yes_with_me": "Bor, birga yashaydi",
+            "yes_with_ex": "Bor, sobiq bilan",
+            "has_children": "Bor",
         },
     }
 
-    L = lang if lang in ("ru", "uz") else "ru"
     lines = []
-    for key, value in filters.items():
-        # Если выбран регион — не показываем отдельно «Где проживает: Узбекистан»
+
+    # Возраст: age_from/age_to (из требований) ИЛИ age (из кнопок)
+    age_label = labels[L]["age"]
+    if filters.get("age_from") or filters.get("age_to"):
+        af = filters.get("age_from", "?")
+        at = filters.get("age_to", "?")
+        lines.append(f"• {age_label}: {af}–{at}")
+    elif filters.get("age"):
+        val = value_labels[L].get(filters["age"], filters["age"])
+        lines.append(f"• {age_label}: {val}")
+
+    # Остальные фильтры в фиксированном порядке
+    ordered_keys = ["religion", "education", "residence", "region",
+                    "nationality", "marital", "children"]
+    for key in ordered_keys:
+        value = filters.get(key)
+        if not value:
+            continue
+        # Если выбран регион — не дублируем «Где проживает: Узбекистан»
         if key == "residence" and "region" in filters:
             continue
         label = labels[L].get(key, key)
