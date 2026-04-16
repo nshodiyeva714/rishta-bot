@@ -16,9 +16,9 @@ from bot.texts import t
 from bot.keyboards.inline import (
     education_kb, nationality_kb, religiosity_kb,
     marital_kb, children_kb, photo_type_kb,
-    confirm_age_kb, tariff_kb,
+    confirm_age_kb, tariff_kb, skip_kb,
     back_step_kb, add_nav, body_type_kb, occupation_kb,
-    anketa_finish_kb,
+    anketa_finish_kb, city_kb,
 )
 
 router = Router()
@@ -86,10 +86,14 @@ def build_card(data: dict, lang: str = "ru") -> str:
         nat_label = nat_map[L].get(nat, nat)
         lines.append(f"{'Нац.' if L == 'ru' else 'Millat'}: {nat_label}")
 
-    # Город
+    # Город + район
     city = data.get("city")
     if city:
-        lines.append(f"📍 {city}")
+        district = data.get("district")
+        if district:
+            lines.append(f"📍 {city}, {district}")
+        else:
+            lines.append(f"📍 {city}")
 
     # Образование
     edu_map = {
@@ -375,22 +379,95 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
     await state.update_data(nationality=value)
     lang = await _lang(state)
     data = await state.get_data()
-    # → 6. Город
+    # → 6. Город (кнопки)
     bar = progress_bar(6, 10)
-    q_text = t("q9_city_district", lang, bar=bar)
+    q_text = t("q6_city", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+    )
     await state.update_data(last_bot_msg=callback.message.message_id)
-    await state.set_state(QuestionnaireStates.q9_city_district)
+    await state.set_state(QuestionnaireStates.q6_city)
     await callback.answer()
 
 
-# ── 6. Город и район ──
-@router.message(QuestionnaireStates.q9_city_district)
-async def q6_city(message: Message, state: FSMContext):
-    await _delete_old(message, state)
-    await state.update_data(city=message.text.strip())
+# ── 6. Город (кнопки) ──
+_CITY_NAMES = {
+    "ru": {
+        "tashkent": "Ташкент", "samarkand": "Самарканд",
+        "fergana": "Фергана", "bukhara": "Бухара",
+        "namangan": "Наманган", "andijan": "Андижан",
+        "nukus": "Нукус", "other": "Другой город",
+    },
+    "uz": {
+        "tashkent": "Toshkent", "samarkand": "Samarqand",
+        "fergana": "Farg'ona", "bukhara": "Buxoro",
+        "namangan": "Namangan", "andijan": "Andijon",
+        "nukus": "Nukus", "other": "Boshqa shahar",
+    },
+}
+
+
+@router.callback_query(F.data.startswith("city:"), QuestionnaireStates.q6_city)
+async def q6_city_selected(callback: CallbackQuery, state: FSMContext):
+    city_code = callback.data.split(":")[1]
     lang = await _lang(state)
+    L = lang if lang in ("ru", "uz") else "ru"
+    city_name = _CITY_NAMES[L].get(city_code, city_code)
+
+    await state.update_data(city_code=city_code, city=city_name)
+
+    if city_code == "other":
+        # «Другой» → ввод названия города текстом
+        data = await state.get_data()
+        bar = progress_bar(6, 10)
+        if lang == "uz":
+            q_text = f"6/10-savol\n{bar}\n\nShahar nomini kiriting:"
+        else:
+            q_text = f"Вопрос 6/10\n{bar}\n\nВведите название города:"
+        full_text = _with_card(data, lang, q_text)
+        await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
+        await state.set_state(QuestionnaireStates.q6_district)
+    else:
+        # Обычный город → спросить район
+        data = await state.get_data()
+        bar = progress_bar(6, 10)
+        if lang == "uz":
+            q_text = (f"6/10-savol\n{bar}\n\n"
+                      f"Tanlandi: {city_name}\n\n"
+                      f"Tuman (ixtiyoriy):\n"
+                      f"(masalan: Yunusobod, Chilonzor)")
+        else:
+            q_text = (f"Вопрос 6/10\n{bar}\n\n"
+                      f"Выбран: {city_name}\n\n"
+                      f"Район (необязательно):\n"
+                      f"(например: Юнусабад, Чиланзар)")
+        full_text = _with_card(data, lang, q_text)
+        await callback.message.edit_text(
+            full_text,
+            reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        )
+        await state.update_data(last_bot_msg=callback.message.message_id)
+        await state.set_state(QuestionnaireStates.q6_district)
+    await callback.answer()
+
+
+# ── 6b. Район текстом ──
+@router.message(QuestionnaireStates.q6_district)
+async def q6_district_entered(message: Message, state: FSMContext):
+    await _delete_old(message, state)
+    lang = await _lang(state)
+    text_input = message.text.strip()
+    data = await state.get_data()
+
+    # Если city_code == "other", то текст — это город (не район)
+    if data.get("city_code") == "other":
+        await state.update_data(city=text_input, district="")
+    else:
+        await state.update_data(district=text_input)
+
     data = await state.get_data()
     # → 7. Образование
     bar = progress_bar(7, 10)
@@ -402,6 +479,25 @@ async def q6_city(message: Message, state: FSMContext):
     )
     await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q5_education)
+
+
+# ── 6b. Пропустить район ──
+@router.callback_query(F.data == "skip", QuestionnaireStates.q6_district)
+async def q6_district_skip(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    await state.update_data(district="")
+    data = await state.get_data()
+    # → 7. Образование
+    bar = progress_bar(7, 10)
+    q_text = t("q5", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+    )
+    await state.update_data(last_bot_msg=callback.message.message_id)
+    await state.set_state(QuestionnaireStates.q5_education)
+    await callback.answer()
 
 
 # ── 7. Образование ──
@@ -684,14 +780,20 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
             lambda: add_nav(body_type_kb(lang, gender).inline_keyboard, lang, "back_step", show_main=False),
             lambda l, c: _with_card(data, l, t("q4_body_type", l, bar=progress_bar(4, 10)))
         ),
-        QuestionnaireStates.q9_city_district.state: (
+        QuestionnaireStates.q6_city.state: (
             "q12", QuestionnaireStates.q12_nationality,
             lambda: add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
             lambda l, c: _with_card(data, l, t("q12", l, bar=progress_bar(5, 10)))
         ),
+        QuestionnaireStates.q6_district.state: (
+            "q6_city", QuestionnaireStates.q6_city,
+            lambda: add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+            lambda l, c: _with_card(data, l, t("q6_city", l, bar=progress_bar(6, 10)))
+        ),
         QuestionnaireStates.q5_education.state: (
-            "q9_city_district", QuestionnaireStates.q9_city_district, None,
-            lambda l, c: _with_card(data, l, t("q9_city_district", l, bar=progress_bar(6, 10)))
+            "q6_city", QuestionnaireStates.q6_city,
+            lambda: add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+            lambda l, c: _with_card(data, l, t("q6_city", l, bar=progress_bar(6, 10)))
         ),
         QuestionnaireStates.q5_university.state: (
             "q5", QuestionnaireStates.q5_education,

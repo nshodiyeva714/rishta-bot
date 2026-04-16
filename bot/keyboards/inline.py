@@ -484,6 +484,44 @@ def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+# ── City keyboard (questionnaire step 6) ──
+
+def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Выбор города кнопками."""
+    if lang == "uz":
+        opts = [
+            ("Toshkent",   "city:tashkent"),
+            ("Samarqand",  "city:samarkand"),
+            ("Farg'ona",   "city:fergana"),
+            ("Buxoro",     "city:bukhara"),
+            ("Namangan",   "city:namangan"),
+            ("Andijon",    "city:andijan"),
+            ("Nukus",      "city:nukus"),
+            ("Boshqa",     "city:other"),
+        ]
+    else:
+        opts = [
+            ("Ташкент",    "city:tashkent"),
+            ("Самарканд",  "city:samarkand"),
+            ("Фергана",    "city:fergana"),
+            ("Бухара",     "city:bukhara"),
+            ("Наманган",   "city:namangan"),
+            ("Андижан",    "city:andijan"),
+            ("Нукус",      "city:nukus"),
+            ("Другой",     "city:other"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=opts[0][0], callback_data=opts[0][1]),
+         InlineKeyboardButton(text=opts[1][0], callback_data=opts[1][1])],
+        [InlineKeyboardButton(text=opts[2][0], callback_data=opts[2][1]),
+         InlineKeyboardButton(text=opts[3][0], callback_data=opts[3][1])],
+        [InlineKeyboardButton(text=opts[4][0], callback_data=opts[4][1]),
+         InlineKeyboardButton(text=opts[5][0], callback_data=opts[5][1])],
+        [InlineKeyboardButton(text=opts[6][0], callback_data=opts[6][1]),
+         InlineKeyboardButton(text=opts[7][0], callback_data=opts[7][1])],
+    ])
+
+
 # ── Requirements keyboards ──
 
 def req_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:

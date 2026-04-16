@@ -719,7 +719,7 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         except ValueError:
             pass
 
-    # Фильтр: регион (город) — ILIKE по family_region и city
+    # Фильтр: регион (город) — по city_code или ILIKE по city/family_region
     if filters.get("region"):
         region_map = {
             "tashkent": "ташкент%", "samarkand": "самарканд%",
@@ -736,6 +736,7 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         pat_uz = region_map_uz.get(region_val, f"{region_val}%")
         from sqlalchemy import or_
         conditions.append(or_(
+            Profile.city_code == region_val,
             Profile.family_region.ilike(pat_ru),
             Profile.family_region.ilike(pat_uz),
             Profile.city.ilike(pat_ru),

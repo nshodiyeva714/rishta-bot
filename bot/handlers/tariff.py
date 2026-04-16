@@ -533,6 +533,7 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
         parent_housing_type=safe_enum(ParentHousing, data.get("parent_housing_type")),
         car=safe_enum(CarStatus, data.get("car")),
         city=data.get("city"),
+        city_code=data.get("city_code"),
         district=data.get("district"),
         address=data.get("address"),
         residence_status=safe_enum(ResidenceStatus, data.get("residence_status")),

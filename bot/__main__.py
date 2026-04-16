@@ -35,6 +35,12 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS city_code VARCHAR(50)"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей

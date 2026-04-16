@@ -243,8 +243,8 @@ T = {
         "uz": "5/10-savol\n{bar}\n\nMillati:",
     },
     "q6_city": {
-        "ru": "Вопрос 6/10\n{bar}\n\nГород и район проживания:\n(например: Ташкент, Юнусабад)",
-        "uz": "6/10-savol\n{bar}\n\nYashash shahri va tumani:\n(masalan: Toshkent, Yunusobod)",
+        "ru": "Вопрос 6/10\n{bar}\n\nГород проживания:",
+        "uz": "6/10-savol\n{bar}\n\nYashash shahri:",
     },
     "q7_education": {
         "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
@@ -316,8 +316,8 @@ T = {
         "uz": "🚗 <b>8-savol</b>\n\nAvtomobil mavjudligi:",
     },
     "q9_city_district": {
-        "ru": "Вопрос 6/10\n{bar}\n\nГород и район проживания:\n(например: Ташкент, Юнусабад)",
-        "uz": "6/10-savol\n{bar}\n\nYashash shahri va tumani:\n(masalan: Toshkent, Yunusobod)",
+        "ru": "Вопрос 6/10\n{bar}\n\nГород проживания:",
+        "uz": "6/10-savol\n{bar}\n\nYashash shahri:",
     },
     "q9_address": {
         "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
