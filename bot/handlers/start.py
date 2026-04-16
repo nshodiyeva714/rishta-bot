@@ -97,21 +97,11 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
 
     await session.commit()
 
-    # Проверяем: если пользователь уже давал согласие — сразу в меню
-    if user.consent_general and user.consent_special:
-        await callback.message.edit_text(
-            t("main_menu", lang),
-            reply_markup=main_menu_kb(lang, callback.from_user.id),
-        )
-    else:
-        # Показываем согласие
-        await callback.message.edit_text(
-            t("consent_general", lang),
-            reply_markup=consent_general_kb(lang),
-        )
-        await state.set_state(ConsentStates.general)
-        await state.update_data(lang=lang)
-
+    # Сразу в главное меню (без экранов согласия)
+    await callback.message.edit_text(
+        t("main_menu", lang),
+        reply_markup=main_menu_kb(lang, callback.from_user.id),
+    )
     await callback.answer()
 
 
