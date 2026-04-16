@@ -41,13 +41,7 @@ async def _lang(state: FSMContext) -> str:
 @router.callback_query(F.data == "tariff:free", TariffStates.choose)
 async def choose_tariff_free(callback: CallbackQuery, state: FSMContext):
     await state.update_data(is_vip=False, vip_days=0)
-    lang = await _lang(state)
-    await callback.message.edit_text(
-        t("req_intro", lang) + "\n\n" + t("req_residence", lang),
-        reply_markup=add_nav(req_residence_simple_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(RequirementStates.residence)
-    await callback.answer()
+    await _show_summary(callback, state, is_callback=True)
 
 
 @router.callback_query(F.data == "tariff:vip", TariffStates.choose)
@@ -87,15 +81,10 @@ async def choose_vip_duration(callback: CallbackQuery, state: FSMContext):
     days = int(callback.data.split(":")[1])
     await state.update_data(is_vip=True, vip_days=days)
     lang = await _lang(state)
-    await callback.message.edit_text(
-        t("req_intro", lang) + "\n\n" + t("req_residence", lang),
-        reply_markup=add_nav(req_residence_simple_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(RequirementStates.residence)
-    await callback.answer()
+    await _show_summary(callback, state, is_callback=True)
 
 
-# ── Шаг 7: Требования ──
+# ── Шаг 7: Требования (отключено, хендлеры оставлены для совместимости) ──
 _AGE_MAP = {
     "age_18_23": (18, 23),
     "age_24_27": (24, 27),
