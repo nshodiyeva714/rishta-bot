@@ -19,9 +19,14 @@ from bot.keyboards.inline import feedback_kb, reminder_kb
 
 logger = logging.getLogger(__name__)
 
+# Глобальная ссылка на scheduler для добавления one-shot задач
+_scheduler: AsyncIOScheduler | None = None
+
 
 def setup_scheduled_jobs(scheduler: AsyncIOScheduler, bot: Bot):
     """Регистрация периодических задач."""
+    global _scheduler
+    _scheduler = scheduler
     # Дневной отчёт модератору в 20:00
     scheduler.add_job(
         daily_report,
@@ -270,3 +275,42 @@ async def check_vip_expiry(bot: Bot):
             logger.info(f"⭐ VIP expired: {display_id}")
 
         await session.commit()
+
+
+def schedule_extend_invite(bot: Bot, user_id: int, profile_id: int, display_id: str, lang: str):
+    """Запланировать приглашение дополнить анкету через 10 минут."""
+    if not _scheduler:
+        logger.warning("Scheduler not initialized, skipping extend invite")
+        return
+
+    run_date = datetime.now() + timedelta(minutes=10)
+
+    async def _send_invite():
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="✏️ Дополнить анкету" if lang == "ru" else "✏️ Anketani to'ldirish",
+                callback_data=f"extend:{profile_id}",
+            )],
+            [InlineKeyboardButton(
+                text="⏭ Позже" if lang == "ru" else "⏭ Keyinroq",
+                callback_data="extend:skip",
+            )],
+        ])
+        try:
+            await bot.send_message(
+                user_id,
+                t("extend_invite", lang, display_id=display_id),
+                reply_markup=kb,
+            )
+            logger.info(f"📩 Extend invite sent to {user_id} for {display_id}")
+        except Exception as e:
+            logger.error(f"Ошибка отправки extend invite: {e}")
+
+    _scheduler.add_job(
+        _send_invite,
+        "date",
+        run_date=run_date,
+        id=f"extend_{user_id}_{profile_id}",
+        replace_existing=True,
+    )

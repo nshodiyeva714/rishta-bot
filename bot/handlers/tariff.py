@@ -362,6 +362,13 @@ async def confirm_profile(callback: CallbackQuery, state: FSMContext, session: A
         except Exception:
             pass  # Модератор недоступен — не блокируем пользователя
 
+    # Запланировать приглашение дополнить анкету через 10 минут
+    try:
+        from bot.services.scheduler import schedule_extend_invite
+        schedule_extend_invite(bot, callback.from_user.id, profile.id, display_id, lang)
+    except Exception:
+        pass
+
     await state.clear()
     await callback.answer()
 

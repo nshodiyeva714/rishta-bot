@@ -525,3 +525,36 @@ async def user_feedback_receive(message: Message, state: FSMContext, session: As
 
     await message.answer(t("user_feedback_thanks", lang), reply_markup=main_menu_kb(lang, user.id))
     await state.clear()
+
+
+# ── Extend: дополнить анкету / пропустить ──
+
+@router.callback_query(F.data == "extend:skip")
+async def extend_skip(callback: CallbackQuery):
+    lang = "ru"
+    try:
+        await callback.message.edit_text(
+            "👌 " + ("Xabar olasiz keyinroq" if callback.from_user.language_code == "uz" else "Хорошо, напомним позже")
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("extend:"))
+async def extend_start(callback: CallbackQuery, session: AsyncSession):
+    """Пользователь хочет дополнить анкету — пока заглушка."""
+    profile_id = int(callback.data.split(":")[1])
+    lang = await get_lang(session, callback.from_user.id)
+
+    text = (
+        "✏️ <b>Дополнение анкеты</b>\n\n"
+        "Эта функция скоро будет доступна!\n"
+        "Мы уведомим вас 🤝"
+    ) if lang == "ru" else (
+        "✏️ <b>Anketani to'ldirish</b>\n\n"
+        "Bu funksiya tez orada tayyor bo'ladi!\n"
+        "Sizga xabar beramiz 🤝"
+    )
+    await _safe_edit(callback, text, reply_markup=back_kb(lang))
+    await callback.answer()
