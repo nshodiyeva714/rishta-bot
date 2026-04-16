@@ -224,60 +224,16 @@ def religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
-def marital_children_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
-    """Семейное положение + дети в одном вопросе (Этап 1)."""
-    if is_male:
-        if lang == "uz":
-            opts = [
-                ("💍 Uylanmagan, farzand yo'q", "mc:single_no"),
-                ("💍 Uylanmagan, farzand bor", "mc:single_yes"),
-                ("💔 Ajrashgan, farzand yo'q", "mc:divorced_no"),
-                ("💔 Ajrashgan, farzand bor", "mc:divorced_yes"),
-                ("🖤 Beva, farzand yo'q", "mc:widower_no"),
-                ("🖤 Beva, farzand bor", "mc:widower_yes"),
-            ]
-        else:
-            opts = [
-                ("💍 Не был женат, детей нет", "mc:single_no"),
-                ("💍 Не был женат, есть дети", "mc:single_yes"),
-                ("💔 Разведён, детей нет", "mc:divorced_no"),
-                ("💔 Разведён, есть дети", "mc:divorced_yes"),
-                ("🖤 Вдовец, детей нет", "mc:widower_no"),
-                ("🖤 Вдовец, есть дети", "mc:widower_yes"),
-            ]
-    else:
-        if lang == "uz":
-            opts = [
-                ("💍 Turmush qurmagan, farzand yo'q", "mc:single_no"),
-                ("💍 Turmush qurmagan, farzand bor", "mc:single_yes"),
-                ("💔 Ajrashgan, farzand yo'q", "mc:divorced_no"),
-                ("💔 Ajrashgan, farzand bor", "mc:divorced_yes"),
-                ("🖤 Beva, farzand yo'q", "mc:widower_no"),
-                ("🖤 Beva, farzand bor", "mc:widower_yes"),
-            ]
-        else:
-            opts = [
-                ("💍 Не была замужем, детей нет", "mc:single_no"),
-                ("💍 Не была замужем, есть дети", "mc:single_yes"),
-                ("💔 Разведена, детей нет", "mc:divorced_no"),
-                ("💔 Разведена, есть дети", "mc:divorced_yes"),
-                ("🖤 Вдова, детей нет", "mc:widower_no"),
-                ("🖤 Вдова, есть дети", "mc:widower_yes"),
-            ]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
-    ])
-
-
 def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
+    """Шаг 1: семейное положение (3 кнопки)."""
     if is_male:
         labels = {
-            "ru": ["💍 Никогда не был женат", "💔 Разведён", "🖤 Вдовец"],
+            "ru": ["💍 Не был женат", "💔 Разведён", "🖤 Вдовец"],
             "uz": ["💍 Hech uylanmagan", "💔 Ajrashgan", "🖤 Beva"],
         }
     else:
         labels = {
-            "ru": ["💍 Никогда не была замужем", "💔 Разведена", "🖤 Вдова"],
+            "ru": ["💍 Не была замужем", "💔 Разведена", "🖤 Вдова"],
             "uz": ["💍 Hech turmushga chiqmagan", "💔 Ajrashgan", "🖤 Beva"],
         }
     values = ["never_married", "divorced", "widowed"]
@@ -288,14 +244,19 @@ def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
 
 
 def children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["👶 Нет", "👶 Да — живут со мной", "👶 Да — живут с бывшей/им"],
-        "uz": ["👶 Yo'q", "👶 Ha — men bilan yashaydi", "👶 Ha — sobiq turmush o'rtoq bilan"],
-    }
-    values = ["no", "yes_with_me", "yes_with_ex"]
+    """Шаг 2: дети (2 кнопки, только если разведён/вдовец)."""
+    if lang == "uz":
+        opts = [
+            ("👶 Farzand yo'q", "child:no"),
+            ("👶 Farzand bor", "child:yes"),
+        ]
+    else:
+        opts = [
+            ("👶 Детей нет", "child:no"),
+            ("👶 Есть дети", "child:yes"),
+        ]
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"child:{values[i]}")]
-        for i in range(3)
+        [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
     ])
 
 

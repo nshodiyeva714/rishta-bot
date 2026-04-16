@@ -17,7 +17,7 @@ from bot.states import QuestionnaireStates, TariffStates
 from bot.texts import t
 from bot.keyboards.inline import (
     education_kb, nationality_kb, religiosity_kb,
-    marital_children_kb, skip_kb, photo_type_kb,
+    marital_kb, children_kb, skip_kb, photo_type_kb,
     confirm_age_kb, back_kb, tariff_kb, work_choice_kb,
 )
 
@@ -216,31 +216,46 @@ async def q9_religiosity(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     data = await state.get_data()
     is_male = data.get("profile_type") == "son"
-    # → 10. Семейное положение + дети
+    # → 10. Семейное положение (3 кнопки)
     await callback.message.edit_text(
-        t("q_marital_children", lang),
-        reply_markup=marital_children_kb(lang, is_male),
+        t("q_marital_status", lang),
+        reply_markup=marital_kb(lang, is_male),
     )
-    await state.set_state(QuestionnaireStates.q_marital_children)
+    await state.set_state(QuestionnaireStates.q_marital_status)
     await callback.answer()
 
 
-# ── 10. Семейное положение + дети (объединённый) ──
-@router.callback_query(F.data.startswith("mc:"), QuestionnaireStates.q_marital_children)
-async def q10_marital_children(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]  # single_no, divorced_yes, etc.
-    parts = value.split("_")
-    marital = parts[0]  # single / divorced / widower
-    children = parts[1]  # no / yes
+# ── 10. Семейное положение (Шаг 1) ──
+@router.callback_query(F.data.startswith("mar:"), QuestionnaireStates.q_marital_status)
+async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
+    marital = callback.data.split(":")[1]  # never_married / divorced / widowed
+    await state.update_data(marital_status=marital)
+    lang = await _lang(state)
 
-    # Маппинг в значения БД
-    marital_map = {"single": "never_married", "divorced": "divorced", "widower": "widowed"}
-    children_map = {"no": "no_children", "yes": "has_children"}
+    if marital == "never_married":
+        # Не был(а) в браке → детей нет автоматически → сразу к фото
+        await state.update_data(children_status="no")
+        await callback.message.edit_text(
+            t("q_photo_optional", lang),
+            reply_markup=photo_type_kb(lang),
+        )
+        await state.set_state(QuestionnaireStates.q21_photo_type)
+    else:
+        # Разведён/а или Вдовец/Вдова → спросить про детей
+        await callback.message.edit_text(
+            t("q_children", lang),
+            reply_markup=children_kb(lang),
+        )
+        await state.set_state(QuestionnaireStates.q_children)
+    await callback.answer()
 
-    await state.update_data(
-        marital_status=marital_map.get(marital, marital),
-        children_status=children_map.get(children, children),
-    )
+
+# ── 10b. Дети (только если разведён/вдовец) ──
+@router.callback_query(F.data.startswith("child:"), QuestionnaireStates.q_children)
+async def q10_children(callback: CallbackQuery, state: FSMContext):
+    value = callback.data.split(":")[1]  # no / yes
+    children_map = {"no": "no", "yes": "yes_with_me"}
+    await state.update_data(children_status=children_map.get(value, value))
     lang = await _lang(state)
     # → Фото (необязательно)
     await callback.message.edit_text(
@@ -335,8 +350,9 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         QuestionnaireStates.q5_education.state: ("q9_city_district", QuestionnaireStates.q9_city_district, None),
         QuestionnaireStates.q6_work_choice.state: ("q5", QuestionnaireStates.q5_education, "education_kb"),
         QuestionnaireStates.q16_religiosity.state: ("q6_choice", QuestionnaireStates.q6_work_choice, "work_choice_kb"),
-        QuestionnaireStates.q_marital_children.state: ("q16", QuestionnaireStates.q16_religiosity, "religiosity_kb"),
-        QuestionnaireStates.q21_photo_type.state: ("q_marital_children", QuestionnaireStates.q_marital_children, "marital_children_kb"),
+        QuestionnaireStates.q_marital_status.state: ("q16", QuestionnaireStates.q16_religiosity, "religiosity_kb"),
+        QuestionnaireStates.q_children.state: ("q_marital_status", QuestionnaireStates.q_marital_status, "marital_kb"),
+        QuestionnaireStates.q21_photo_type.state: ("q_marital_status", QuestionnaireStates.q_marital_status, "marital_kb"),
         QuestionnaireStates.q22_parent_phone.state: ("q_photo_optional", QuestionnaireStates.q21_photo_type, "photo_type_kb"),
     }
 
@@ -345,7 +361,7 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         "education_kb": lambda: education_kb(lang),
         "work_choice_kb": lambda: work_choice_kb(lang),
         "religiosity_kb": lambda: religiosity_kb(lang),
-        "marital_children_kb": lambda: marital_children_kb(lang, is_male),
+        "marital_kb": lambda: marital_kb(lang, is_male),
         "photo_type_kb": lambda: photo_type_kb(lang),
     }
 

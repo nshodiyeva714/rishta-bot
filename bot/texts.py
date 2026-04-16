@@ -311,9 +311,13 @@ T = {
         "ru": "🕌 <b>Вопрос 9/10</b>\n\nРелигиозность:",
         "uz": "🕌 <b>9/10-savol</b>\n\nDindorlik:",
     },
-    "q_marital_children": {
-        "ru": "💍 <b>Вопрос 10/10</b>\n\nСемейное положение и дети:",
-        "uz": "💍 <b>10/10-savol</b>\n\nOilaviy holat va farzandlar:",
+    "q_marital_status": {
+        "ru": "💍 <b>Вопрос 10/10</b>\n\nСемейное положение:",
+        "uz": "💍 <b>10/10-savol</b>\n\nOilaviy holati:",
+    },
+    "q_children": {
+        "ru": "👶 Есть ли дети?",
+        "uz": "👶 Farzandlaringiz bormi?",
     },
     "q_photo_optional": {
         "ru": "📸 Фото (необязательно)\n\n🔒 Защищено от скриншотов",

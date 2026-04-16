@@ -24,7 +24,8 @@ class QuestionnaireStates(StatesGroup):
     q6_work_choice = State()       # 8. Работа
     q6_occupation = State()
     q16_religiosity = State()      # 9. Религиозность
-    q_marital_children = State()   # 10. Семейное положение + дети
+    q_marital_status = State()     # 10. Семейное положение
+    q_children = State()           # 10b. Дети (только если разведён/вдовец)
     q21_photo_type = State()       # Фото (необязательно)
     q21_photo_upload = State()
     q22_parent_phone = State()     # Телефон (необязательно)
