@@ -408,15 +408,17 @@ async def show_search_filters(callback: CallbackQuery, session: AsyncSession, st
 
 @router.callback_query(F.data == "search:manual")
 async def search_manual(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """Показать меню ручных фильтров."""
+    """Показать меню ручных фильтров — всегда с чистыми фильтрами."""
     data = await state.get_data()
-    filters = data.get("search_filters", {})
 
-    # Если search_type ещё не установлен — определяем
+    # Определяем search_type если ещё нет
     if "search_type" not in data:
         my_profile = await _get_user_profile(session, callback.from_user.id)
         search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
-        await state.update_data(search_type=search_type, search_filters=filters, search_offset=0)
+        await state.update_data(search_type=search_type)
+
+    # Всегда начинаем с пустых фильтров
+    await state.update_data(search_filters={}, search_offset=0)
 
     await show_search_filters(callback, session, state)
 
