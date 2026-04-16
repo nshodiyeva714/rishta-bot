@@ -386,16 +386,12 @@ async def search_by_my_requirements(callback: CallbackQuery, session: AsyncSessi
 # ══════════════════════════════════════════════════════════
 
 async def show_search_filters(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """Умный экран фильтров — выбранные как текст, невыбранные как кнопки."""
+    """Экран фильтров — все кнопки видны, выбранные отмечены ✅."""
     lang = await get_lang(session, callback.from_user.id)
     data = await state.get_data()
     filters = data.get("search_filters", {})
 
-    # Заголовок + выбранные фильтры
-    header = t("search_filters_title", lang)
-    selected = build_selected_filters_text(filters, lang)
-    text = header + ("\n" + selected if selected else "")
-
+    text = t("search_filters_title", lang)
     kb = search_filter_kb(lang, filters)
     try:
         await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
@@ -403,7 +399,7 @@ async def show_search_filters(callback: CallbackQuery, session: AsyncSession, st
         try:
             await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
         except Exception as e:
-            logger.error(f"show_search_filters answer error: {e}")
+            logger.error(f"show_search_filters error: {e}")
     try:
         await callback.answer()
     except Exception:

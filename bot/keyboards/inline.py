@@ -703,8 +703,62 @@ def search_no_anketa_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def _filter_value_label(key: str, value, lang: str, filters: dict) -> str:
+    """Человекочитаемое значение фильтра на языке пользователя."""
+    L = lang if lang in ("ru", "uz") else "ru"
+    vl = {
+        "ru": {
+            "age": {"18_23": "18–23", "24_27": "24–27", "28_35": "28–35",
+                    "36_45": "36–45", "45plus": "45+"},
+            "religion": {"practicing": "Практикующий", "moderate": "Умеренный",
+                         "secular": "Светский"},
+            "education": {"secondary": "Среднее", "vocational": "Среднее спец.",
+                          "higher": "Высшее", "studying": "Студент"},
+            "residence": {"uzbekistan": "Узбекистан", "cis": "СНГ", "usa": "США",
+                          "europe": "Европа", "other_country": "Другое", "other": "Другое",
+                          "tashkent": "Ташкент", "samarkand": "Самарканд",
+                          "fergana": "Фергана", "bukhara": "Бухара",
+                          "namangan": "Наманган", "andijan": "Андижан", "nukus": "Нукус"},
+            "nationality": {"uzbek": "Узбек", "russian": "Русский", "korean": "Кореец",
+                            "tajik": "Таджик", "kazakh": "Казах", "other": "Другая"},
+            "marital": {"never_married": "Не был(а) в браке", "divorced": "Разведён/а",
+                        "widowed": "Вдовец/Вдова"},
+            "children": {"no": "Без детей", "no_children": "Без детей",
+                         "has_children": "Есть дети",
+                         "yes_with_me": "Есть", "yes_with_ex": "Есть"},
+        },
+        "uz": {
+            "age": {"18_23": "18–23", "24_27": "24–27", "28_35": "28–35",
+                    "36_45": "36–45", "45plus": "45+"},
+            "religion": {"practicing": "Amaliyotchi", "moderate": "Mo'tadil",
+                         "secular": "Dunyoviy"},
+            "education": {"secondary": "O'rta", "vocational": "O'rta maxsus",
+                          "higher": "Oliy", "studying": "Talaba"},
+            "residence": {"uzbekistan": "O'zbekiston", "cis": "MDH", "usa": "AQSH",
+                          "europe": "Yevropa", "other_country": "Boshqa", "other": "Boshqa",
+                          "tashkent": "Toshkent", "samarkand": "Samarqand",
+                          "fergana": "Farg'ona", "bukhara": "Buxoro",
+                          "namangan": "Namangan", "andijan": "Andijon", "nukus": "Nukus"},
+            "nationality": {"uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys",
+                            "tajik": "Tojik", "kazakh": "Qozoq", "other": "Boshqa"},
+            "marital": {"never_married": "Turmush qurmagan", "divorced": "Ajrashgan",
+                        "widowed": "Beva"},
+            "children": {"no": "Farzandsiz", "no_children": "Farzandsiz",
+                         "has_children": "Farzandli",
+                         "yes_with_me": "Bor", "yes_with_ex": "Bor"},
+        },
+    }
+    # Специальный случай: возраст из требований (age_from/age_to)
+    if key == "age" and "age_from" in filters:
+        return f"{filters.get('age_from', '?')}–{filters.get('age_to', '?')}"
+    # Специальный случай: регион
+    if key == "residence" and "region" in filters:
+        return vl[L].get("residence", {}).get(str(filters["region"]), str(filters["region"]))
+    return vl[L].get(key, {}).get(str(value), str(value))
+
+
 def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKeyboardMarkup:
-    """Умное меню фильтров — показывает только НЕ выбранные фильтры."""
+    """Меню фильтров — ВСЕ кнопки всегда видны, выбранные отмечены ✅."""
     if filters is None:
         filters = {}
     is_uz = lang == "uz"
@@ -719,18 +773,23 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
         ("children",    "Farzandlar" if is_uz else "Наличие детей",  "filter:children"),
     ]
 
-    # Возраст выбран если есть "age" (кнопки) ИЛИ "age_from"/"age_to" (требования)
+    # Определяем какие фильтры выбраны
     age_selected = "age" in filters or "age_from" in filters or "age_to" in filters
+    residence_selected = "residence" in filters or "region" in filters
 
     buttons = []
     for key, label, cb in all_filters:
-        # Скрываем «Где проживает» если выбран регион ИЛИ страна
-        if key == "residence" and ("residence" in filters or "region" in filters):
-            continue
-        # Скрываем «Возраст» если выбран в любом формате
         if key == "age" and age_selected:
-            continue
-        if key not in filters:
+            val = _filter_value_label("age", filters.get("age", ""), lang, filters)
+            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
+        elif key == "residence" and residence_selected:
+            res_val = filters.get("region") or filters.get("residence", "")
+            val = _filter_value_label("residence", res_val, lang, filters)
+            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
+        elif key in filters:
+            val = _filter_value_label(key, filters[key], lang, filters)
+            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
+        else:
             buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
 
     # Кнопка поиска
