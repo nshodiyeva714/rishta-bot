@@ -441,7 +441,6 @@ async def filter_age(callback: CallbackQuery, session: AsyncSession):
         ("28–35", "fval:age:28_35"),
         ("36–45", "fval:age:36_45"),
         ("45+",   "fval:age:45plus"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:age:any"),
     ]
     title = "Возраст:" if lang == "ru" else "Yosh:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -456,7 +455,6 @@ async def filter_religion(callback: CallbackQuery, session: AsyncSession):
         ("Практикующий" if lang == "ru" else "Amaliyotchi", "fval:religion:practicing"),
         ("Умеренный" if lang == "ru" else "Mo'tadil",       "fval:religion:moderate"),
         ("Светский" if lang == "ru" else "Dunyoviy",        "fval:religion:secular"),
-        ("Не важно" if lang == "ru" else "Muhim emas",      "fval:religion:any"),
     ]
     title = "Религиозность:" if lang == "ru" else "Dindorlik:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -472,7 +470,6 @@ async def filter_education(callback: CallbackQuery, session: AsyncSession):
         ("Среднее специальное" if lang == "ru" else "O'rta maxsus", "fval:education:vocational"),
         ("Высшее" if lang == "ru" else "Oliy",                      "fval:education:higher"),
         ("Студент" if lang == "ru" else "Talaba",                   "fval:education:studying"),
-        ("Не важно" if lang == "ru" else "Muhim emas",              "fval:education:any"),
     ]
     title = "Образование:" if lang == "ru" else "Ma'lumot:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -487,7 +484,6 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
         ("Не был(а) в браке" if lang == "ru" else "Turmush qurmagan", "fval:marital:never_married"),
         ("Разведён/а" if lang == "ru" else "Ajrashgan", "fval:marital:divorced"),
         ("Вдовец/Вдова" if lang == "ru" else "Beva", "fval:marital:widowed"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:marital:any"),
     ]
     title = "Семейное положение:" if lang == "ru" else "Oilaviy holat:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -499,11 +495,29 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Узбекистан" if lang == "ru" else "O'zbekiston", "fval:residence:uzbekistan"),
+        ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
         ("Другое" if lang == "ru" else "Boshqa",          "fval:residence:other_country"),
-        ("Не важно" if lang == "ru" else "Muhim emas",    "fval:residence:any"),
     ]
     title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
+    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    await callback.answer()
+
+
+# ── Узбекистан → выбор региона ──
+@router.callback_query(F.data == "filter:residence:uzb")
+async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    options = [
+        ("Ташкент" if lang == "ru" else "Toshkent",       "fval:region:tashkent"),
+        ("Самарканд" if lang == "ru" else "Samarqand",     "fval:region:samarkand"),
+        ("Фергана" if lang == "ru" else "Farg'ona",        "fval:region:fergana"),
+        ("Бухара" if lang == "ru" else "Buxoro",           "fval:region:bukhara"),
+        ("Наманган" if lang == "ru" else "Namangan",       "fval:region:namangan"),
+        ("Андижан" if lang == "ru" else "Andijon",         "fval:region:andijan"),
+        ("Нукус" if lang == "ru" else "Nukus",             "fval:region:nukus"),
+        ("Весь Узбекистан" if lang == "ru" else "Barcha",  "fval:residence:uzbekistan"),
+    ]
+    title = "Выберите регион:" if lang == "ru" else "Hududni tanlang:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
     await callback.answer()
 
@@ -519,7 +533,6 @@ async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
         ("Таджик" if lang == "ru" else "Tojik", "fval:nationality:tajik"),
         ("Казах" if lang == "ru" else "Qozoq", "fval:nationality:kazakh"),
         ("Другая" if lang == "ru" else "Boshqa", "fval:nationality:other"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:nationality:any"),
     ]
     title = "Национальность:" if lang == "ru" else "Millat:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -532,7 +545,6 @@ async def filter_children(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("Без детей" if lang == "ru" else "Farzandsiz", "fval:children:no"),
-        ("Не важно" if lang == "ru" else "Muhim emas",  "fval:children:any"),
     ]
     title = "Наличие детей:" if lang == "ru" else "Farzandlar:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))

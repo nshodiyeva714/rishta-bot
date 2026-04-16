@@ -785,6 +785,9 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
             continue
         if key in filters:
             continue
+        # Дети — скрываем если «Не был(а) в браке»
+        if key == "children" and filters.get("marital") == "never_married":
+            continue
         # Невыбранные — показываем кнопкой
         buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
 
