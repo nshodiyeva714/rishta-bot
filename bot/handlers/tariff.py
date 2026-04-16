@@ -393,6 +393,43 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# ── «← Назад» из экрана summary → вернуть на тариф ──
+@router.callback_query(F.data == "profile:back", RequirementStates.summary)
+async def profile_back(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+
+    from bot.handlers.questionnaire import build_card, SEP
+    card = build_card(data, lang)
+
+    if lang == "uz":
+        tariff_text = (
+            "📋 Joylashtirish turi:\n\n"
+            "⭐ VIP anketa — ko'proq e'tibor,\n"
+            "qidirishda birinchi ko'rinadi.\n\n"
+            "📋 Oddiy anketa — bepul."
+        )
+    else:
+        tariff_text = (
+            "📋 Тип размещения:\n\n"
+            "⭐ VIP анкета — больше просмотров,\n"
+            "показывается первой в поиске.\n\n"
+            "📋 Обычная анкета — бесплатно."
+        )
+
+    full_text = (card + SEP + tariff_text) if card else tariff_text
+    from bot.keyboards.inline import tariff_kb
+    await callback.message.edit_text(full_text, reply_markup=tariff_kb(lang))
+    await state.set_state(TariffStates.choose)
+    await callback.answer()
+
+
+# ── «← Назад» из экрана enhance → вернуть на summary ──
+@router.callback_query(F.data == "profile:back_enhance", RequirementStates.summary)
+async def profile_back_enhance(callback: CallbackQuery, state: FSMContext):
+    await _show_summary(callback, state, is_callback=True)
+
+
 # ── «✏️ Дополнить сейчас» — сначала публикуем, потом Этап 2 ──
 @router.callback_query(F.data == "profile:extend_now", RequirementStates.summary)
 async def profile_extend_now(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):

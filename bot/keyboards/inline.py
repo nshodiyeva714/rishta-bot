@@ -431,31 +431,33 @@ def profile_status_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Экран завершения Этапа 1: опубликовать или дополнить."""
+    back_text = "← Orqaga" if lang == "uz" else "← Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
-            *nav_kb(lang, show_back=False),
+            [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
         [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
-        *nav_kb(lang, show_back=False),
+        [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
     ])
 
 
 def enhance_or_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """После описания Этапа 2: дополнить сейчас или опубликовать."""
+    back_text = "← Orqaga" if lang == "uz" else "← Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="profile:extend_now")],
             [InlineKeyboardButton(text="🚀 Shundayicha nashr etish", callback_data="profile:publish")],
-            *nav_kb(lang, show_back=False),
+            [InlineKeyboardButton(text=back_text, callback_data="profile:back_enhance")],
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✏️ Дополнить сейчас", callback_data="profile:extend_now")],
         [InlineKeyboardButton(text="🚀 Опубликовать как есть", callback_data="profile:publish")],
-        *nav_kb(lang, show_back=False),
+        [InlineKeyboardButton(text=back_text, callback_data="profile:back_enhance")],
     ])
 
 
