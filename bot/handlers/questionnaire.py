@@ -191,7 +191,6 @@ async def quest_start(callback: CallbackQuery, state: FSMContext):
     bar = progress_bar(1, 10)
     await callback.message.edit_text(
         t("q1", lang, child=child, bar=bar),
-        reply_markup=back_step_kb(lang),
     )
     await state.set_state(QuestionnaireStates.q1_name)
     await callback.answer()
