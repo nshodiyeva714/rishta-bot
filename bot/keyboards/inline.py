@@ -758,7 +758,7 @@ def _filter_value_label(key: str, value, lang: str, filters: dict) -> str:
 
 
 def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKeyboardMarkup:
-    """Меню фильтров — ВСЕ кнопки всегда видны, выбранные отмечены ✅."""
+    """Меню фильтров — выбранные исчезают (показаны текстом), остальные кнопками."""
     if filters is None:
         filters = {}
     is_uz = lang == "uz"
@@ -773,24 +773,20 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
         ("children",    "Farzandlar" if is_uz else "Наличие детей",  "filter:children"),
     ]
 
-    # Определяем какие фильтры выбраны
     age_selected = "age" in filters or "age_from" in filters or "age_to" in filters
     residence_selected = "residence" in filters or "region" in filters
 
     buttons = []
     for key, label, cb in all_filters:
+        # Выбранные — пропускаем (они показаны текстом в сообщении)
         if key == "age" and age_selected:
-            val = _filter_value_label("age", filters.get("age", ""), lang, filters)
-            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
-        elif key == "residence" and residence_selected:
-            res_val = filters.get("region") or filters.get("residence", "")
-            val = _filter_value_label("residence", res_val, lang, filters)
-            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
-        elif key in filters:
-            val = _filter_value_label(key, filters[key], lang, filters)
-            buttons.append([InlineKeyboardButton(text=f"✅ {label}: {val}", callback_data=cb)])
-        else:
-            buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
+            continue
+        if key == "residence" and residence_selected:
+            continue
+        if key in filters:
+            continue
+        # Невыбранные — показываем кнопкой
+        buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
 
     # Кнопка поиска
     buttons.append([InlineKeyboardButton(
@@ -801,7 +797,7 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
     # Сброс — только если есть выбранные фильтры
     if filters:
         buttons.append([InlineKeyboardButton(
-            text="Filtrlarni tozalash" if is_uz else "Сбросить фильтры",
+            text="🔄 Tozalash" if is_uz else "🔄 Сбросить фильтры",
             callback_data="filter:clear",
         )])
 
