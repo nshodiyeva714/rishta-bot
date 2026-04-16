@@ -375,7 +375,7 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
             "👨‍👩‍👧 Oila haqida (ota, ona, aka-ukalar)\n"
             "✨ Xarakter va qiziqishlar\n"
             "🔮 Kelajak rejalari\n\n"
-            "Taxminan 5 daqiqa vaqt oladi 🕐"
+            "Taxminan 2 daqiqa vaqt oladi 🕐"
         )
     else:
         text = (
@@ -386,7 +386,7 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
             "👨‍👩‍👧 О семье (отец, мать, братья)\n"
             "✨ Характер и увлечения\n"
             "🔮 Планы на будущее\n\n"
-            "Займёт около 5 минут 🕐"
+            "Займёт около 2 минут 🕐"
         )
 
     await callback.message.edit_text(text, reply_markup=enhance_or_publish_kb(lang))
