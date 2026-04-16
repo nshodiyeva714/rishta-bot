@@ -498,6 +498,7 @@ def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
             ("Andijon",    "city:andijan"),
             ("Nukus",      "city:nukus"),
             ("Boshqa",     "city:other"),
+            ("🌍 Chet elda", "city:abroad"),
         ]
     else:
         opts = [
@@ -509,6 +510,7 @@ def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
             ("Андижан",    "city:andijan"),
             ("Нукус",      "city:nukus"),
             ("Другой",     "city:other"),
+            ("🌍 За рубежом", "city:abroad"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=opts[0][0], callback_data=opts[0][1]),
@@ -519,6 +521,7 @@ def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
          InlineKeyboardButton(text=opts[5][0], callback_data=opts[5][1])],
         [InlineKeyboardButton(text=opts[6][0], callback_data=opts[6][1]),
          InlineKeyboardButton(text=opts[7][0], callback_data=opts[7][1])],
+        [InlineKeyboardButton(text=opts[8][0], callback_data=opts[8][1])],
     ])
 
 

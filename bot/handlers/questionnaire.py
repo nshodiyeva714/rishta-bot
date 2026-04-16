@@ -399,12 +399,14 @@ _CITY_NAMES = {
         "fergana": "Фергана", "bukhara": "Бухара",
         "namangan": "Наманган", "andijan": "Андижан",
         "nukus": "Нукус", "other": "Другой город",
+        "abroad": "За рубежом",
     },
     "uz": {
         "tashkent": "Toshkent", "samarkand": "Samarqand",
         "fergana": "Farg'ona", "bukhara": "Buxoro",
         "namangan": "Namangan", "andijan": "Andijon",
         "nukus": "Nukus", "other": "Boshqa shahar",
+        "abroad": "Chet elda",
     },
 }
 
@@ -418,7 +420,23 @@ async def q6_city_selected(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(city_code=city_code, city=city_name)
 
-    if city_code == "other":
+    if city_code == "abroad":
+        # «За рубежом» → ввод страны и города текстом
+        data = await state.get_data()
+        bar = progress_bar(6, 10)
+        if lang == "uz":
+            q_text = (f"6/10-savol\n{bar}\n\n"
+                      f"🌍 Davlat va shaharni kiriting:\n"
+                      f"(masalan: Rossiya, Moskva)")
+        else:
+            q_text = (f"Вопрос 6/10\n{bar}\n\n"
+                      f"🌍 Укажите страну и город:\n"
+                      f"(например: Россия, Москва)")
+        full_text = _with_card(data, lang, q_text)
+        await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
+        await state.set_state(QuestionnaireStates.q6_district)
+    elif city_code == "other":
         # «Другой» → ввод названия города текстом
         data = await state.get_data()
         bar = progress_bar(6, 10)
@@ -462,8 +480,8 @@ async def q6_district_entered(message: Message, state: FSMContext):
     text_input = message.text.strip()
     data = await state.get_data()
 
-    # Если city_code == "other", то текст — это город (не район)
-    if data.get("city_code") == "other":
+    # «Другой» или «За рубежом» → текст = город, без района
+    if data.get("city_code") in ("other", "abroad"):
         await state.update_data(city=text_input, district="")
     else:
         await state.update_data(district=text_input)

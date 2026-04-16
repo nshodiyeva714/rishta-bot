@@ -496,7 +496,7 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
-        ("Другое" if lang == "ru" else "Boshqa",          "fval:residence:other_country"),
+        ("🌍 За рубежом" if lang == "ru" else "🌍 Chet elda", "fval:region:abroad"),
     ]
     title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
