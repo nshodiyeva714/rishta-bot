@@ -716,12 +716,19 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
         ("residence",   "Yashash joyi" if is_uz else "Где проживает","filter:residence"),
         ("nationality", "Millat" if is_uz else "Национальность",     "filter:nationality"),
         ("marital",     "Oilaviy holat" if is_uz else "Семейное положение", "filter:marital"),
+        ("children",    "Farzandlar" if is_uz else "Наличие детей",  "filter:children"),
     ]
+
+    # Возраст выбран если есть "age" (кнопки) ИЛИ "age_from"/"age_to" (требования)
+    age_selected = "age" in filters or "age_from" in filters or "age_to" in filters
 
     buttons = []
     for key, label, cb in all_filters:
         # Скрываем «Где проживает» если выбран регион ИЛИ страна
         if key == "residence" and ("residence" in filters or "region" in filters):
+            continue
+        # Скрываем «Возраст» если выбран в любом формате
+        if key == "age" and age_selected:
             continue
         if key not in filters:
             buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])

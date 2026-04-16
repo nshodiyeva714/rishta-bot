@@ -560,6 +560,20 @@ async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
     await callback.answer()
 
 
+# ── Фильтр: наличие детей ──
+@router.callback_query(F.data == "filter:children")
+async def filter_children(callback: CallbackQuery, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    options = [
+        ("Без детей" if lang == "ru" else "Farzandsiz", "fval:children:no"),
+        ("Есть дети" if lang == "ru" else "Farzandli", "fval:children:has_children"),
+        ("Не важно" if lang == "ru" else "Muhim emas", "fval:children:any"),
+    ]
+    title = "Наличие детей:" if lang == "ru" else "Farzandlar:"
+    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    await callback.answer()
+
+
 # ── Универсальный обработчик значений фильтров ──
 @router.callback_query(F.data.startswith("fval:"))
 async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -700,10 +714,20 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     # Фильтр: дети
     if filters.get("children") and filters["children"] != "any":
         from bot.db.models import ChildrenStatus
-        try:
-            conditions.append(Profile.children_status == ChildrenStatus(filters["children"]))
-        except ValueError:
-            pass
+        from sqlalchemy import or_
+        ch = filters["children"]
+        if ch in ("no", "no_children"):
+            conditions.append(Profile.children_status == ChildrenStatus.NO)
+        elif ch == "has_children":
+            conditions.append(or_(
+                Profile.children_status == ChildrenStatus.YES_WITH_ME,
+                Profile.children_status == ChildrenStatus.YES_WITH_EX,
+            ))
+        else:
+            try:
+                conditions.append(Profile.children_status == ChildrenStatus(ch))
+            except ValueError:
+                pass
 
     # Фильтр: проживание
     if filters.get("residence") and filters["residence"] != "any":
