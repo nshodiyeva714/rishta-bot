@@ -595,6 +595,7 @@ async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
             full_text,
             reply_markup=add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
         )
+        await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q_children)
     await callback.answer()
 
@@ -629,8 +630,10 @@ async def _show_stage1_complete(callback: CallbackQuery, state: FSMContext):
 
     try:
         await callback.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=callback.message.message_id)
     except Exception:
-        await callback.message.answer(full_text, reply_markup=kb)
+        sent = await callback.message.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
 
     await state.set_state(QuestionnaireStates.stage1_complete)
 
@@ -770,7 +773,9 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
             kb = back_step_kb(lang)
         try:
             await callback.message.edit_text(msg_text, reply_markup=kb)
+            await state.update_data(last_bot_msg=callback.message.message_id)
         except Exception:
-            await callback.message.answer(msg_text, reply_markup=kb)
+            sent = await callback.message.answer(msg_text, reply_markup=kb)
+            await state.update_data(last_bot_msg=sent.message_id)
         await state.set_state(prev_state)
     await callback.answer("🔙")
