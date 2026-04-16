@@ -4,7 +4,7 @@ import random
 import asyncio
 import logging
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, desc, case, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -199,6 +199,7 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "religion":    "Религиозность",
             "education":   "Образование",
             "residence":   "Где проживает",
+            "region":      "Регион",
             "nationality": "Национальность",
             "marital":     "Семейное положение",
         },
@@ -207,6 +208,7 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "religion":    "Dindorlik",
             "education":   "Ma'lumot",
             "residence":   "Yashash joyi",
+            "region":      "Hudud",
             "nationality": "Millat",
             "marital":     "Oilaviy holat",
         },
@@ -225,6 +227,10 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             # Проживание
             "uzbekistan": "Узбекистан", "cis": "СНГ", "usa": "США",
             "europe": "Европа", "other_country": "Другое",
+            # Регионы Узбекистана
+            "tashkent": "Ташкент", "samarkand": "Самарканд",
+            "fergana": "Фергана", "bukhara": "Бухара",
+            "namangan": "Наманган", "andijan": "Андижан", "nukus": "Нукус",
             # Национальность
             "uzbek": "Узбек", "russian": "Русский", "korean": "Кореец",
             "tajik": "Таджик", "kazakh": "Казах", "other": "Другая",
@@ -244,6 +250,10 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             # Проживание
             "uzbekistan": "O'zbekiston", "cis": "MDH", "usa": "AQSH",
             "europe": "Yevropa", "other_country": "Boshqa",
+            # Регионы Узбекистана
+            "tashkent": "Toshkent", "samarkand": "Samarqand",
+            "fergana": "Farg'ona", "bukhara": "Buxoro",
+            "namangan": "Namangan", "andijan": "Andijon", "nukus": "Nukus",
             # Национальность
             "uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys",
             "tajik": "Tojik", "kazakh": "Qozoq", "other": "Boshqa",
@@ -256,6 +266,9 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
     L = lang if lang in ("ru", "uz") else "ru"
     lines = []
     for key, value in filters.items():
+        # Если выбран регион — не показываем отдельно «Где проживает: Узбекистан»
+        if key == "residence" and "region" in filters:
+            continue
         label = labels[L].get(key, key)
         val = value_labels[L].get(str(value), str(value))
         lines.append(f"• {label}: {val}")
@@ -390,7 +403,6 @@ async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state
     not_imp = "Muhim emas" if lang == "uz" else "Не важно"
     title = "Yosh:" if lang == "uz" else "Возраст:"
 
-    from aiogram.types import InlineKeyboardMarkup
     buttons = [
         [InlineKeyboardButton(text="18–23", callback_data="fval:age:18_23"),
          InlineKeyboardButton(text="24–27", callback_data="fval:age:24_27")],
@@ -455,7 +467,7 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Узбекистан" if lang == "ru" else "O'zbekiston", "fval:residence:uzbekistan"),
+        ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
         ("СНГ" if lang == "ru" else "MDH", "fval:residence:cis"),
         ("США" if lang == "ru" else "AQSH", "fval:residence:usa"),
         ("Европа" if lang == "ru" else "Yevropa", "fval:residence:europe"),
@@ -464,6 +476,39 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     ]
     title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    await callback.answer()
+
+
+# ── Узбекистан → выбор региона ──
+@router.callback_query(F.data == "filter:residence:uzb")
+async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """После выбора Узбекистан показываем регионы."""
+    lang = await get_lang(session, callback.from_user.id)
+
+    regions_ru = ["Ташкент", "Самарканд", "Фергана", "Бухара", "Наманган", "Андижан", "Нукус"]
+    regions_uz = ["Toshkent", "Samarqand", "Farg'ona", "Buxoro", "Namangan", "Andijon", "Nukus"]
+    region_keys = ["tashkent", "samarkand", "fergana", "bukhara", "namangan", "andijan", "nukus"]
+
+    labels = regions_uz if lang == "uz" else regions_ru
+    buttons = []
+    for i in range(0, len(labels), 2):
+        row = []
+        for j in range(i, min(i + 2, len(labels))):
+            row.append(InlineKeyboardButton(
+                text=labels[j],
+                callback_data=f"fval:region:{region_keys[j]}",
+            ))
+        buttons.append(row)
+
+    # Кнопка «Весь Узбекистан»
+    buttons.append([InlineKeyboardButton(
+        text="Barcha hududlar" if lang == "uz" else "Весь Узбекистан",
+        callback_data="fval:residence:uzbekistan",
+    )])
+    buttons.extend(nav_kb(lang, "search:manual"))
+
+    title = "Hududni tanlang:" if lang == "uz" else "Выберите регион:"
+    await callback.message.edit_text(title, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
 
@@ -500,6 +545,14 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
         filters.pop(field, None)
     else:
         filters[field] = value
+
+    # Если выбран регион — также ставим residence = uzbekistan
+    if field == "region":
+        filters["residence"] = "uzbekistan"
+
+    # Если выбрано residence (весь Узбекистан или другая страна) — убираем регион
+    if field == "residence":
+        filters.pop("region", None)
 
     await state.update_data(search_filters=filters)
     await show_search_filters(callback, session, state)
@@ -630,6 +683,29 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         except ValueError:
             pass
 
+    # Фильтр: регион (город) — ILIKE по family_region и city
+    if filters.get("region"):
+        region_map = {
+            "tashkent": "ташкент%", "samarkand": "самарканд%",
+            "fergana": "ферган%", "bukhara": "бухар%",
+            "namangan": "наманган%", "andijan": "андижан%", "nukus": "нукус%",
+        }
+        region_map_uz = {
+            "tashkent": "toshkent%", "samarkand": "samarqand%",
+            "fergana": "farg'ona%", "bukhara": "buxoro%",
+            "namangan": "namangan%", "andijan": "andijon%", "nukus": "nukus%",
+        }
+        region_val = filters["region"]
+        pat_ru = region_map.get(region_val, f"{region_val}%")
+        pat_uz = region_map_uz.get(region_val, f"{region_val}%")
+        from sqlalchemy import or_
+        conditions.append(or_(
+            Profile.family_region.ilike(pat_ru),
+            Profile.family_region.ilike(pat_uz),
+            Profile.city.ilike(pat_ru),
+            Profile.city.ilike(pat_uz),
+        ))
+
     # Фильтр: национальность
     if filters.get("nationality") and filters["nationality"] != "any":
         conditions.append(Profile.nationality == filters["nationality"])
@@ -664,7 +740,6 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     total = len(profiles)
 
     if total == 0:
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
@@ -710,20 +785,30 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     try:
         await callback.message.edit_text(loading)
         await asyncio.sleep(0.8)
-        await callback.message.edit_text(header)
     except Exception:
-        await callback.message.answer(header)
+        pass
+
+    # Заголовок с результатами
+    try:
+        await callback.message.edit_text(header, parse_mode="HTML")
+    except Exception:
+        try:
+            await callback.message.answer(header, parse_mode="HTML")
+        except Exception:
+            await callback.message.answer(header)
 
     # Показываем карточки + уведомляем владельцев
-    from aiogram import Bot as _Bot
-    bot: _Bot = callback.bot
+    bot = callback.bot
     for p, score in page_profiles:
         p.views_count = (p.views_count or 0) + 1
         card_text = format_anketa_public(p, score, lang)
-        await callback.message.answer(
-            card_text,
-            reply_markup=profile_card_kb(p.id, lang, p.display_id or ""),
-        )
+        try:
+            await callback.message.answer(
+                card_text,
+                reply_markup=profile_card_kb(p.id, lang, p.display_id or ""),
+            )
+        except Exception as e:
+            logger.error(f"Ошибка отправки карточки {p.id}: {e}")
         # Уведомление владельца о просмотре
         try:
             await _notify_owner_view(bot, session, p, callback.from_user.id)
@@ -733,7 +818,6 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     await session.commit()
 
     # Навигация
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     nav_buttons = []
 
     if offset + PROFILES_PER_PAGE < total:

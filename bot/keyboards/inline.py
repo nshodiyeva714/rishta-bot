@@ -720,6 +720,9 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
 
     buttons = []
     for key, label, cb in all_filters:
+        # Скрываем «Где проживает» если выбран регион ИЛИ страна
+        if key == "residence" and ("residence" in filters or "region" in filters):
+            continue
         if key not in filters:
             buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
 
