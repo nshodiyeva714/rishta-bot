@@ -702,17 +702,29 @@ async def q10_children(callback: CallbackQuery, state: FSMContext):
 # ══════════════════════════════════════
 
 async def _show_stage1_complete(callback: CallbackQuery, state: FSMContext):
-    """Показать экран завершения Этапа 1 — полная карточка + кнопки."""
+    """После последнего вопроса — показать выбор тарифа."""
     data = await state.get_data()
     lang = data.get("lang", "ru")
-    name = data.get("name", "—")
-    age = data.get("age", "?")
 
     card = build_card(data, lang)
-    finish_text = t("stage1_complete", lang, name=name, age=age)
-    full_text = (card + SEP + finish_text) if card else finish_text
 
-    kb = anketa_finish_kb(lang)
+    if lang == "uz":
+        tariff_text = (
+            "📋 Joylashtirish turi:\n\n"
+            "⭐ VIP anketa — ko'proq e'tibor,\n"
+            "qidirishda birinchi ko'rinadi.\n\n"
+            "📋 Oddiy anketa — bepul."
+        )
+    else:
+        tariff_text = (
+            "📋 Тип размещения:\n\n"
+            "⭐ VIP анкета — больше просмотров,\n"
+            "показывается первой в поиске.\n\n"
+            "📋 Обычная анкета — бесплатно."
+        )
+
+    full_text = (card + SEP + tariff_text) if card else tariff_text
+    kb = tariff_kb(lang)
 
     try:
         await callback.message.edit_text(full_text, reply_markup=kb)
@@ -721,27 +733,7 @@ async def _show_stage1_complete(callback: CallbackQuery, state: FSMContext):
         sent = await callback.message.answer(full_text, reply_markup=kb)
         await state.update_data(last_bot_msg=sent.message_id)
 
-    await state.set_state(QuestionnaireStates.stage1_complete)
-
-
-# ── Кнопки на экране завершения Этапа 1 ──
-@router.callback_query(F.data == "profile:publish", QuestionnaireStates.stage1_complete)
-async def stage1_publish(callback: CallbackQuery, state: FSMContext):
-    """Отправить на публикацию → переход к тарифу."""
-    lang = await _lang(state)
-    await callback.message.edit_text(t("tariff", lang), reply_markup=tariff_kb(lang))
     await state.set_state(TariffStates.choose)
-    await callback.answer()
-
-
-@router.callback_query(F.data == "profile:enhance", QuestionnaireStates.stage1_complete)
-async def stage1_enhance(callback: CallbackQuery, state: FSMContext):
-    """Сделать анкету ярче → переход к тарифу, затем Этап 2."""
-    lang = await _lang(state)
-    await state.update_data(want_enhance=True)
-    await callback.message.edit_text(t("tariff", lang), reply_markup=tariff_kb(lang))
-    await state.set_state(TariffStates.choose)
-    await callback.answer()
 
 
 # ══════════════════════════════════════
