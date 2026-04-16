@@ -52,25 +52,25 @@ T = {
     # ── Step 1: Language ──
     "welcome": {
         "ru": (
-            "🤝 Rishta\n\n"
             "🇺🇿 Assalomu alaykum!\n"
-            "O'zbekistondagi birinchi raqamli\n"
-            "sovchilik platformasi.\n\n"
+            "Rishta — O'zbekistondagi birinchi\n"
+            "raqamli sovchilik platformasi.\n"
             "Ishonchli, qulay va maxfiy. 🔒\n\n"
+            "➖➖➖➖➖➖➖➖\n\n"
             "🇷🇺 Здравствуйте!\n"
-            "Первая цифровая платформа\n"
-            "для сватовства в Узбекистане.\n\n"
+            "Rishta — Первая цифровая платформа\n"
+            "для сватовства в Узбекистане.\n"
             "Надёжно, удобно и конфиденциально. 🔒"
         ),
         "uz": (
-            "🤝 Rishta\n\n"
             "🇺🇿 Assalomu alaykum!\n"
-            "O'zbekistondagi birinchi raqamli\n"
-            "sovchilik platformasi.\n\n"
+            "Rishta — O'zbekistondagi birinchi\n"
+            "raqamli sovchilik platformasi.\n"
             "Ishonchli, qulay va maxfiy. 🔒\n\n"
+            "➖➖➖➖➖➖➖➖\n\n"
             "🇷🇺 Здравствуйте!\n"
-            "Первая цифровая платформа\n"
-            "для сватовства в Узбекистане.\n\n"
+            "Rishta — Первая цифровая платформа\n"
+            "для сватовства в Узбекистане.\n"
             "Надёжно, удобно и конфиденциально. 🔒"
         ),
     },
