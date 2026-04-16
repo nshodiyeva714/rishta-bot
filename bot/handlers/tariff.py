@@ -179,8 +179,15 @@ async def req_marital(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_marital_status=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_children", lang), reply_markup=req_children_kb(lang))
-    await state.set_state(RequirementStates.children)
+
+    if value == "never_married":
+        # Не замужем/не женат → детей нет автоматически → пропускаем вопрос
+        await state.update_data(req_children="no")
+        await _after_req_children(callback, state)
+    else:
+        # Разведена/вдова/любое → спросить про детей
+        await callback.message.edit_text(t("req_children", lang), reply_markup=req_children_kb(lang))
+        await state.set_state(RequirementStates.children)
     await callback.answer()
 
 
@@ -188,17 +195,22 @@ async def req_marital(callback: CallbackQuery, state: FSMContext):
 async def req_children(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_children=value)
+    await _after_req_children(callback, state)
+    await callback.answer()
+
+
+async def _after_req_children(callback: CallbackQuery, state: FSMContext):
+    """Общий переход после вопроса о детях в требованиях."""
     lang = await _lang(state)
     data = await state.get_data()
 
-    # Для анкеты дочери — дополнительные вопросы
+    # Для анкеты дочери — дополнительные вопросы (машина, жильё, работа)
     if data.get("profile_type") == "daughter":
         await callback.message.edit_text(t("req_car", lang), reply_markup=req_car_kb(lang))
         await state.set_state(RequirementStates.car_required)
     else:
         await callback.message.edit_text(t("req_other", lang), reply_markup=skip_kb(lang))
         await state.set_state(RequirementStates.other_wishes)
-    await callback.answer()
 
 
 # Дополнительные требования для дочери

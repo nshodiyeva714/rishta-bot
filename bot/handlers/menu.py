@@ -13,7 +13,7 @@ from bot.texts import t
 from bot.keyboards.inline import (
     main_menu_kb, _full_menu_kb, back_kb, my_profile_kb,
     quest_start_kb, contact_moderator_kb, vip_duration_kb,
-    choose_moderator_kb,
+    choose_moderator_kb, search_submenu_kb, create_submenu_kb,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -390,6 +390,47 @@ async def contact_moderator_menu(callback: CallbackQuery, state: FSMContext, ses
         t("choose_moderator", lang),
         reply_markup=choose_moderator_kb(lang),
     )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "menu:search_sub")
+async def search_submenu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Подменю: Найти кандидата → невестку / жениха."""
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    await _safe_edit(callback, t("submenu_search", lang), reply_markup=search_submenu_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.in_({"menu:search_bride", "menu:search_groom"}))
+async def search_redirect(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Поиск невестки / жениха → единый экран поиска."""
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+
+    result = await session.execute(
+        select(Profile).where(
+            Profile.user_id == callback.from_user.id,
+            Profile.status != ProfileStatus.DELETED,
+        ).limit(1)
+    )
+    my_profile = result.scalar_one_or_none()
+
+    if my_profile:
+        from bot.keyboards.inline import search_mode_kb
+        await _safe_edit(callback, t("search_title", lang), reply_markup=search_mode_kb(lang))
+    else:
+        from bot.keyboards.inline import search_no_anketa_kb
+        await _safe_edit(callback, t("search_no_anketa", lang), reply_markup=search_no_anketa_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "menu:create_sub")
+async def create_submenu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Подменю: Создать анкету → сына / дочери."""
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    await _safe_edit(callback, t("submenu_create", lang), reply_markup=create_submenu_kb(lang))
     await callback.answer()
 
 

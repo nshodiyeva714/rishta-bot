@@ -31,15 +31,32 @@ def main_menu_kb(lang: str = "ru", user_id: int = 0) -> InlineKeyboardMarkup:
 
 
 def _full_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Полное меню с все кнопками."""
+    """Главное меню — 6 кнопок."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:son")],
-        [InlineKeyboardButton(text=t("btn_post_daughter", lang), callback_data="menu:daughter")],
-        [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search")],
+        [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search_sub")],
+        [InlineKeyboardButton(text=t("btn_create_profile", lang), callback_data="menu:create_sub")],
         [InlineKeyboardButton(text=t("btn_my_applications", lang), callback_data="menu:my")],
         [InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator")],
         [InlineKeyboardButton(text=t("btn_feedback", lang), callback_data="menu:feedback")],
         [InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about")],
+    ])
+
+
+def search_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Подменю: Найти кандидата → невестку / жениха."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:search_bride")],
+        [InlineKeyboardButton(text=t("btn_search_groom", lang), callback_data="menu:search_groom")],
+        [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")],
+    ])
+
+
+def create_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Подменю: Создать анкету → сына / дочери."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_profile_son", lang), callback_data="menu:son")],
+        [InlineKeyboardButton(text=t("btn_profile_daughter", lang), callback_data="menu:daughter")],
+        [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")],
     ])
 
 

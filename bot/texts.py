@@ -73,12 +73,24 @@ T = {
         "uz": "👋 Rishta'ga xush kelibsiz! 🤝",
     },
     "btn_search_bride": {"ru": "👦 Ищем невестку", "uz": "👦 Kelin qidiramiz"},
+    "btn_search_groom": {"ru": "👧 Ищем жениха", "uz": "👧 Kuyov qidiramiz"},
     "btn_post_daughter": {"ru": "👧 Разместить анкету дочери", "uz": "👧 Qiz anketasini joylashtirish"},
     "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
+    "btn_create_profile": {"ru": "📝 Создать анкету", "uz": "📝 Anketa yaratish"},
+    "btn_profile_son": {"ru": "👦 Анкета сына", "uz": "👦 O'g'il anketasi"},
+    "btn_profile_daughter": {"ru": "👧 Анкета дочери", "uz": "👧 Qiz anketasi"},
     "btn_my_applications": {"ru": "📋 Мои заявки", "uz": "📋 Mening arizalarim"},
     "btn_contact_moderator": {"ru": "💬 Связаться с модератором", "uz": "💬 Moderator bilan bog'lanish"},
     "btn_feedback": {"ru": "💡 Предложение/Обратная связь", "uz": "💡 Taklif yuborish"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
+    "submenu_search": {
+        "ru": "🔍 <b>Найти кандидата</b>\n\nКого ищете?",
+        "uz": "🔍 <b>Nomzod qidirish</b>\n\nKimni qidiryapsiz?",
+    },
+    "submenu_create": {
+        "ru": "📝 <b>Создать анкету</b>\n\nЧью анкету хотите создать?",
+        "uz": "📝 <b>Anketa yaratish</b>\n\nKimning anketasini yaratmoqchisiz?",
+    },
     "user_feedback_prompt": {
         "ru": (
             "💡 <b>Предложения и обратная связь</b>\n\n"
