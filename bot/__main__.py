@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, MenuButtonCommands
+from aiogram.types import BotCommand, BotCommandScopeChat, MenuButtonCommands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import config
@@ -31,13 +31,26 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             pass  # Колонка уже существует или БД не поддерживает IF NOT EXISTS
     logger.info("Database tables ensured")
 
-    # Устанавливаем команды бота (кнопка Меню в Telegram)
-    await bot.set_my_commands([
+    # Команды для обычных пользователей
+    user_commands = [
         BotCommand(command="start", description="Главное меню / Bosh menyu"),
-        BotCommand(command="find", description="Найти анкету по номеру (модератор)"),
-        BotCommand(command="ankety", description="Анкеты на проверке (модератор)"),
-        BotCommand(command="stats", description="Статистика (модератор)"),
-    ])
+    ]
+    await bot.set_my_commands(user_commands)
+
+    # Команды для модераторов (расширенные)
+    mod_commands = [
+        BotCommand(command="start",  description="Главное меню"),
+        BotCommand(command="ankety", description="Анкеты на проверке"),
+        BotCommand(command="find",   description="Найти анкету по номеру"),
+        BotCommand(command="stats",  description="Статистика"),
+    ]
+    from bot.config import get_all_moderator_ids
+    for mod_id in get_all_moderator_ids():
+        try:
+            await bot.set_my_commands(mod_commands, scope=BotCommandScopeChat(chat_id=mod_id))
+        except Exception as e:
+            logger.warning(f"Не удалось установить команды модератору {mod_id}: {e}")
+
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
     logger.info("Bot commands set")
 
