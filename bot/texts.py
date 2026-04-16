@@ -669,8 +669,8 @@ T = {
         "uz": "🔍 Anketalar topilmadi.\n\nFiltrlarni o'zgartiring.",
     },
     "search_filters_title": {
-        "ru": "🔧 <b>Фильтры поиска</b>\n\n{summary}\n\nЧто настроить?",
-        "uz": "🔧 <b>Filtrlar</b>\n\n{summary}\n\nNimani o'zgartirmoqchisiz?",
+        "ru": "Фильтры поиска:",
+        "uz": "Qidiruv filtrlari:",
     },
     "search_filters_empty": {
         "ru": "Фильтры не выбраны — будут показаны все анкеты.",

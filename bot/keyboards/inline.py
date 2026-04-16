@@ -703,20 +703,44 @@ def search_no_anketa_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def search_filter_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Главное меню ручных фильтров."""
+def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKeyboardMarkup:
+    """Умное меню фильтров — показывает только НЕ выбранные фильтры."""
+    if filters is None:
+        filters = {}
     is_uz = lang == "uz"
-    buttons = [
-        [InlineKeyboardButton(text="📅 Yosh" if is_uz else "📅 Возраст", callback_data="filter:age")],
-        [InlineKeyboardButton(text="🕌 Dindorlik" if is_uz else "🕌 Религиозность", callback_data="filter:religion")],
-        [InlineKeyboardButton(text="🎓 Ma'lumoti" if is_uz else "🎓 Образование", callback_data="filter:education")],
-        [InlineKeyboardButton(text="💍 Oilaviy holat" if is_uz else "💍 Семейное положение", callback_data="filter:marital")],
-        [InlineKeyboardButton(text="👶 Farzandlar" if is_uz else "👶 Дети", callback_data="filter:children")],
-        [InlineKeyboardButton(text="🌍 Yashash joyi" if is_uz else "🌍 Где проживает", callback_data="filter:residence")],
-        [InlineKeyboardButton(text="🔍 Qidirish" if is_uz else "🔍 Начать поиск", callback_data="filter:go")],
-        [InlineKeyboardButton(text="🔄 Tozalash" if is_uz else "🔄 Сбросить фильтры", callback_data="filter:clear")],
-        *nav_kb(lang, "back:menu"),
+
+    all_filters = [
+        ("age",         "Yosh" if is_uz else "Возраст",              "filter:age"),
+        ("religion",    "Dindorlik" if is_uz else "Религиозность",   "filter:religion"),
+        ("education",   "Ma'lumot" if is_uz else "Образование",      "filter:education"),
+        ("residence",   "Yashash joyi" if is_uz else "Где проживает","filter:residence"),
+        ("nationality", "Millat" if is_uz else "Национальность",     "filter:nationality"),
+        ("marital",     "Oilaviy holat" if is_uz else "Семейное положение", "filter:marital"),
     ]
+
+    buttons = []
+    for key, label, cb in all_filters:
+        if key not in filters:
+            buttons.append([InlineKeyboardButton(text=label, callback_data=cb)])
+
+    # Кнопка поиска
+    buttons.append([InlineKeyboardButton(
+        text="🔍 Qidiruvni boshlash" if is_uz else "🔍 Начать поиск",
+        callback_data="filter:go",
+    )])
+
+    # Сброс — только если есть выбранные фильтры
+    if filters:
+        buttons.append([InlineKeyboardButton(
+            text="Filtrlarni tozalash" if is_uz else "Сбросить фильтры",
+            callback_data="filter:clear",
+        )])
+
+    buttons.append([InlineKeyboardButton(
+        text="← Orqaga" if is_uz else "← Назад",
+        callback_data="menu:main",
+    )])
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
