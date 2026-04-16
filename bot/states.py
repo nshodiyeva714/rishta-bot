@@ -102,5 +102,14 @@ class ModeratorContactStates(StatesGroup):
     awaiting_message = State()
 
 
+class EditProfileStates(StatesGroup):
+    name = State()
+    birth_year = State()
+    height_weight = State()
+    city = State()
+    occupation = State()
+    photo = State()
+    phone = State()
+
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()

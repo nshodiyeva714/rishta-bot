@@ -966,6 +966,44 @@ T = {
         "uz": "❌ Raqamni +998XXXXXXXXX formatda kiriting",
     },
 
+    # ── Edit profile ──
+    "edit_menu_title": {
+        "ru": "✏️ <b>Редактирование анкеты</b>\n\nВыберите что хотите изменить:",
+        "uz": "✏️ <b>Anketani tahrirlash</b>\n\nNimani o'zgartirmoqchisiz:",
+    },
+    "edit_name_prompt": {
+        "ru": "👤 Введите новое имя:",
+        "uz": "👤 Yangi ismni kiriting:",
+    },
+    "edit_birth_year_prompt": {
+        "ru": "🗓 Введите новый год рождения (например: 1998):",
+        "uz": "🗓 Yangi tug'ilgan yilni kiriting (masalan: 1998):",
+    },
+    "edit_height_weight_prompt": {
+        "ru": "📏 Введите рост и вес через пробел (например: 175 70):",
+        "uz": "📏 Bo'yi va vaznini bo'sh joy bilan kiriting (masalan: 175 70):",
+    },
+    "edit_city_prompt": {
+        "ru": "🏙 Введите город и район (например: Ташкент, Юнусабад):",
+        "uz": "🏙 Shahar va tumanni kiriting (masalan: Toshkent, Yunusobod):",
+    },
+    "edit_occupation_prompt": {
+        "ru": "💼 Введите место работы / род деятельности:",
+        "uz": "💼 Ish joyi / faoliyat turini kiriting:",
+    },
+    "edit_photo_prompt": {
+        "ru": "📸 Отправьте новое фото:",
+        "uz": "📸 Yangi fotosuratni yuboring:",
+    },
+    "edit_phone_prompt": {
+        "ru": "📞 Введите новый номер телефона:",
+        "uz": "📞 Yangi telefon raqamini kiriting:",
+    },
+    "edit_saved": {
+        "ru": "✅ Сохранено!",
+        "uz": "✅ Saqlandi!",
+    },
+
     # child labels (genitive)
     "son": {"ru": "сына", "uz": "O'g'lingiz"},
     "daughter": {"ru": "дочери", "uz": "Qizingiz"},

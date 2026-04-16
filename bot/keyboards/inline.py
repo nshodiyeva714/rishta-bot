@@ -867,6 +867,102 @@ def complaint_reason_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMark
 
 # ── My applications keyboard ──
 
+def edit_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Клавиатура образования для редактирования (prefix editedu:)."""
+    labels = {
+        "ru": ["📚 Среднее", "📖 Среднее специальное", "🎓 Высшее", "🏛 Учится в вузе"],
+        "uz": ["📚 O'rta", "📖 O'rta maxsus", "🎓 Oliy", "🏛 OTMda o'qiydi"],
+    }
+    values = ["secondary", "vocational", "higher", "studying"]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editedu:{values[i]}")]
+        for i in range(4)
+    ])
+
+
+def edit_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Клавиатура религиозности для редактирования (prefix editrel:)."""
+    labels = {
+        "ru": ["🕌 Практикующий", "☪️ Умеренный", "🌐 Светский"],
+        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy"],
+    }
+    values = ["practicing", "moderate", "secular"]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editrel:{values[i]}")]
+        for i in range(3)
+    ])
+
+
+def edit_marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
+    """Клавиатура семейного положения для редактирования (prefix editmar:)."""
+    if is_male:
+        labels = {
+            "ru": ["💍 Не был женат", "💔 Разведён", "🖤 Вдовец"],
+            "uz": ["💍 Hech uylanmagan", "💔 Ajrashgan", "🖤 Beva"],
+        }
+    else:
+        labels = {
+            "ru": ["💍 Не была замужем", "💔 Разведена", "🖤 Вдова"],
+            "uz": ["💍 Hech turmushga chiqmagan", "💔 Ajrashgan", "🖤 Beva"],
+        }
+    values = ["never_married", "divorced", "widowed"]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editmar:{values[i]}")]
+        for i in range(3)
+    ])
+
+
+def edit_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Клавиатура национальностей для редактирования (prefix editnat:)."""
+    labels = {
+        "ru": ["🇺🇿 Узбек", "🇷🇺 Русский", "🇰🇷 Кореец", "🇹🇯 Таджик", "🇰🇿 Казах", "🌍 Другая"],
+        "uz": ["🇺🇿 O'zbek", "🇷🇺 Rus", "🇰🇷 Koreys", "🇹🇯 Tojik", "🇰🇿 Qozoq", "🌍 Boshqa"],
+    }
+    values = ["uzbek", "russian", "korean", "tajik", "kazakh", "other"]
+    rows = []
+    for i in range(0, len(values), 2):
+        row = [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=f"editnat:{values[j]}") for j in range(i, min(i + 2, len(values)))]
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Меню редактирования — список полей для изменения."""
+    if lang == "uz":
+        fields = [
+            ("👤 Ism", "edit:name"),
+            ("🗓 Tug'ilgan yili", "edit:birth_year"),
+            ("📏 Bo'yi / Vazni", "edit:height_weight"),
+            ("👥 Millat", "edit:nationality"),
+            ("🏙 Shahar va tuman", "edit:city"),
+            ("🎓 Ma'lumoti", "edit:education"),
+            ("💼 Ish joyi", "edit:occupation"),
+            ("🕌 Dindorlik", "edit:religiosity"),
+            ("💍 Oilaviy holat", "edit:marital"),
+            ("📸 Fotosurat", "edit:photo"),
+            ("📞 Telefon", "edit:phone"),
+        ]
+        back_text = "🔙 Ortga"
+    else:
+        fields = [
+            ("👤 Имя", "edit:name"),
+            ("🗓 Год рождения", "edit:birth_year"),
+            ("📏 Рост / Вес", "edit:height_weight"),
+            ("👥 Национальность", "edit:nationality"),
+            ("🏙 Город и район", "edit:city"),
+            ("🎓 Образование", "edit:education"),
+            ("💼 Работа", "edit:occupation"),
+            ("🕌 Религиозность", "edit:religiosity"),
+            ("💍 Семейное положение", "edit:marital"),
+            ("📸 Фото", "edit:photo"),
+            ("📞 Телефон", "edit:phone"),
+        ]
+        back_text = "🔙 Назад"
+    rows = [[InlineKeyboardButton(text=label, callback_data=f"{cd}:{profile_id}")] for label, cd in fields]
+    rows.append([InlineKeyboardButton(text=back_text, callback_data="menu:my")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
