@@ -423,23 +423,20 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
     await show_search_filters(callback, session, state)
 
 
-# ── Фильтр: возраст (кнопки-диапазоны) ──
+# ── Фильтр: возраст ──
 @router.callback_query(F.data == "filter:age")
-async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+async def filter_age(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    not_imp = "Muhim emas" if lang == "uz" else "Не важно"
-    title = "Yosh:" if lang == "uz" else "Возраст:"
-
-    buttons = [
-        [InlineKeyboardButton(text="18–23", callback_data="fval:age:18_23"),
-         InlineKeyboardButton(text="24–27", callback_data="fval:age:24_27")],
-        [InlineKeyboardButton(text="28–35", callback_data="fval:age:28_35"),
-         InlineKeyboardButton(text="36–45", callback_data="fval:age:36_45")],
-        [InlineKeyboardButton(text="45+", callback_data="fval:age:45plus"),
-         InlineKeyboardButton(text=not_imp, callback_data="fval:age:any")],
+    options = [
+        ("18–23", "fval:age:18_23"),
+        ("24–27", "fval:age:24_27"),
+        ("28–35", "fval:age:28_35"),
+        ("36–45", "fval:age:36_45"),
+        ("45+",   "fval:age:45plus"),
+        ("Не важно" if lang == "ru" else "Muhim emas", "fval:age:any"),
     ]
-    buttons.extend(nav_kb(lang, "search:manual"))
-    await callback.message.edit_text(title, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    title = "Возраст:" if lang == "ru" else "Yosh:"
+    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
     await callback.answer()
 
 
@@ -448,10 +445,10 @@ async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state
 async def filter_religion(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("🕌 " + ("Практикующий" if lang == "ru" else "Amaliyotchi"), "fval:religion:practicing"),
-        ("Умеренный" if lang == "ru" else "Mo'tadil", "fval:religion:moderate"),
-        ("Светский" if lang == "ru" else "Dunyoviy", "fval:religion:secular"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:religion:any"),
+        ("Практикующий" if lang == "ru" else "Amaliyotchi", "fval:religion:practicing"),
+        ("Умеренный" if lang == "ru" else "Mo'tadil",       "fval:religion:moderate"),
+        ("Светский" if lang == "ru" else "Dunyoviy",        "fval:religion:secular"),
+        ("Не важно" if lang == "ru" else "Muhim emas",      "fval:religion:any"),
     ]
     title = "Религиозность:" if lang == "ru" else "Dindorlik:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -463,11 +460,11 @@ async def filter_religion(callback: CallbackQuery, session: AsyncSession):
 async def filter_education(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Среднее" if lang == "ru" else "O'rta", "fval:education:secondary"),
+        ("Среднее" if lang == "ru" else "O'rta",                    "fval:education:secondary"),
         ("Среднее специальное" if lang == "ru" else "O'rta maxsus", "fval:education:vocational"),
-        ("Высшее" if lang == "ru" else "Oliy", "fval:education:higher"),
-        ("Студент" if lang == "ru" else "Talaba", "fval:education:studying"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:education:any"),
+        ("Высшее" if lang == "ru" else "Oliy",                      "fval:education:higher"),
+        ("Студент" if lang == "ru" else "Talaba",                   "fval:education:studying"),
+        ("Не важно" if lang == "ru" else "Muhim emas",              "fval:education:any"),
     ]
     title = "Образование:" if lang == "ru" else "Ma'lumot:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -494,48 +491,12 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
-        ("СНГ" if lang == "ru" else "MDH", "fval:residence:cis"),
-        ("США" if lang == "ru" else "AQSH", "fval:residence:usa"),
-        ("Европа" if lang == "ru" else "Yevropa", "fval:residence:europe"),
-        ("Другое" if lang == "ru" else "Boshqa", "fval:residence:other_country"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:residence:any"),
+        ("Узбекистан" if lang == "ru" else "O'zbekiston", "fval:residence:uzbekistan"),
+        ("Другое" if lang == "ru" else "Boshqa",          "fval:residence:other_country"),
+        ("Не важно" if lang == "ru" else "Muhim emas",    "fval:residence:any"),
     ]
     title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
-
-
-# ── Узбекистан → выбор региона ──
-@router.callback_query(F.data == "filter:residence:uzb")
-async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """После выбора Узбекистан показываем регионы."""
-    lang = await get_lang(session, callback.from_user.id)
-
-    regions_ru = ["Ташкент", "Самарканд", "Фергана", "Бухара", "Наманган", "Андижан", "Нукус"]
-    regions_uz = ["Toshkent", "Samarqand", "Farg'ona", "Buxoro", "Namangan", "Andijon", "Nukus"]
-    region_keys = ["tashkent", "samarkand", "fergana", "bukhara", "namangan", "andijan", "nukus"]
-
-    labels = regions_uz if lang == "uz" else regions_ru
-    buttons = []
-    for i in range(0, len(labels), 2):
-        row = []
-        for j in range(i, min(i + 2, len(labels))):
-            row.append(InlineKeyboardButton(
-                text=labels[j],
-                callback_data=f"fval:region:{region_keys[j]}",
-            ))
-        buttons.append(row)
-
-    # Кнопка «Весь Узбекистан»
-    buttons.append([InlineKeyboardButton(
-        text="Barcha hududlar" if lang == "uz" else "Весь Узбекистан",
-        callback_data="fval:residence:uzbekistan",
-    )])
-    buttons.extend(nav_kb(lang, "search:manual"))
-
-    title = "Hududni tanlang:" if lang == "uz" else "Выберите регион:"
-    await callback.message.edit_text(title, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()
 
 
@@ -563,8 +524,7 @@ async def filter_children(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("Без детей" if lang == "ru" else "Farzandsiz", "fval:children:no"),
-        ("Есть дети" if lang == "ru" else "Farzandli", "fval:children:has_children"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:children:any"),
+        ("Не важно" if lang == "ru" else "Muhim emas",  "fval:children:any"),
     ]
     title = "Наличие детей:" if lang == "ru" else "Farzandlar:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
