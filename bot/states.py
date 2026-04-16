@@ -6,10 +6,6 @@ class ConsentStates(StatesGroup):
     special = State()
 
 
-class LanguageStates(StatesGroup):
-    choose = State()
-
-
 class QuestionnaireStates(StatesGroup):
     # ── ЭТАП 1: Быстрый старт (10 вопросов) ──
     q1_name = State()              # 1. Имя
@@ -35,10 +31,6 @@ class QuestionnaireStates(StatesGroup):
     ext_housing_parent = State()
     ext_car = State()
     ext_address = State()
-    ext_search_scope = State()
-    ext_preferred_city = State()
-    ext_preferred_district = State()
-    ext_preferred_country = State()
     ext_family_region = State()
     ext_father = State()
     ext_mother = State()
@@ -52,36 +44,7 @@ class QuestionnaireStates(StatesGroup):
     ext_plans = State()
     ext_parent_telegram = State()
     ext_candidate_telegram = State()
-    ext_location = State()
-    ext_status = State()
     ext_confirm = State()
-
-    # Legacy (для обратной совместимости — не используются в новом потоке)
-    q7_housing = State()
-    q7_parent_housing = State()
-    q8_car = State()
-    q9_address = State()
-    q10b_search_scope = State()
-    q10b_preferred_city = State()
-    q10b_preferred_district = State()
-    q10b_preferred_country = State()
-    q11_family_region = State()
-    q13_father = State()
-    q14_mother = State()
-    q15_brothers = State()
-    q15_sisters = State()
-    q15_position = State()
-    q17_marital = State()
-    q18_children = State()
-    q19_health = State()
-    q20_character = State()
-    q20a_ideal_family = State()
-    q20a_qualities = State()
-    q20a_plans = State()
-    q22_parent_telegram = State()
-    q22_candidate_telegram = State()
-    q22_location = State()
-    q23_status = State()
 
 
 class TariffStates(StatesGroup):

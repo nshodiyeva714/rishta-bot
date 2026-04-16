@@ -1,8 +1,4 @@
-"""Шаг 1 — Выбор языка → Главное меню.
-
-Порядок:
-  /start → выбор языка → главное меню (каждый раз с начала)
-"""
+"""Шаг 0-1 — /start → Язык → Согласие → Главное меню."""
 
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command
@@ -12,9 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Language
+from bot.states import ConsentStates
 from bot.texts import t
 from bot.keyboards.inline import (
     lang_kb,
+    consent_general_kb,
+    consent_special_kb,
     main_menu_kb,
 )
 from bot.config import config, is_moderator
@@ -24,10 +23,8 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
-    """Команда /start — всегда показываем выбор языка (Шаг 1)."""
+    """Команда /start — всегда показываем выбор языка."""
     await state.clear()
-
-    # Всегда начинаем с выбора языка
     await message.answer(
         t("welcome", "ru"),
         reply_markup=lang_kb(),
@@ -79,9 +76,10 @@ async def cmd_test(message: Message, bot: Bot):
     await message.answer("🔧 <b>Тест модераторов:</b>\n\n" + "\n".join(results))
 
 
+# ── Выбор языка → Согласие ──
 @router.callback_query(F.data.startswith("lang:"))
 async def choose_language(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 1 — пользователь выбрал язык → главное меню."""
+    """Шаг 1 — пользователь выбрал язык → показываем согласие."""
     await state.clear()
     lang = callback.data.split(":")[1]
 
@@ -99,9 +97,81 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
 
     await session.commit()
 
-    # Переходим в главное меню
+    # Проверяем: если пользователь уже давал согласие — сразу в меню
+    if user.consent_general and user.consent_special:
+        await callback.message.edit_text(
+            t("main_menu", lang),
+            reply_markup=main_menu_kb(lang, callback.from_user.id),
+        )
+    else:
+        # Показываем согласие
+        await callback.message.edit_text(
+            t("consent_general", lang),
+            reply_markup=consent_general_kb(lang),
+        )
+        await state.set_state(ConsentStates.general)
+        await state.update_data(lang=lang)
+
+    await callback.answer()
+
+
+# ── Согласие: общее ──
+@router.callback_query(F.data == "consent:general:yes", ConsentStates.general)
+async def consent_general_yes(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Пользователь согласен с общими условиями → спецсогласие."""
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    result = await session.execute(select(User).where(User.id == callback.from_user.id))
+    user = result.scalar_one_or_none()
+    if user:
+        user.consent_general = True
+        await session.commit()
+
+    await callback.message.edit_text(
+        t("consent_special", lang),
+        reply_markup=consent_special_kb(lang),
+    )
+    await state.set_state(ConsentStates.special)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "consent:general:no", ConsentStates.general)
+async def consent_general_no(callback: CallbackQuery, state: FSMContext):
+    """Пользователь отказался от условий."""
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    await callback.message.edit_text(t("consent_declined", lang))
+    await state.clear()
+    await callback.answer()
+
+
+# ── Согласие: специальное (персональные данные) ──
+@router.callback_query(F.data == "consent:special:yes", ConsentStates.special)
+async def consent_special_yes(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Пользователь дал спецсогласие → главное меню."""
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    result = await session.execute(select(User).where(User.id == callback.from_user.id))
+    user = result.scalar_one_or_none()
+    if user:
+        user.consent_special = True
+        await session.commit()
+
     await callback.message.edit_text(
         t("main_menu", lang),
         reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
+    await state.clear()
+    await callback.answer()
+
+
+@router.callback_query(F.data == "consent:special:no", ConsentStates.special)
+async def consent_special_no(callback: CallbackQuery, state: FSMContext):
+    """Пользователь отказался от спецсогласия."""
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    await callback.message.edit_text(t("consent_declined", lang))
+    await state.clear()
     await callback.answer()

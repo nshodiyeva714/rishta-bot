@@ -5,7 +5,6 @@
          Семейное положение+дети → [Фото] → [Телефон] → Тариф
 """
 
-import re
 from datetime import datetime
 
 from aiogram import Router, F
@@ -341,6 +340,13 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     is_male = data.get("profile_type") == "son"
 
+    # Определяем куда возвращаться от фото — к marital или children
+    marital = data.get("marital_status")
+    if marital and marital != "never_married":
+        photo_back = ("q_children", QuestionnaireStates.q_children, "children_kb")
+    else:
+        photo_back = ("q_marital_status", QuestionnaireStates.q_marital_status, "marital_kb")
+
     back_map = {
         QuestionnaireStates.q2_birth_year.state: ("q1", QuestionnaireStates.q1_name, None),
         QuestionnaireStates.q3_height.state: ("q2", QuestionnaireStates.q2_birth_year, None),
@@ -349,10 +355,10 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         QuestionnaireStates.q9_city_district.state: ("q12", QuestionnaireStates.q12_nationality, "nationality_kb"),
         QuestionnaireStates.q5_education.state: ("q9_city_district", QuestionnaireStates.q9_city_district, None),
         QuestionnaireStates.q6_work_choice.state: ("q5", QuestionnaireStates.q5_education, "education_kb"),
-        QuestionnaireStates.q16_religiosity.state: ("q6_choice", QuestionnaireStates.q6_work_choice, "work_choice_kb"),
+        QuestionnaireStates.q16_religiosity.state: (f"q6_choice_{data.get('profile_type', 'son')}", QuestionnaireStates.q6_work_choice, "work_choice_kb"),
         QuestionnaireStates.q_marital_status.state: ("q16", QuestionnaireStates.q16_religiosity, "religiosity_kb"),
         QuestionnaireStates.q_children.state: ("q_marital_status", QuestionnaireStates.q_marital_status, "marital_kb"),
-        QuestionnaireStates.q21_photo_type.state: ("q_marital_status", QuestionnaireStates.q_marital_status, "marital_kb"),
+        QuestionnaireStates.q21_photo_type.state: photo_back,
         QuestionnaireStates.q22_parent_phone.state: ("q_photo_optional", QuestionnaireStates.q21_photo_type, "photo_type_kb"),
     }
 
@@ -362,6 +368,7 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         "work_choice_kb": lambda: work_choice_kb(lang),
         "religiosity_kb": lambda: religiosity_kb(lang),
         "marital_kb": lambda: marital_kb(lang, is_male),
+        "children_kb": lambda: children_kb(lang),
         "photo_type_kb": lambda: photo_type_kb(lang),
     }
 
