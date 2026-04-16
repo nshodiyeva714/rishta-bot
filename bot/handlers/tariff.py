@@ -24,7 +24,7 @@ from bot.keyboards.inline import (
     skip_kb, confirm_profile_kb, main_menu_kb,
     mod_review_kb,
     anketa_finish_kb, enhance_or_publish_kb, after_publish_kb,
-    housing_kb,
+    housing_kb, add_nav, nav_kb, back_kb,
 )
 from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa
 from bot.config import config
@@ -42,7 +42,10 @@ async def _lang(state: FSMContext) -> str:
 async def choose_tariff_free(callback: CallbackQuery, state: FSMContext):
     await state.update_data(is_vip=False, vip_days=0)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age", lang), reply_markup=req_age_kb(lang))
+    await callback.message.edit_text(
+        t("req_intro", lang) + "\n\n" + t("req_age", lang),
+        reply_markup=add_nav(req_age_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.age)
     await callback.answer()
 
@@ -84,7 +87,10 @@ async def choose_vip_duration(callback: CallbackQuery, state: FSMContext):
     days = int(callback.data.split(":")[1])
     await state.update_data(is_vip=True, vip_days=days)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_intro", lang) + "\n\n" + t("req_age", lang), reply_markup=req_age_kb(lang))
+    await callback.message.edit_text(
+        t("req_intro", lang) + "\n\n" + t("req_age", lang),
+        reply_markup=add_nav(req_age_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.age)
     await callback.answer()
 
@@ -105,7 +111,10 @@ async def req_age(callback: CallbackQuery, state: FSMContext):
     age_from, age_to = _AGE_MAP.get(callback.data, (0, 0))
     await state.update_data(req_age_from=age_from, req_age_to=age_to)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_education", lang), reply_markup=req_education_kb(lang))
+    await callback.message.edit_text(
+        t("req_education", lang),
+        reply_markup=add_nav(req_education_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.education)
     await callback.answer()
 
@@ -115,7 +124,10 @@ async def req_education(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_education=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_residence", lang), reply_markup=req_residence_simple_kb(lang))
+    await callback.message.edit_text(
+        t("req_residence", lang),
+        reply_markup=add_nav(req_residence_simple_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.residence)
     await callback.answer()
 
@@ -127,7 +139,10 @@ async def req_residence(callback: CallbackQuery, state: FSMContext):
 
     if value == "rres_uzb":
         # Show regions keyboard
-        await callback.message.edit_text(t("req_residence_region", lang), reply_markup=req_residence_regions_kb(lang))
+        await callback.message.edit_text(
+            t("req_residence_region", lang),
+            reply_markup=add_nav(req_residence_regions_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+        )
         await state.set_state(RequirementStates.residence_city)
         await callback.answer()
         return
@@ -136,7 +151,10 @@ async def req_residence(callback: CallbackQuery, state: FSMContext):
     else:  # rres_skip
         await state.update_data(req_residence="")
 
-    await callback.message.edit_text(t("req_nationality", lang), reply_markup=req_nationality_kb(lang))
+    await callback.message.edit_text(
+        t("req_nationality", lang),
+        reply_markup=add_nav(req_nationality_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.nationality)
     await callback.answer()
 
@@ -149,7 +167,10 @@ async def req_residence_region(callback: CallbackQuery, state: FSMContext):
     else:
         await state.update_data(req_residence=region)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_nationality", lang), reply_markup=req_nationality_kb(lang))
+    await callback.message.edit_text(
+        t("req_nationality", lang),
+        reply_markup=add_nav(req_nationality_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.nationality)
     await callback.answer()
 
@@ -159,7 +180,10 @@ async def req_nationality(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_nationality=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_religiosity", lang), reply_markup=req_religiosity_kb(lang))
+    await callback.message.edit_text(
+        t("req_religiosity", lang),
+        reply_markup=add_nav(req_religiosity_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.religiosity)
     await callback.answer()
 
@@ -169,7 +193,10 @@ async def req_religiosity(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_religiosity=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_marital", lang), reply_markup=req_marital_kb(lang))
+    await callback.message.edit_text(
+        t("req_marital", lang),
+        reply_markup=add_nav(req_marital_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.marital_status)
     await callback.answer()
 
@@ -186,7 +213,10 @@ async def req_marital(callback: CallbackQuery, state: FSMContext):
         await _after_req_children(callback, state)
     else:
         # Разведена/вдова/любое → спросить про детей
-        await callback.message.edit_text(t("req_children", lang), reply_markup=req_children_kb(lang))
+        await callback.message.edit_text(
+            t("req_children", lang),
+            reply_markup=add_nav(req_children_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+        )
         await state.set_state(RequirementStates.children)
     await callback.answer()
 
@@ -206,10 +236,16 @@ async def _after_req_children(callback: CallbackQuery, state: FSMContext):
 
     # Для анкеты дочери — дополнительные вопросы (машина, жильё, работа)
     if data.get("profile_type") == "daughter":
-        await callback.message.edit_text(t("req_car", lang), reply_markup=req_car_kb(lang))
+        await callback.message.edit_text(
+            t("req_car", lang),
+            reply_markup=add_nav(req_car_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+        )
         await state.set_state(RequirementStates.car_required)
     else:
-        await callback.message.edit_text(t("req_other", lang), reply_markup=skip_kb(lang))
+        await callback.message.edit_text(
+            t("req_other", lang),
+            reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+        )
         await state.set_state(RequirementStates.other_wishes)
 
 
@@ -219,7 +255,10 @@ async def req_car(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_car=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_housing", lang), reply_markup=req_housing_kb(lang))
+    await callback.message.edit_text(
+        t("req_housing", lang),
+        reply_markup=add_nav(req_housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.housing_required)
     await callback.answer()
 
@@ -229,7 +268,10 @@ async def req_housing(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(req_housing=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("req_job", lang), reply_markup=req_job_kb(lang))
+    await callback.message.edit_text(
+        t("req_job", lang),
+        reply_markup=add_nav(req_job_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
+    )
     await state.set_state(RequirementStates.job_required)
     await callback.answer()
 
@@ -383,7 +425,7 @@ async def profile_extend_now(callback: CallbackQuery, state: FSMContext, session
     # Запускаем Этап 2
     await callback.message.edit_text(
         t("ext_housing", lang),
-        reply_markup=housing_kb(lang),
+        reply_markup=add_nav(housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     from bot.states import QuestionnaireStates
     await state.set_state(QuestionnaireStates.ext_housing)
@@ -444,7 +486,7 @@ async def after_extend(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         t("ext_housing", lang),
-        reply_markup=housing_kb(lang),
+        reply_markup=add_nav(housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     from bot.states import QuestionnaireStates
     await state.set_state(QuestionnaireStates.ext_housing)

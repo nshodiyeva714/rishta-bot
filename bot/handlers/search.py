@@ -15,9 +15,9 @@ from bot.db.models import (
 )
 from bot.texts import t
 from bot.keyboards.inline import (
-    profile_card_kb, search_nav_kb, back_kb, main_menu_kb,
+    profile_card_kb, search_nav_kb, back_kb, back_main_kb, main_menu_kb,
     get_contact_kb, search_mode_kb, search_no_anketa_kb,
-    search_filter_kb, filter_option_kb,
+    search_filter_kb, filter_option_kb, nav_kb,
 )
 from bot.utils.helpers import age_text, calculate_age, format_anketa_public
 from bot.config import config
@@ -316,7 +316,7 @@ async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state
     lang = await get_lang(session, callback.from_user.id)
     await callback.message.edit_text(
         t("search_filter_age_prompt", lang),
-        reply_markup=back_kb(lang),
+        reply_markup=back_main_kb(lang, "search:manual"),
     )
     await state.set_state(SearchStates.filter_age)
     await callback.answer()
@@ -639,10 +639,7 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
                 text="👀 " + ("Barchasini ko'rish" if lang == "uz" else "Показать все"),
                 callback_data="search:all",
             )],
-            [InlineKeyboardButton(
-                text="🔙 " + ("Orqaga" if lang == "uz" else "Назад"),
-                callback_data="back:menu",
-            )],
+            *nav_kb(lang, "back:menu"),
         ])
         await callback.message.edit_text(t("search_empty", lang), reply_markup=kb)
         await callback.answer()
@@ -718,16 +715,11 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
             callback_data="search:prev",
         )])
 
-    nav_buttons.extend([
-        [InlineKeyboardButton(
-            text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
-            callback_data="search:manual",
-        )],
-        [InlineKeyboardButton(
-            text="🔙 " + ("Bosh menyu" if lang == "uz" else "Главное меню"),
-            callback_data="back:menu",
-        )],
-    ])
+    nav_buttons.append([InlineKeyboardButton(
+        text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
+        callback_data="search:manual",
+    )])
+    nav_buttons.extend(nav_kb(lang, "back:menu"))
 
     await callback.message.answer(
         "─────────────────",

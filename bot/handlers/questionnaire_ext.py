@@ -20,6 +20,7 @@ from bot.texts import t
 from bot.keyboards.inline import (
     housing_kb, parent_housing_kb, car_kb, skip_kb,
     family_position_kb, back_kb, main_menu_kb,
+    add_nav, nav_kb,
 )
 from bot.db.models import (
     Profile, ProfileStatus, User,
@@ -63,13 +64,13 @@ async def ext_housing(callback: CallbackQuery, state: FSMContext):
     if value == "with_parents":
         await callback.message.edit_text(
             t("ext_housing_parent", lang),
-            reply_markup=parent_housing_kb(lang),
+            reply_markup=add_nav(parent_housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
         )
         await state.set_state(QuestionnaireStates.ext_housing_parent)
     else:
         await callback.message.edit_text(
             t("ext_car", lang),
-            reply_markup=car_kb(lang),
+            reply_markup=add_nav(car_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
         )
         await state.set_state(QuestionnaireStates.ext_car)
     await callback.answer()
@@ -83,7 +84,7 @@ async def ext_housing_parent(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(
         t("ext_car", lang),
-        reply_markup=car_kb(lang),
+        reply_markup=add_nav(car_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_car)
     await callback.answer()
@@ -95,7 +96,7 @@ async def ext_car(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
     await state.update_data(car=value)
     lang = await _lang(state)
-    await callback.message.edit_text(t("ext_address", lang))
+    await callback.message.edit_text(t("ext_address", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_address)
     await callback.answer()
 
@@ -105,7 +106,7 @@ async def ext_car(callback: CallbackQuery, state: FSMContext):
 async def ext_address(message: Message, state: FSMContext):
     await state.update_data(address=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_family_region", lang))
+    await message.answer(t("ext_family_region", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_family_region)
 
 
@@ -114,7 +115,7 @@ async def ext_address(message: Message, state: FSMContext):
 async def ext_family_region(message: Message, state: FSMContext):
     await state.update_data(family_region=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_father", lang))
+    await message.answer(t("ext_father", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_father)
 
 
@@ -123,7 +124,7 @@ async def ext_family_region(message: Message, state: FSMContext):
 async def ext_father(message: Message, state: FSMContext):
     await state.update_data(father_occupation=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_mother", lang))
+    await message.answer(t("ext_mother", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_mother)
 
 
@@ -132,7 +133,7 @@ async def ext_father(message: Message, state: FSMContext):
 async def ext_mother(message: Message, state: FSMContext):
     await state.update_data(mother_occupation=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_brothers", lang))
+    await message.answer(t("ext_brothers", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_brothers)
 
 
@@ -145,7 +146,7 @@ async def ext_brothers(message: Message, state: FSMContext):
         await message.answer(t("invalid_number", lang))
         return
     await state.update_data(brothers_count=int(text))
-    await message.answer(t("ext_sisters", lang))
+    await message.answer(t("ext_sisters", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_sisters)
 
 
@@ -160,7 +161,7 @@ async def ext_sisters(message: Message, state: FSMContext):
     await state.update_data(sisters_count=int(text))
     await message.answer(
         t("ext_position", lang),
-        reply_markup=family_position_kb(lang),
+        reply_markup=add_nav(family_position_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_position)
 
@@ -173,7 +174,7 @@ async def ext_position(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(
         t("ext_health", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_health)
     await callback.answer()
@@ -184,14 +185,14 @@ async def ext_position(callback: CallbackQuery, state: FSMContext):
 async def ext_health(message: Message, state: FSMContext):
     await state.update_data(health_notes=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_character", lang))
+    await message.answer(t("ext_character", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_character)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_health)
 async def ext_health_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("ext_character", lang))
+    await callback.message.edit_text(t("ext_character", lang), reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_character)
     await callback.answer()
 
@@ -203,7 +204,7 @@ async def ext_character(message: Message, state: FSMContext):
     lang = await _lang(state)
     await message.answer(
         t("ext_ideal_family", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_ideal_family)
 
@@ -215,7 +216,7 @@ async def ext_ideal_family(message: Message, state: FSMContext):
     lang = await _lang(state)
     await message.answer(
         t("ext_qualities", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_qualities)
 
@@ -225,7 +226,7 @@ async def ext_ideal_family_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(
         t("ext_qualities", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_qualities)
     await callback.answer()
@@ -238,7 +239,7 @@ async def ext_qualities(message: Message, state: FSMContext):
     lang = await _lang(state)
     await message.answer(
         t("ext_plans", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_plans)
 
@@ -248,7 +249,7 @@ async def ext_qualities_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(
         t("ext_plans", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_plans)
     await callback.answer()
@@ -261,7 +262,7 @@ async def ext_plans(message: Message, state: FSMContext):
     lang = await _lang(state)
     await message.answer(
         t("ext_parent_telegram", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
 
@@ -271,7 +272,7 @@ async def ext_plans_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await callback.message.edit_text(
         t("ext_parent_telegram", lang),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
     await callback.answer()
@@ -290,7 +291,7 @@ async def ext_parent_telegram(message: Message, state: FSMContext):
     child = t("son", lang) if ptype == "son" else t("daughter", lang)
     await message.answer(
         t("ext_candidate_telegram", lang, child=child),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
 
@@ -303,7 +304,7 @@ async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
     child = t("son", lang) if ptype == "son" else t("daughter", lang)
     await callback.message.edit_text(
         t("ext_candidate_telegram", lang, child=child),
-        reply_markup=skip_kb(lang),
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
     await callback.answer()
@@ -339,6 +340,7 @@ async def _show_ext_confirm(message, state: FSMContext, lang: str, edit: bool = 
             text="❌ Отменить" if lang == "ru" else "❌ Bekor qilish",
             callback_data="ext_confirm:cancel",
         )],
+        *nav_kb(lang, "back:menu"),
     ])
     text = t("ext_confirm", lang)
     if edit:

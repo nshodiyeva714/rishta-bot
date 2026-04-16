@@ -16,11 +16,11 @@ from bot.utils.helpers import format_full_anketa
 from bot.states import ModeratorContactStates, FeedbackSuggestionStates, EditProfileStates
 from bot.texts import t
 from bot.keyboards.inline import (
-    main_menu_kb, _full_menu_kb, back_kb, my_profile_kb,
+    main_menu_kb, _full_menu_kb, back_kb, back_main_kb, my_profile_kb,
     quest_start_kb, contact_moderator_kb, vip_duration_kb,
     choose_moderator_kb, search_submenu_kb, create_submenu_kb,
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
-    edit_marital_kb, edit_nationality_kb,
+    edit_marital_kb, edit_nationality_kb, nav_kb, add_nav,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -130,7 +130,7 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"📢 @Rishta_uz | 💬 @Rishta_chat"
         )
 
-    await _safe_edit(callback, text, reply_markup=back_kb(lang))
+    await _safe_edit(callback, text, reply_markup=back_main_kb(lang))
     await callback.answer()
 
 
@@ -659,8 +659,7 @@ async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, sess
         f"To'lov uchun moderator bilan bog'laning:\n{moderator}"
     )
 
-    from bot.keyboards.inline import back_kb
-    await _safe_edit(callback, text, reply_markup=back_kb(lang))
+    await _safe_edit(callback, text, reply_markup=back_main_kb(lang, "menu:my"))
     await state.clear()
     await callback.answer()
 
@@ -827,7 +826,7 @@ async def start_daughter_quest(callback: CallbackQuery, state: FSMContext, sessi
 async def mod_write_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     prompt = "✍️ Напишите ваше сообщение модератору:" if lang == "ru" else "✍️ Moderatorga xabaringizni yozing:"
-    await _safe_edit(callback, prompt, reply_markup=back_kb(lang))
+    await _safe_edit(callback, prompt, reply_markup=back_main_kb(lang))
     await state.set_state(ModeratorContactStates.awaiting_message)
     await callback.answer()
 
@@ -890,7 +889,7 @@ async def user_feedback_start(callback: CallbackQuery, state: FSMContext, sessio
     await _safe_edit(
         callback,
         t("user_feedback_prompt", lang),
-        reply_markup=back_kb(lang),
+        reply_markup=back_main_kb(lang),
     )
     await state.set_state(FeedbackSuggestionStates.awaiting_text)
     await callback.answer()
@@ -970,7 +969,7 @@ async def extend_start(callback: CallbackQuery, state: FSMContext, session: Asyn
     await _safe_edit(
         callback,
         t("ext_housing", lang),
-        reply_markup=housing_kb(lang),
+        reply_markup=add_nav(housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     await state.set_state(QuestionnaireStates.ext_housing)
     await callback.answer()

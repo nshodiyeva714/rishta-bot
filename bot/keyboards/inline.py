@@ -2,6 +2,38 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeybo
 from bot.texts import t
 
 
+# ── Универсальная навигация ──
+
+def nav_kb(lang: str = "ru", back_cb: str = "back:menu",
+           show_back: bool = True, show_main: bool = True) -> list:
+    """Навигационные кнопки — возвращает список строк для добавления в клавиатуру."""
+    row = []
+    if show_back:
+        row.append(InlineKeyboardButton(
+            text="🔙 Ortga" if lang == "uz" else "🔙 Назад",
+            callback_data=back_cb,
+        ))
+    if show_main:
+        row.append(InlineKeyboardButton(
+            text="🏠 Bosh menyu" if lang == "uz" else "🏠 Главное меню",
+            callback_data="menu:main",
+        ))
+    return [row] if row else []
+
+
+def add_nav(existing_rows: list, lang: str = "ru", back_cb: str = "back:menu",
+            show_back: bool = True, show_main: bool = True) -> InlineKeyboardMarkup:
+    """Добавить навигацию к существующим строкам клавиатуры."""
+    rows = list(existing_rows)
+    rows.extend(nav_kb(lang, back_cb, show_back, show_main))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def back_main_kb(lang: str = "ru", back_cb: str = "back:menu") -> InlineKeyboardMarkup:
+    """Кнопки Назад + Главное меню."""
+    return InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, back_cb))
+
+
 def lang_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -47,7 +79,7 @@ def search_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:search_bride")],
         [InlineKeyboardButton(text=t("btn_search_groom", lang), callback_data="menu:search_groom")],
-        [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")],
+        *nav_kb(lang, "back:menu"),
     ])
 
 
@@ -56,7 +88,7 @@ def create_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_profile_son", lang), callback_data="menu:son")],
         [InlineKeyboardButton(text=t("btn_profile_daughter", lang), callback_data="menu:daughter")],
-        [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")],
+        *nav_kb(lang, "back:menu"),
     ])
 
 
@@ -80,7 +112,7 @@ def contact_moderator_kb(lang: str = "ru", region: str = "tashkent") -> InlineKe
 def quest_start_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_start", lang), callback_data="quest:start")],
-        [InlineKeyboardButton(text=t("btn_cancel", lang), callback_data="back:menu")],
+        *nav_kb(lang, "back:menu"),
     ])
 
 
@@ -347,10 +379,12 @@ def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
+            *nav_kb(lang, show_back=False),
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
         [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
+        *nav_kb(lang, show_back=False),
     ])
 
 
@@ -360,10 +394,12 @@ def enhance_or_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="profile:extend_now")],
             [InlineKeyboardButton(text="🚀 Shundayicha nashr etish", callback_data="profile:publish")],
+            *nav_kb(lang, show_back=False),
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✏️ Дополнить сейчас", callback_data="profile:extend_now")],
         [InlineKeyboardButton(text="🚀 Опубликовать как есть", callback_data="profile:publish")],
+        *nav_kb(lang, show_back=False),
     ])
 
 
@@ -648,74 +684,56 @@ def search_nav_kb(page: int, total_pages: int, lang: str = "ru") -> InlineKeyboa
 
 def search_mode_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """3 варианта поиска когда у пользователя есть анкета."""
-    if lang == "uz":
-        buttons = [
-            [InlineKeyboardButton(text="✅ Mening talablarim bo'yicha", callback_data="search:my_req")],
-            [InlineKeyboardButton(text="🔧 Filtrlarni qo'lda sozlash", callback_data="search:manual")],
-            [InlineKeyboardButton(text="👀 Barcha anketalarni ko'rish", callback_data="search:all")],
-            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
-        ]
-    else:
-        buttons = [
-            [InlineKeyboardButton(text="✅ По моим требованиям", callback_data="search:my_req")],
-            [InlineKeyboardButton(text="🔧 Настроить фильтры вручную", callback_data="search:manual")],
-            [InlineKeyboardButton(text="👀 Показать все анкеты", callback_data="search:all")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
-        ]
+    buttons = [
+        [InlineKeyboardButton(
+            text="✅ Mening talablarim bo'yicha" if lang == "uz" else "✅ По моим требованиям",
+            callback_data="search:my_req")],
+        [InlineKeyboardButton(
+            text="🔧 Filtrlarni qo'lda sozlash" if lang == "uz" else "🔧 Настроить фильтры вручную",
+            callback_data="search:manual")],
+        [InlineKeyboardButton(
+            text="👀 Barcha anketalarni ko'rish" if lang == "uz" else "👀 Показать все анкеты",
+            callback_data="search:all")],
+        *nav_kb(lang, "back:menu"),
+    ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def search_no_anketa_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Если нет анкеты — предлагаем создать."""
-    if lang == "uz":
-        buttons = [
-            [InlineKeyboardButton(text="👦 Anketa joylashtirish", callback_data="menu:son")],
-            [InlineKeyboardButton(text="👧 Anketa joylashtirish", callback_data="menu:daughter")],
-            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
-        ]
-    else:
-        buttons = [
-            [InlineKeyboardButton(text="👦 Разместить анкету сына", callback_data="menu:son")],
-            [InlineKeyboardButton(text="👧 Разместить анкету дочери", callback_data="menu:daughter")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
-        ]
+    buttons = [
+        [InlineKeyboardButton(
+            text="👦 Anketa joylashtirish" if lang == "uz" else "👦 Разместить анкету сына",
+            callback_data="menu:son")],
+        [InlineKeyboardButton(
+            text="👧 Anketa joylashtirish" if lang == "uz" else "👧 Разместить анкету дочери",
+            callback_data="menu:daughter")],
+        *nav_kb(lang, "back:menu"),
+    ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def search_filter_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Главное меню ручных фильтров."""
-    if lang == "uz":
-        buttons = [
-            [InlineKeyboardButton(text="📅 Yosh", callback_data="filter:age")],
-            [InlineKeyboardButton(text="🕌 Dindorlik", callback_data="filter:religion")],
-            [InlineKeyboardButton(text="🎓 Ma'lumoti", callback_data="filter:education")],
-            [InlineKeyboardButton(text="💍 Oilaviy holat", callback_data="filter:marital")],
-            [InlineKeyboardButton(text="👶 Farzandlar", callback_data="filter:children")],
-            [InlineKeyboardButton(text="🌍 Yashash joyi", callback_data="filter:residence")],
-            [InlineKeyboardButton(text="🔍 Qidirish", callback_data="filter:go")],
-            [InlineKeyboardButton(text="🔄 Tozalash", callback_data="filter:clear")],
-            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
-        ]
-    else:
-        buttons = [
-            [InlineKeyboardButton(text="📅 Возраст", callback_data="filter:age")],
-            [InlineKeyboardButton(text="🕌 Религиозность", callback_data="filter:religion")],
-            [InlineKeyboardButton(text="🎓 Образование", callback_data="filter:education")],
-            [InlineKeyboardButton(text="💍 Семейное положение", callback_data="filter:marital")],
-            [InlineKeyboardButton(text="👶 Дети", callback_data="filter:children")],
-            [InlineKeyboardButton(text="🌍 Где проживает", callback_data="filter:residence")],
-            [InlineKeyboardButton(text="🔍 Начать поиск", callback_data="filter:go")],
-            [InlineKeyboardButton(text="🔄 Сбросить фильтры", callback_data="filter:clear")],
-            [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
-        ]
+    is_uz = lang == "uz"
+    buttons = [
+        [InlineKeyboardButton(text="📅 Yosh" if is_uz else "📅 Возраст", callback_data="filter:age")],
+        [InlineKeyboardButton(text="🕌 Dindorlik" if is_uz else "🕌 Религиозность", callback_data="filter:religion")],
+        [InlineKeyboardButton(text="🎓 Ma'lumoti" if is_uz else "🎓 Образование", callback_data="filter:education")],
+        [InlineKeyboardButton(text="💍 Oilaviy holat" if is_uz else "💍 Семейное положение", callback_data="filter:marital")],
+        [InlineKeyboardButton(text="👶 Farzandlar" if is_uz else "👶 Дети", callback_data="filter:children")],
+        [InlineKeyboardButton(text="🌍 Yashash joyi" if is_uz else "🌍 Где проживает", callback_data="filter:residence")],
+        [InlineKeyboardButton(text="🔍 Qidirish" if is_uz else "🔍 Начать поиск", callback_data="filter:go")],
+        [InlineKeyboardButton(text="🔄 Tozalash" if is_uz else "🔄 Сбросить фильтры", callback_data="filter:clear")],
+        *nav_kb(lang, "back:menu"),
+    ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def filter_option_kb(options: list[tuple[str, str]], lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура выбора значения фильтра. options = [(label, callback_data), ...]"""
     buttons = [[InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in options]
-    back_label = "🔙 Orqaga" if lang == "uz" else "🔙 Назад к фильтрам"
-    buttons.append([InlineKeyboardButton(text=back_label, callback_data="search:manual")])
+    buttons.extend(nav_kb(lang, "search:manual"))
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -959,7 +977,7 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
         ]
         back_text = "🔙 Назад"
     rows = [[InlineKeyboardButton(text=label, callback_data=f"{cd}:{profile_id}")] for label, cd in fields]
-    rows.append([InlineKeyboardButton(text=back_text, callback_data="menu:my")])
+    rows.extend(nav_kb(lang, "menu:my"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -988,7 +1006,7 @@ def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> 
         text="🗑 Удалить анкету" if lang == "ru" else "🗑 Anketani o'chirish",
         callback_data=f"mydelete:{profile_id}",
     )])
-    rows.append([InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:menu")])
+    rows.extend(nav_kb(lang, "back:menu"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -1012,9 +1030,8 @@ def choose_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     from bot.config import MODERATOR_USERNAMES
     tash = MODERATOR_USERNAMES.get("tashkent", "rishta_manager_tashkent")
     sam = MODERATOR_USERNAMES.get("samarkand", "rishta_manager_samarkand")
-    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"💬 @{tash}", url=f"https://t.me/{tash}")],
         [InlineKeyboardButton(text=f"💬 @{sam}", url=f"https://t.me/{sam}")],
-        [InlineKeyboardButton(text=back, callback_data="back:menu")],
+        *nav_kb(lang, "back:menu"),
     ])

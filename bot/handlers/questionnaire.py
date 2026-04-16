@@ -18,6 +18,7 @@ from bot.keyboards.inline import (
     education_kb, nationality_kb, religiosity_kb,
     marital_kb, children_kb, skip_kb, photo_type_kb,
     confirm_age_kb, back_kb, tariff_kb, work_choice_kb,
+    back_step_kb, add_nav,
 )
 
 router = Router()
@@ -54,7 +55,7 @@ async def _gendered_key(state: FSMContext, base_key: str) -> str:
 async def quest_start(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     child = await _child_label(state)
-    await callback.message.edit_text(t("q1", lang, child=child))
+    await callback.message.edit_text(t("q1", lang, child=child), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q1_name)
     await callback.answer()
 
@@ -64,7 +65,7 @@ async def quest_start(callback: CallbackQuery, state: FSMContext):
 async def q1_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("q2", lang))
+    await message.answer(t("q2", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q2_birth_year)
 
 
@@ -90,7 +91,7 @@ async def q2_birth_year(message: Message, state: FSMContext):
 @router.callback_query(F.data == "age:confirm", QuestionnaireStates.q2_confirm_age)
 async def q2_confirm(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("q3", lang))
+    await callback.message.edit_text(t("q3", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q3_height)
     await callback.answer()
 
@@ -98,7 +99,7 @@ async def q2_confirm(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "age:fix", QuestionnaireStates.q2_confirm_age)
 async def q2_fix(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("q2", lang))
+    await callback.message.edit_text(t("q2", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q2_birth_year)
     await callback.answer()
 
@@ -112,7 +113,7 @@ async def q3_height(message: Message, state: FSMContext):
         await message.answer(t("invalid_number", lang))
         return
     await state.update_data(height_cm=int(text))
-    await message.answer(t("q4", lang))
+    await message.answer(t("q4", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q4_weight)
 
 
@@ -126,7 +127,7 @@ async def q4_weight(message: Message, state: FSMContext):
         return
     await state.update_data(weight_kg=int(text))
     # → 5. Национальность
-    await message.answer(t("q12", lang), reply_markup=nationality_kb(lang))
+    await message.answer(t("q12", lang), reply_markup=add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
     await state.set_state(QuestionnaireStates.q12_nationality)
 
 
@@ -137,7 +138,7 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
     await state.update_data(nationality=value)
     lang = await _lang(state)
     # → 6. Город
-    await callback.message.edit_text(t("q9_city_district", lang))
+    await callback.message.edit_text(t("q9_city_district", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q9_city_district)
     await callback.answer()
 
@@ -148,7 +149,7 @@ async def q6_city(message: Message, state: FSMContext):
     await state.update_data(city=message.text.strip())
     lang = await _lang(state)
     # → 7. Образование
-    await message.answer(t("q5", lang), reply_markup=education_kb(lang))
+    await message.answer(t("q5", lang), reply_markup=add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
     await state.set_state(QuestionnaireStates.q5_education)
 
 
@@ -160,12 +161,12 @@ async def q7_education(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
 
     if value == "studying":
-        await callback.message.edit_text(t("q5_university", lang))
+        await callback.message.edit_text(t("q5_university", lang), reply_markup=back_step_kb(lang))
         await state.set_state(QuestionnaireStates.q5_university)
     else:
         # → 8. Работа
         gkey = await _gendered_key(state, "q6_choice")
-        await callback.message.edit_text(t(gkey, lang), reply_markup=work_choice_kb(lang))
+        await callback.message.edit_text(t(gkey, lang), reply_markup=add_nav(work_choice_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
         await state.set_state(QuestionnaireStates.q6_work_choice)
     await callback.answer()
 
@@ -175,7 +176,7 @@ async def q7_university(message: Message, state: FSMContext):
     await state.update_data(university_info=message.text.strip())
     lang = await _lang(state)
     # Если учится — пропускаем работу → 9. Религиозность
-    await message.answer(t("q16", lang), reply_markup=religiosity_kb(lang))
+    await message.answer(t("q16", lang), reply_markup=add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
     await state.set_state(QuestionnaireStates.q16_religiosity)
 
 
@@ -183,7 +184,7 @@ async def q7_university(message: Message, state: FSMContext):
 @router.callback_query(F.data == "work:specify", QuestionnaireStates.q6_work_choice)
 async def q8_work_specify(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
-    await callback.message.edit_text(t("q6", lang))
+    await callback.message.edit_text(t("q6", lang), reply_markup=back_step_kb(lang))
     await state.set_state(QuestionnaireStates.q6_occupation)
     await callback.answer()
 
@@ -193,7 +194,7 @@ async def q8_work_skip(callback: CallbackQuery, state: FSMContext):
     lang = await _lang(state)
     await state.update_data(occupation="—")
     # → 9. Религиозность
-    await callback.message.edit_text(t("q16", lang), reply_markup=religiosity_kb(lang))
+    await callback.message.edit_text(t("q16", lang), reply_markup=add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
     await state.set_state(QuestionnaireStates.q16_religiosity)
     await callback.answer()
 
@@ -203,7 +204,7 @@ async def q8_occupation(message: Message, state: FSMContext):
     await state.update_data(occupation=message.text.strip())
     lang = await _lang(state)
     # → 9. Религиозность
-    await message.answer(t("q16", lang), reply_markup=religiosity_kb(lang))
+    await message.answer(t("q16", lang), reply_markup=add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
     await state.set_state(QuestionnaireStates.q16_religiosity)
 
 
@@ -218,7 +219,7 @@ async def q9_religiosity(callback: CallbackQuery, state: FSMContext):
     # → 10. Семейное положение (3 кнопки)
     await callback.message.edit_text(
         t("q_marital_status", lang),
-        reply_markup=marital_kb(lang, is_male),
+        reply_markup=add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False),
     )
     await state.set_state(QuestionnaireStates.q_marital_status)
     await callback.answer()
@@ -236,14 +237,14 @@ async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
         await state.update_data(children_status="no")
         await callback.message.edit_text(
             t("q_photo_optional", lang),
-            reply_markup=photo_type_kb(lang),
+            reply_markup=add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
         )
         await state.set_state(QuestionnaireStates.q21_photo_type)
     else:
         # Разведён/а или Вдовец/Вдова → спросить про детей
         await callback.message.edit_text(
             t("q_children", lang),
-            reply_markup=children_kb(lang),
+            reply_markup=add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
         )
         await state.set_state(QuestionnaireStates.q_children)
     await callback.answer()
@@ -259,7 +260,7 @@ async def q10_children(callback: CallbackQuery, state: FSMContext):
     # → Фото (необязательно)
     await callback.message.edit_text(
         t("q_photo_optional", lang),
-        reply_markup=photo_type_kb(lang),
+        reply_markup=add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     )
     await state.set_state(QuestionnaireStates.q21_photo_type)
     await callback.answer()
@@ -363,23 +364,23 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
     }
 
     kb_map = {
-        "nationality_kb": lambda: nationality_kb(lang),
-        "education_kb": lambda: education_kb(lang),
-        "work_choice_kb": lambda: work_choice_kb(lang),
-        "religiosity_kb": lambda: religiosity_kb(lang),
-        "marital_kb": lambda: marital_kb(lang, is_male),
-        "children_kb": lambda: children_kb(lang),
-        "photo_type_kb": lambda: photo_type_kb(lang),
+        "nationality_kb": lambda: add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        "education_kb": lambda: add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        "work_choice_kb": lambda: add_nav(work_choice_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        "religiosity_kb": lambda: add_nav(religiosity_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        "marital_kb": lambda: add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False),
+        "children_kb": lambda: add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+        "photo_type_kb": lambda: add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     }
 
     entry = back_map.get(current)
     if entry:
         text_key, prev_state, kb_name = entry
         msg_text = t(text_key, lang, child=child)
-        kb = kb_map[kb_name]() if kb_name else None
-        if kb:
-            await callback.message.edit_text(msg_text, reply_markup=kb)
+        if kb_name:
+            kb = kb_map[kb_name]()
         else:
-            await callback.message.edit_text(msg_text)
+            kb = back_step_kb(lang)
+        await callback.message.edit_text(msg_text, reply_markup=kb)
         await state.set_state(prev_state)
     await callback.answer("🔙")

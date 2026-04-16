@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, Meeting, Profile
 from bot.states import MeetingStates
 from bot.texts import t
-from bot.keyboards.inline import main_menu_kb, meeting_skip_kb
+from bot.keyboards.inline import main_menu_kb, meeting_skip_kb, nav_kb
 from bot.config import config
 
 router = Router()
@@ -26,7 +26,11 @@ async def get_lang(session: AsyncSession, user_id: int) -> str:
 @router.callback_query(F.data == "meeting:skip")
 async def meeting_skip(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    await callback.message.edit_text(t("meeting_skip", lang))
+    from aiogram.types import InlineKeyboardMarkup
+    await callback.message.edit_text(
+        t("meeting_skip", lang),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+    )
     await callback.answer()
 
 
@@ -125,5 +129,9 @@ async def meeting_time(message: Message, state: FSMContext, session: AsyncSessio
         except Exception:
             pass
 
-    await message.answer(t("meeting_confirmed", lang, date=date_str, time=time_str))
+    from aiogram.types import InlineKeyboardMarkup
+    await message.answer(
+        t("meeting_confirmed", lang, date=date_str, time=time_str),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+    )
     await state.clear()

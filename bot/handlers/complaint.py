@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Complaint, ComplaintReason, Profile
 from bot.texts import t
+from bot.keyboards.inline import nav_kb, add_nav
 from bot.config import config
 
 router = Router()
@@ -30,7 +31,7 @@ async def report_profile(callback: CallbackQuery, session: AsyncSession):
     from bot.keyboards.inline import complaint_reason_kb
     await callback.message.answer(
         t("complaint_reason", lang, display_id=display_id),
-        reply_markup=complaint_reason_kb(profile_id, lang),
+        reply_markup=add_nav(complaint_reason_kb(profile_id, lang).inline_keyboard, lang, "back:menu"),
     )
     await callback.answer()
 
@@ -52,7 +53,11 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
     session.add(complaint)
     await session.commit()
 
-    await callback.message.edit_text(t("complaint_submitted", lang))
+    from aiogram.types import InlineKeyboardMarkup
+    await callback.message.edit_text(
+        t("complaint_submitted", lang),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+    )
 
     # Уведомляем всех модераторов
     from bot.config import get_all_moderator_ids

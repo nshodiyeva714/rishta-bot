@@ -14,7 +14,8 @@ from bot.states import PaymentStates, MeetingStates
 from bot.texts import t
 from bot.keyboards.inline import (
     payment_uz_kb, payment_cis_kb, payment_intl_kb,
-    mod_payment_kb, meeting_skip_kb, back_kb,
+    mod_payment_kb, meeting_skip_kb, back_main_kb,
+    main_menu_kb, nav_kb,
 )
 from bot.config import config
 from bot.utils.helpers import format_anketa_private
@@ -116,7 +117,10 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
         residence = user_profile.residence_status.value if user_profile and user_profile.residence_status else "uzbekistan"
         amount = 30000_00  # 30,000 сум
         await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer", pay_amount=amount, lang=lang)
-        await callback.message.edit_text(t("payment_card_transfer", lang))
+        await callback.message.edit_text(
+            t("payment_card_transfer", lang),
+            reply_markup=back_main_kb(lang),
+        )
         await state.set_state(PaymentStates.awaiting_screenshot)
     elif method == "moderator":
         # Через модератора
@@ -125,11 +129,14 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
         hours = "08:00–00:00"
         await callback.message.edit_text(
             t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
-            reply_markup=back_kb(lang),
+            reply_markup=back_main_kb(lang),
         )
     elif method in ("payme", "click", "uzum", "stripe"):
         # Эти методы больше не доступны — направляем к карте
-        await callback.message.edit_text(t("payment_card_transfer", lang))
+        await callback.message.edit_text(
+            t("payment_card_transfer", lang),
+            reply_markup=back_main_kb(lang),
+        )
         await state.update_data(pay_profile_id=profile_id, pay_method="card_transfer", pay_amount=30000_00, lang=lang)
         await state.set_state(PaymentStates.awaiting_screenshot)
 
@@ -174,9 +181,11 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
         except Exception:
             pass
 
+    from aiogram.types import InlineKeyboardMarkup
     await message.answer(
         "✅ Скриншот отправлен модератору.\nОжидайте подтверждения оплаты." if lang == "ru"
-        else "✅ Skrinshot moderatorga yuborildi.\nTo'lovni tasdiqlashni kuting."
+        else "✅ Skrinshot moderatorga yuborildi.\nTo'lovni tasdiqlashni kuting.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
     )
     # Не очищаем state — оплата ещё не подтверждена.
     # Модератор подтвердит → send_contact_details → meeting flow
@@ -188,4 +197,4 @@ async def payment_screenshot_invalid(message: Message, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "ru")
     text = "📸 Пожалуйста, отправьте скриншот оплаты (фото)." if lang == "ru" else "📸 Iltimos, to'lov skrinshotini (foto) yuboring."
-    await message.answer(text)
+    await message.answer(text, reply_markup=back_main_kb(lang))

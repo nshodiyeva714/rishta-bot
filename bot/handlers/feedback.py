@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, Feedback, FeedbackResult
 from bot.states import FeedbackStates
 from bot.texts import t
-from bot.keyboards.inline import feedback_story_kb, main_menu_kb
+from bot.keyboards.inline import feedback_story_kb, main_menu_kb, back_main_kb, add_nav, nav_kb
 
 router = Router()
 
@@ -39,7 +39,7 @@ async def feedback_result(callback: CallbackQuery, state: FSMContext, session: A
     if result_value == "nikoh":
         await callback.message.edit_text(
             t("feedback_nikoh", lang),
-            reply_markup=feedback_story_kb(lang),
+            reply_markup=add_nav(feedback_story_kb(lang).inline_keyboard, lang, "back:menu"),
         )
         await state.update_data(feedback_profile_id=profile_id, lang=lang)
         await state.set_state(FeedbackStates.story)
@@ -50,7 +50,11 @@ async def feedback_result(callback: CallbackQuery, state: FSMContext, session: A
             "not_matched": "❌ Жаль, что не подошли. Желаем найти свою пару! 🤲" if lang == "ru" else "❌ Mos kelmaganiga afsusdamiz. Juftingizni topishingizni tilaymiz! 🤲",
         }
         text = responses.get(result_value, "Спасибо за отзыв!")
-        await callback.message.edit_text(text)
+        from aiogram.types import InlineKeyboardMarkup
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+        )
 
     await callback.answer()
 
@@ -60,7 +64,7 @@ async def story_yes(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "ru")
     prompt = "Напишите вашу историю (будет опубликована анонимно):" if lang == "ru" else "Tarixingizni yozing (anonim ravishda nashr etiladi):"
-    await callback.message.edit_text(prompt)
+    await callback.message.edit_text(prompt, reply_markup=back_main_kb(lang))
     await callback.answer()
 
 
@@ -83,7 +87,11 @@ async def story_text(message: Message, state: FSMContext, session: AsyncSession)
         await session.commit()
 
     thanks = "Спасибо за вашу историю! Она будет опубликована анонимно в @Rishta_uz 🤲" if lang == "ru" else "Tarixingiz uchun rahmat! U @Rishta_uz da anonim ravishda nashr etiladi 🤲"
-    await message.answer(thanks)
+    from aiogram.types import InlineKeyboardMarkup
+    await message.answer(
+        thanks,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+    )
     await state.clear()
 
 
@@ -92,6 +100,10 @@ async def story_no(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     lang = data.get("lang", "ru")
     text = "Спасибо! Nikohingiz muborak bo'lsin! 💍🤲" if lang == "ru" else "Rahmat! Nikohingiz muborak bo'lsin! 💍🤲"
-    await callback.message.edit_text(text)
+    from aiogram.types import InlineKeyboardMarkup
+    await callback.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
+    )
     await state.clear()
     await callback.answer()
