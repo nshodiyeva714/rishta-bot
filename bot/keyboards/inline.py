@@ -86,7 +86,7 @@ def create_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_profile_son", lang), callback_data="menu:son")],
         [InlineKeyboardButton(text=t("btn_profile_daughter", lang), callback_data="menu:daughter")],
-        *nav_kb(lang, "back:menu"),
+        *nav_kb(lang, "back:menu", show_main=False),
     ])
 
 
