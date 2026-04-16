@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite, ProfileType
+from bot.utils.helpers import format_full_anketa
 from bot.states import ModeratorContactStates, FeedbackSuggestionStates
 from bot.texts import t
 from bot.keyboards.inline import (
@@ -129,7 +130,7 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
 
 @router.callback_query(F.data == "menu:my")
 async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 4 — Мои заявки."""
+    """Шаг 4 — Мои заявки: статистика + полная анкета + управление."""
     await state.clear()
     lang = await get_lang(session, callback.from_user.id)
     user_id = callback.from_user.id
@@ -138,72 +139,99 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
         select(Profile).where(
             Profile.user_id == user_id,
             Profile.status != ProfileStatus.DELETED,
-        )
+        ).order_by(Profile.created_at.desc())
     )
-    profiles = result.scalars().all()
+    profile = result.scalars().first()
 
-    if not profiles:
-        await _safe_edit(callback, t("no_profiles", lang), reply_markup=back_kb(lang))
+    if not profile:
+        if lang == "uz":
+            text = (
+                "📋 Sizda hozircha anketa yo'q.\n\n"
+                "Anketa yaratib qidiruvni boshlang!"
+            )
+        else:
+            text = (
+                "📋 У вас пока нет анкеты.\n\n"
+                "Создайте анкету чтобы начать поиск!"
+            )
+        from bot.keyboards.inline import create_submenu_kb
+        await _safe_edit(callback, text, reply_markup=create_submenu_kb(lang))
         await callback.answer()
         return
 
-    for profile in profiles:
-        # Считаем запросы и избранное
-        req_result = await session.execute(
-            select(ContactRequest).where(ContactRequest.target_profile_id == profile.id)
+    # ── Статистика ──
+    from sqlalchemy import func as sqlfunc
+
+    fav_result = await session.execute(
+        select(sqlfunc.count(Favorite.id)).where(Favorite.profile_id == profile.id)
+    )
+    fav_count = fav_result.scalar() or 0
+
+    req_result = await session.execute(
+        select(sqlfunc.count(ContactRequest.id)).where(
+            ContactRequest.target_profile_id == profile.id
         )
-        requests = req_result.scalars().all()
+    )
+    req_count = req_result.scalar() or 0
 
-        fav_result = await session.execute(
-            select(Favorite).where(Favorite.user_id == user_id)
+    views = profile.views_count or 0
+    display_id = profile.display_id or "—"
+    vip_active = profile.vip_status == VipStatus.ACTIVE
+
+    status_map_ru = {
+        ProfileStatus.DRAFT: "📝 Черновик",
+        ProfileStatus.PENDING: "⏳ На проверке",
+        ProfileStatus.PUBLISHED: "✅ Опубликована",
+        ProfileStatus.REJECTED: "❌ Отклонена",
+        ProfileStatus.PAUSED: "⏸ На паузе",
+    }
+    status_map_uz = {
+        ProfileStatus.DRAFT: "📝 Qoralama",
+        ProfileStatus.PENDING: "⏳ Tekshiruvda",
+        ProfileStatus.PUBLISHED: "✅ Nashr etilgan",
+        ProfileStatus.REJECTED: "❌ Rad etilgan",
+        ProfileStatus.PAUSED: "⏸ Pauzada",
+    }
+
+    s_map = status_map_uz if lang == "uz" else status_map_ru
+    status_label = s_map.get(profile.status, "—")
+    vip_label = "⭐ VIP" if vip_active else ("📋 Oddiy" if lang == "uz" else "📋 Обычная")
+
+    if lang == "uz":
+        stats = (
+            f"🔖 #{display_id}\n"
+            f"📊 Holat: {status_label}\n"
+            f"{vip_label}\n"
+            f"👁 Ko'rishlar: {views}\n"
+            f"❤️ Tanlanganlar: {fav_count}\n"
+            f"💬 Kontakt so'rovlari: {req_count}"
         )
-        fav_count = len(fav_result.scalars().all())
-
-        vip_label = "⭐ VIP" if profile.vip_status == VipStatus.ACTIVE else "📋 Обычная"
-        status_map = {
-            ProfileStatus.DRAFT: "📝 Черновик",
-            ProfileStatus.PENDING: "⏳ На проверке",
-            ProfileStatus.PUBLISHED: "✅ Опубликована",
-            ProfileStatus.REJECTED: "❌ Отклонена",
-            ProfileStatus.PAUSED: "⏸ На паузе",
-        }
-        status_label = status_map.get(profile.status, str(profile.status))
-
-        text = (
-            f"📋 <b>МОИ ЗАЯВКИ</b>\n\n"
-            f"🔖 Анкета: {profile.display_id or '—'}\n"
-            f"Статус: {status_label}\n"
-            f"Тип: {vip_label}\n"
-            f"👁 Просмотров: {profile.views_count or 0}\n"
-            f"💬 Запросов: {len(requests)}\n\n"
-            f"❤️ Избранное ({fav_count} анкет)"
-        )
-
-        # Добавляем список запросов
-        if requests:
-            text += "\n\n📨 Мои запросы:"
-            for req in requests[:5]:
-                target = await session.get(Profile, req.target_profile_id)
-                status_icons = {
-                    "pending": "⏳ Ожидание",
-                    "talking": "⏳ Общаемся",
-                    "contact_given": "✅ Контакт получен",
-                    "rejected": "❌ Не подошли",
-                }
-                icon = status_icons.get(req.status.value, req.status.value)
-                text += f"\n• {target.display_id if target else '—'} — {icon}"
-
-        is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
-        await _safe_edit(
-            callback, text,
-            reply_markup=my_profile_kb(profile.id, lang, is_active),
+    else:
+        stats = (
+            f"🔖 #{display_id}\n"
+            f"📊 Статус: {status_label}\n"
+            f"{vip_label}\n"
+            f"👁 Просмотров: {views}\n"
+            f"❤️ В избранном: {fav_count}\n"
+            f"💬 Запросов контакта: {req_count}"
         )
 
+    # ── Полная анкета ──
+    anketa_text = format_full_anketa(profile, lang=lang)
+
+    full_text = stats + "\n\n━━━━━━━━━━━━━━━\n\n" + anketa_text
+
+    # Telegram ограничение — 4096 символов
+    if len(full_text) > 4000:
+        full_text = full_text[:3997] + "..."
+
+    is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
+    await _safe_edit(callback, full_text, reply_markup=my_profile_kb(profile.id, lang, is_active))
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("mypause:"))
-async def pause_profile(callback: CallbackQuery, session: AsyncSession):
+async def pause_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
     if profile and profile.user_id == callback.from_user.id:
@@ -212,11 +240,12 @@ async def pause_profile(callback: CallbackQuery, session: AsyncSession):
         await session.commit()
     lang = await get_lang(session, callback.from_user.id)
     await callback.answer("⏸ Анкета поставлена на паузу" if lang == "ru" else "⏸ Anketa pauzaga qo'yildi")
-    await show_main_menu(callback, session)
+    # Обновляем экран «Мои заявки»
+    await my_applications(callback, state, session)
 
 
 @router.callback_query(F.data.startswith("myactivate:"))
-async def activate_profile(callback: CallbackQuery, session: AsyncSession):
+async def activate_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
     if profile and profile.user_id == callback.from_user.id:
@@ -225,7 +254,7 @@ async def activate_profile(callback: CallbackQuery, session: AsyncSession):
         await session.commit()
     lang = await get_lang(session, callback.from_user.id)
     await callback.answer("🟢 Анкета активирована" if lang == "ru" else "🟢 Anketa faollashtirildi")
-    await show_main_menu(callback, session)
+    await my_applications(callback, state, session)
 
 
 @router.callback_query(F.data.startswith("myedit:"))
@@ -336,7 +365,34 @@ async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, sess
 
 
 @router.callback_query(F.data.startswith("mydelete:"))
-async def delete_profile(callback: CallbackQuery, session: AsyncSession):
+async def delete_confirm(callback: CallbackQuery, session: AsyncSession):
+    """Подтверждение удаления анкеты."""
+    profile_id = callback.data.split(":")[1]
+    lang = await get_lang(session, callback.from_user.id)
+
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    if lang == "uz":
+        text = "⚠️ Anketani o'chirishni tasdiqlaysizmi?\nBu amalni ortga qaytarib bo'lmaydi!"
+    else:
+        text = "⚠️ Вы уверены что хотите удалить анкету?\nЭто действие нельзя отменить!"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="✅ Да, удалить" if lang == "ru" else "✅ Ha, o'chirish",
+            callback_data=f"mydelete_yes:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="❌ Отмена" if lang == "ru" else "❌ Bekor qilish",
+            callback_data="menu:my",
+        )],
+    ])
+    await _safe_edit(callback, text, reply_markup=kb)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("mydelete_yes:"))
+async def delete_execute(callback: CallbackQuery, session: AsyncSession):
+    """Фактическое удаление анкеты."""
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
     if profile and profile.user_id == callback.from_user.id:
@@ -344,8 +400,9 @@ async def delete_profile(callback: CallbackQuery, session: AsyncSession):
         profile.is_active = False
         await session.commit()
     lang = await get_lang(session, callback.from_user.id)
-    await callback.answer("🗑 Анкета удалена" if lang == "ru" else "🗑 Anketa o'chirildi")
-    await show_main_menu(callback, session)
+    text = "✅ Анкета удалена." if lang == "ru" else "✅ Anketa o'chirildi."
+    await _safe_edit(callback, text, reply_markup=main_menu_kb(lang, callback.from_user.id))
+    await callback.answer()
 
 
 # ── Напоминания (Шаг 18) ──

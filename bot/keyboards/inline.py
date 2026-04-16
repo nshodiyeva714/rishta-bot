@@ -870,13 +870,17 @@ def complaint_reason_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMark
 def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
+            text="✏️ Редактировать анкету" if lang == "ru" else "✏️ Anketani tahrirlash",
+            callback_data=f"myedit:{profile_id}",
+        )],
+        [InlineKeyboardButton(
             text="⭐ Перейти на VIP" if lang == "ru" else "⭐ VIPga o'tish",
             callback_data=f"myvip:{profile_id}",
         )],
     ]
     if is_active:
         rows.append([InlineKeyboardButton(
-            text="⏸ Пауза" if lang == "ru" else "⏸ Pauza",
+            text="⏸ Поставить на паузу" if lang == "ru" else "⏸ Pauzaga qo'yish",
             callback_data=f"mypause:{profile_id}",
         )])
     else:
