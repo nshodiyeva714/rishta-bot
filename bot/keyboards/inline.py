@@ -37,8 +37,8 @@ def back_main_kb(lang: str = "ru", back_cb: str = "back:menu") -> InlineKeyboard
 def lang_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru"),
             InlineKeyboardButton(text="🇺🇿 O'zbek", callback_data="lang:uz"),
+            InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru"),
         ]
     ])
 
