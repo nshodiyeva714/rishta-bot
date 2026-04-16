@@ -29,6 +29,12 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass  # Колонка уже существует или БД не поддерживает IF NOT EXISTS
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS body_type VARCHAR(20)"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей

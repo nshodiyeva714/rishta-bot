@@ -529,6 +529,7 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
         birth_year=data.get("birth_year"),
         height_cm=data.get("height_cm"),
         weight_kg=data.get("weight_kg"),
+        body_type=data.get("body_type"),
         education=safe_enum(Education, data.get("education")),
         university_info=data.get("university_info"),
         occupation=data.get("occupation"),

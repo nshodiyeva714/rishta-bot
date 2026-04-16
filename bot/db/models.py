@@ -187,6 +187,7 @@ class Profile(Base):
     birth_year = Column(Integer)
     height_cm = Column(Integer)
     weight_kg = Column(Integer)
+    body_type = Column(String(20))  # slim / average / athletic / full
 
     # Q5: education
     education = Column(Enum(Education))

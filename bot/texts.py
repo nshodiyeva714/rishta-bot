@@ -201,38 +201,103 @@ T = {
         ),
     },
 
-    # ── Questions ──
+    # ── Questions (Stage 1 — 10 questions with progress bar) ──
     "q1": {
-        "ru": "<b>Вопрос 1 из 10</b>\nИмя {child} (можно вымышленное):",
-        "uz": "<b>1-savol (10 dan)</b>\n{child}ning ismi (taxallus bo'lishi mumkin):",
+        "ru": "Вопрос 1/10\n{bar}\n\nИмя {child} (можно вымышленное):",
+        "uz": "1/10-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
     },
     "q2": {
-        "ru": "<b>Вопрос 2 из 10</b>\nГод рождения (например: 1998):",
-        "uz": "<b>2-savol (10 dan)</b>\nTug'ilgan yili (masalan: 1998):",
+        "ru": "Вопрос 2/10\n{bar}\n\nГод рождения (например: 1998):",
+        "uz": "2/10-savol\n{bar}\n\nTug'ilgan yil (masalan: 1998):",
     },
     "q2_confirm": {
-        "ru": "Возраст: {age} — верно?",
-        "uz": "Yoshi: {age} — to'g'rimi?",
+        "ru": "Вопрос 2/10\n{bar}\n\nВозраст: {age} — верно?",
+        "uz": "2/10-savol\n{bar}\n\nYoshi: {age} — to'g'rimi?",
     },
+    "q2_height": {
+        "ru": "Вопрос 2/10\n{bar}\n\nРост в см (например: 175):",
+        "uz": "2/10-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
+    },
+    "q3_photo": {
+        "ru": (
+            "Вопрос 3/10\n{bar}\n\n"
+            "📸 Фото\n\n"
+            "💡 Анкеты с фото получают\n"
+            "в 3 раза больше просмотров!\n\n"
+            "Как хотите разместить фото?"
+        ),
+        "uz": (
+            "3/10-savol\n{bar}\n\n"
+            "📸 Fotosurat\n\n"
+            "💡 Fotoli anketalar 3 marta\n"
+            "ko'proq e'tibor tortadi!\n\n"
+            "Qanday joylashtirasiz?"
+        ),
+    },
+    "q4_body_type": {
+        "ru": "Вопрос 4/10\n{bar}\n\nТелосложение:",
+        "uz": "4/10-savol\n{bar}\n\nTana tuzilishi:",
+    },
+    "q5_nationality": {
+        "ru": "Вопрос 5/10\n{bar}\n\nНациональность:",
+        "uz": "5/10-savol\n{bar}\n\nMillati:",
+    },
+    "q6_city": {
+        "ru": "Вопрос 6/10\n{bar}\n\nГород и район проживания:\n(например: Ташкент, Юнусабад)",
+        "uz": "6/10-savol\n{bar}\n\nYashash shahri va tumani:\n(masalan: Toshkent, Yunusobod)",
+    },
+    "q7_education": {
+        "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
+        "uz": "7/10-savol\n{bar}\n\nMa'lumoti:",
+    },
+    "q8_occupation": {
+        "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
+        "uz": "8/10-savol\n{bar}\n\nBandligi:",
+    },
+    "q8_occupation_detail": {
+        "ru": "Вопрос 8/10\n{bar}\n\nГде и кем работает:",
+        "uz": "8/10-savol\n{bar}\n\nQayerda va kim bo'lib ishlaydi:",
+    },
+    "q9_religion": {
+        "ru": "Вопрос 9/10\n{bar}\n\nРелигиозность:",
+        "uz": "9/10-savol\n{bar}\n\nDindorligi:",
+    },
+    "q10_marital": {
+        "ru": "Вопрос 10/10\n{bar}\n\nСемейное положение:",
+        "uz": "10/10-savol\n{bar}\n\nOilaviy holati:",
+    },
+    "stage1_complete": {
+        "ru": (
+            "✅ Анкета заполнена!\n\n"
+            "👤 {name} · {age} лет\n\n"
+            "Что делаем дальше?"
+        ),
+        "uz": (
+            "✅ Anketa to'ldirildi!\n\n"
+            "👤 {name} · {age} yosh\n\n"
+            "Keyingi qadam:"
+        ),
+    },
+    # ── Legacy keys (kept for back-compat) ──
     "q3": {
-        "ru": "<b>Вопрос 3 из 10</b>\nРост в см (например: 175):",
-        "uz": "<b>3-savol (10 dan)</b>\nBo'yi sm da (masalan: 175):",
+        "ru": "Вопрос 2/10\n{bar}\n\nРост в см (например: 175):",
+        "uz": "2/10-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
     },
     "q4": {
-        "ru": "<b>Вопрос 4 из 10</b>\nВес в кг (например: 70):",
-        "uz": "<b>4-savol (10 dan)</b>\nVazni kg da (masalan: 70):",
+        "ru": "Вопрос 4/10\n{bar}\n\nТелосложение:",
+        "uz": "4/10-savol\n{bar}\n\nTana tuzilishi:",
     },
     "q5": {
-        "ru": "<b>Вопрос 7 из 10</b>\nОбразование:",
-        "uz": "<b>7-savol (10 dan)</b>\nMa'lumoti:",
+        "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
+        "uz": "7/10-savol\n{bar}\n\nMa'lumoti:",
     },
     "q5_university": {
         "ru": "Укажите название вуза и курс:",
         "uz": "OTM nomi va kursini kiriting:",
     },
     "q6_choice": {
-        "ru": "<b>Вопрос 8 из 10</b>\nРабота / занятость:",
-        "uz": "<b>8-savol (10 dan)</b>\nIsh / bandlik:",
+        "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
+        "uz": "8/10-savol\n{bar}\n\nBandligi:",
     },
     "q6": {
         "ru": "Укажите место работы / род деятельности:",
@@ -251,8 +316,8 @@ T = {
         "uz": "🚗 <b>8-savol</b>\n\nAvtomobil mavjudligi:",
     },
     "q9_city_district": {
-        "ru": "<b>Вопрос 6 из 10</b>\nГород и район (например: Ташкент, Юнусабад):",
-        "uz": "<b>6-savol (10 dan)</b>\nShahringiz va tumaningiz (masalan: Toshkent, Yunusobod):",
+        "ru": "Вопрос 6/10\n{bar}\n\nГород и район проживания:\n(например: Ташкент, Юнусабад)",
+        "uz": "6/10-savol\n{bar}\n\nYashash shahri va tumani:\n(masalan: Toshkent, Yunusobod)",
     },
     "q9_address": {
         "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
@@ -283,8 +348,8 @@ T = {
         "uz": "🗺 <b>12-savol</b>\n\nOila kelib chiqqan hudud:",
     },
     "q12": {
-        "ru": "<b>Вопрос 5 из 10</b>\nНациональность:",
-        "uz": "<b>5-savol (10 dan)</b>\nMillati:",
+        "ru": "Вопрос 5/10\n{bar}\n\nНациональность:",
+        "uz": "5/10-savol\n{bar}\n\nMillati:",
     },
     "q13": {
         "ru": "👨 <b>Вопрос 14</b>\n\nОтец — чем занимается:",
@@ -307,12 +372,12 @@ T = {
         "uz": "Oiladagi o'rni:",
     },
     "q16": {
-        "ru": "<b>Вопрос 9 из 10</b>\nРелигиозность:",
-        "uz": "<b>9-savol (10 dan)</b>\nDindorlik:",
+        "ru": "Вопрос 9/10\n{bar}\n\nРелигиозность:",
+        "uz": "9/10-savol\n{bar}\n\nDindorligi:",
     },
     "q_marital_status": {
-        "ru": "<b>Вопрос 10 из 10</b>\nСемейное положение:",
-        "uz": "<b>10-savol (10 dan)</b>\nOilaviy holati:",
+        "ru": "Вопрос 10/10\n{bar}\n\nСемейное положение:",
+        "uz": "10/10-savol\n{bar}\n\nOilaviy holati:",
     },
     "q_children": {
         "ru": "Есть ли дети?",
@@ -991,12 +1056,12 @@ T = {
     "works_m": {"ru": "работает", "uz": "ishlaydi"},
     "works_f": {"ru": "работает", "uz": "ishlaydi"},
     "q6_choice_son": {
-        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается ваш сын:",
-        "uz": "💼 <b>6-savol</b>\n\nO'g'lingiz qayerda ishlaydi / nima bilan shug'ullanadi:",
+        "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
+        "uz": "8/10-savol\n{bar}\n\nBandligi:",
     },
     "q6_choice_daughter": {
-        "ru": "💼 <b>Вопрос 6</b>\n\nГде работает / чем занимается ваша дочь:",
-        "uz": "💼 <b>6-savol</b>\n\nQizingiz qayerda ishlaydi / nima bilan shug'ullanadi:",
+        "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
+        "uz": "8/10-savol\n{bar}\n\nBandligi:",
     },
 }
 

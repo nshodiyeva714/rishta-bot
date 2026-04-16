@@ -11,8 +11,8 @@ class QuestionnaireStates(StatesGroup):
     q1_name = State()              # 1. Имя
     q2_birth_year = State()        # 2. Год рождения
     q2_confirm_age = State()
-    q3_height = State()            # 3. Рост
-    q4_weight = State()            # 4. Вес
+    q3_height = State()            # 2C. Рост (часть вопроса 2)
+    q4_body_type = State()         # 4. Телосложение
     q12_nationality = State()      # 5. Национальность
     q9_city_district = State()     # 6. Город и район
     q5_education = State()         # 7. Образование
@@ -22,9 +22,10 @@ class QuestionnaireStates(StatesGroup):
     q16_religiosity = State()      # 9. Религиозность
     q_marital_status = State()     # 10. Семейное положение
     q_children = State()           # 10b. Дети (только если разведён/вдовец)
-    q21_photo_type = State()       # Фото (необязательно)
+    q21_photo_type = State()       # 3. Фото (позиция 3 в анкете)
     q21_photo_upload = State()
-    q22_parent_phone = State()     # Телефон (необязательно)
+    q22_parent_phone = State()     # Телефон (необязательно, убран из Этапа 1)
+    stage1_complete = State()      # Экран завершения Этапа 1
 
     # ── ЭТАП 2: Расширенный профиль ──
     ext_housing = State()

@@ -330,6 +330,64 @@ def work_choice_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def body_type_kb(lang: str = "ru", gender: str = "son") -> InlineKeyboardMarkup:
+    """Клавиатура телосложения — gender-aware labels."""
+    if gender == "son":
+        labels = {
+            "ru": ["Стройный", "Среднее", "Спортивный", "Плотный"],
+            "uz": ["Ozg'in", "O'rtacha", "Sportcha", "To'liq"],
+        }
+    else:
+        labels = {
+            "ru": ["Стройная", "Среднее", "Спортивная", "Плотная"],
+            "uz": ["Ozg'in", "O'rtacha", "Sportcha", "To'liq"],
+        }
+    values = ["slim", "average", "athletic", "full"]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"body:{values[i]}")]
+        for i in range(4)
+    ])
+
+
+def occupation_kb(lang: str = "ru", gender: str = "son") -> InlineKeyboardMarkup:
+    """Клавиатура занятости — gender-aware, кнопки вместо текста."""
+    if gender == "son":
+        if lang == "uz":
+            opts = [
+                ("Ishlaydi", "occ:works"),
+                ("Talaba", "occ:student"),
+                ("O'z biznesi bor", "occ:business"),
+                ("Boshqa", "occ:other"),
+            ]
+        else:
+            opts = [
+                ("Работает", "occ:works"),
+                ("Студент", "occ:student"),
+                ("Свой бизнес", "occ:business"),
+                ("Другое", "occ:other"),
+            ]
+    else:
+        if lang == "uz":
+            opts = [
+                ("Ishlaydi", "occ:works"),
+                ("Talaba", "occ:student"),
+                ("O'z biznesi bor", "occ:business"),
+                ("Uy bekaligi", "occ:housewife"),
+                ("Boshqa", "occ:other"),
+            ]
+        else:
+            opts = [
+                ("Работает", "occ:works"),
+                ("Студентка", "occ:student"),
+                ("Свой бизнес", "occ:business"),
+                ("Домохозяйка", "occ:housewife"),
+                ("Другое", "occ:other"),
+            ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
+    ])
+
+
 def photo_type_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["🖼 Обычное фото", "😊 Фото с закрытым лицом", "👤 Силуэт / в полный рост", "⏭ Без фото"],

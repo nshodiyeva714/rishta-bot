@@ -241,6 +241,13 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
     age_str = age_text(age, L) if isinstance(age, int) else str(age)
 
+    # Телосложение
+    body_type_map = {
+        "ru": {"slim": "Стройный", "average": "Среднее", "athletic": "Спортивный", "full": "Плотный"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+    }
+    bt = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
+
     # Фиксированные значения — переводим
     edu = _edu_map(L).get(_ev(profile, "education"), "—")
     # university_info — введено вручную, добавляем как есть
@@ -310,7 +317,9 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
         f"1. {profile.name or '—'}\n"
         # Возраст — фиксированный формат
         f"2. {age_str} ({profile.birth_year or '?'})\n"
-        f"3. {profile.height_cm or '?'} {lb['cm']} / {profile.weight_kg or '?'} {lb['kg']}\n"
+        f"3. {profile.height_cm or '?'} {lb['cm']}"
+        f"{(' / ' + str(profile.weight_kg) + ' ' + lb['kg']) if profile.weight_kg else ''}"
+        f"{(' / ' + bt) if bt else ''}\n"
         f"4. {lb['edu']}: {edu}\n"
         # Работа — введена вручную
         f"5. {lb['work']}: {profile.occupation or not_specified}\n"
@@ -375,6 +384,11 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
     age_str = age_text(age, L) if isinstance(age, int) else str(age)
 
+    body_type_map = {
+        "ru": {"slim": "Стройный", "average": "Среднее", "athletic": "Спортивный", "full": "Плотный"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+    }
+
     edu = _edu_map(L).get(_ev(profile, "education"), "—")
     if profile.university_info:
         edu += f", {profile.university_info}"
@@ -390,8 +404,14 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         f"",
     ]
 
-    # Line: age · height · weight
-    age_hw = f"{age_str} · {profile.height_cm or '?'} {lb['cm']} · {profile.weight_kg or '?'} {lb['kg']}"
+    # Line: age · height · body type (or weight for old profiles)
+    bt_pub = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
+    parts = [age_str, f"{profile.height_cm or '?'} {lb['cm']}"]
+    if bt_pub:
+        parts.append(bt_pub)
+    elif profile.weight_kg:
+        parts.append(f"{profile.weight_kg} {lb['kg']}")
+    age_hw = " · ".join(parts)
     lines.append(age_hw)
 
     # Line: education · city
