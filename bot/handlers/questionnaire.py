@@ -157,6 +157,21 @@ def _with_card(data: dict, lang: str, question_text: str) -> str:
     return question_text
 
 
+async def _delete_old(message: Message, state: FSMContext):
+    """Удаляет набранный текст пользователя и предыдущее сообщение бота."""
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    data = await state.get_data()
+    old_id = data.get("last_bot_msg")
+    if old_id:
+        try:
+            await message.bot.delete_message(message.chat.id, old_id)
+        except Exception:
+            pass
+
+
 async def _lang(state: FSMContext) -> str:
     data = await state.get_data()
     return data.get("lang", "ru")
@@ -192,6 +207,7 @@ async def quest_start(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         t("q1", lang, child=child, bar=bar),
     )
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q1_name)
     await callback.answer()
 
@@ -199,31 +215,36 @@ async def quest_start(callback: CallbackQuery, state: FSMContext):
 # ── 1. Имя ──
 @router.message(QuestionnaireStates.q1_name)
 async def q1_name(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     await state.update_data(name=message.text.strip())
     lang = await _lang(state)
     data = await state.get_data()
     bar = progress_bar(2, 10)
     q_text = t("q2", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await message.answer(full_text, reply_markup=back_step_kb(lang))
+    sent = await message.answer(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q2_birth_year)
 
 
 # ── 2A. Год рождения ──
 @router.message(QuestionnaireStates.q2_birth_year)
 async def q2_birth_year(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     lang = await _lang(state)
     text = message.text.strip()
     if not text.isdigit():
         err = "⚠️ Raqam kiriting" if lang == "uz" else "⚠️ Введите число"
-        await message.answer(err)
+        sent = await message.answer(err)
+        await state.update_data(last_bot_msg=sent.message_id)
         return
     year = int(text)
     age = datetime.now().year - year
     if age < 18 or age > 60:
         err = ("⚠️ Yosh 18 dan 60 gacha bo'lishi kerak." if lang == "uz"
                else "⚠️ Возраст должен быть от 18 до 60 лет.")
-        await message.answer(err)
+        sent = await message.answer(err)
+        await state.update_data(last_bot_msg=sent.message_id)
         return
     await state.update_data(birth_year=year, age=age)
     data = await state.get_data()
@@ -231,7 +252,8 @@ async def q2_birth_year(message: Message, state: FSMContext):
     from bot.utils.helpers import age_text
     q_text = t("q2_confirm", lang, age=age_text(age, lang), bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await message.answer(full_text, reply_markup=confirm_age_kb(lang))
+    sent = await message.answer(full_text, reply_markup=confirm_age_kb(lang))
+    await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q2_confirm_age)
 
 
@@ -244,6 +266,7 @@ async def q2_confirm(callback: CallbackQuery, state: FSMContext):
     q_text = t("q2_height", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q3_height)
     await callback.answer()
 
@@ -256,6 +279,7 @@ async def q2_fix(callback: CallbackQuery, state: FSMContext):
     q_text = t("q2", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q2_birth_year)
     await callback.answer()
 
@@ -263,12 +287,14 @@ async def q2_fix(callback: CallbackQuery, state: FSMContext):
 # ── 2C. Рост ──
 @router.message(QuestionnaireStates.q3_height)
 async def q3_height(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     lang = await _lang(state)
     text = message.text.strip()
     if not text.isdigit() or not (100 <= int(text) <= 250):
         err = ("⚠️ Bo'yni to'g'ri kiriting (140–220 sm)" if lang == "uz"
                else "⚠️ Введите корректный рост (140–220 см)")
-        await message.answer(err)
+        sent = await message.answer(err)
+        await state.update_data(last_bot_msg=sent.message_id)
         return
     await state.update_data(height_cm=int(text))
     # → 3. Фото с мотивацией
@@ -286,8 +312,10 @@ async def _ask_photo(message_or_callback, state: FSMContext, lang: str):
 
     if hasattr(message_or_callback, "message"):
         await message_or_callback.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=message_or_callback.message.message_id)
     else:
-        await message_or_callback.answer(full_text, reply_markup=kb)
+        sent = await message_or_callback.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q21_photo_type)
 
 
@@ -303,15 +331,18 @@ async def photo_type(callback: CallbackQuery, state: FSMContext):
         await _ask_body_type(callback, state, lang)
     elif value == "closed_face":
         await callback.message.edit_text(t("q21_closed_face_hint", lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q21_photo_upload)
     else:
         await callback.message.edit_text(t("q21_upload", lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q21_photo_upload)
     await callback.answer()
 
 
 @router.message(QuestionnaireStates.q21_photo_upload, F.photo)
 async def photo_upload(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     photo = message.photo[-1]
     await state.update_data(photo_file_id=photo.file_id)
     lang = await _lang(state)
@@ -321,8 +352,10 @@ async def photo_upload(message: Message, state: FSMContext):
 
 @router.message(QuestionnaireStates.q21_photo_upload)
 async def photo_upload_invalid(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     lang = await _lang(state)
-    await message.answer(t("q21_upload", lang))
+    sent = await message.answer(t("q21_upload", lang))
+    await state.update_data(last_bot_msg=sent.message_id)
 
 
 # ── 4. Телосложение ──
@@ -337,8 +370,10 @@ async def _ask_body_type(message_or_callback, state: FSMContext, lang: str):
 
     if hasattr(message_or_callback, "message"):
         await message_or_callback.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=message_or_callback.message.message_id)
     else:
-        await message_or_callback.answer(full_text, reply_markup=kb)
+        sent = await message_or_callback.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q4_body_type)
 
 
@@ -356,6 +391,7 @@ async def q4_body_type(callback: CallbackQuery, state: FSMContext):
         full_text,
         reply_markup=add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     )
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q12_nationality)
     await callback.answer()
 
@@ -372,6 +408,7 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
     q_text = t("q9_city_district", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q9_city_district)
     await callback.answer()
 
@@ -379,6 +416,7 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
 # ── 6. Город и район ──
 @router.message(QuestionnaireStates.q9_city_district)
 async def q6_city(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     await state.update_data(city=message.text.strip())
     lang = await _lang(state)
     data = await state.get_data()
@@ -386,10 +424,11 @@ async def q6_city(message: Message, state: FSMContext):
     bar = progress_bar(7, 10)
     q_text = t("q5", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await message.answer(
+    sent = await message.answer(
         full_text,
         reply_markup=add_nav(education_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
     )
+    await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q5_education)
 
 
@@ -406,6 +445,7 @@ async def q7_education(callback: CallbackQuery, state: FSMContext):
         q_text = t("q5_university", lang)
         full_text = (card + SEP + q_text) if card else q_text
         await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q5_university)
     else:
         # → 8. Занятость (кнопки)
@@ -415,6 +455,7 @@ async def q7_education(callback: CallbackQuery, state: FSMContext):
 
 @router.message(QuestionnaireStates.q5_university)
 async def q7_university(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     await state.update_data(university_info=message.text.strip())
     lang = await _lang(state)
     # Студент → пропускаем занятость → 9. Религиозность
@@ -434,8 +475,10 @@ async def _ask_occupation(message_or_callback, state: FSMContext, lang: str):
 
     if hasattr(message_or_callback, "message"):
         await message_or_callback.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=message_or_callback.message.message_id)
     else:
-        await message_or_callback.answer(full_text, reply_markup=kb)
+        sent = await message_or_callback.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q6_work_choice)
 
 
@@ -452,6 +495,7 @@ async def q8_occupation_choice(callback: CallbackQuery, state: FSMContext):
         q_text = t("q8_occupation_detail", lang, bar=bar)
         full_text = _with_card(data, lang, q_text)
         await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q6_occupation)
     else:
         # student / housewife → сохранить и перейти к религиозности
@@ -470,6 +514,7 @@ async def q8_work_specify(callback: CallbackQuery, state: FSMContext):
     q_text = t("q8_occupation_detail", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q6_occupation)
     await callback.answer()
 
@@ -484,6 +529,7 @@ async def q8_work_skip(callback: CallbackQuery, state: FSMContext):
 
 @router.message(QuestionnaireStates.q6_occupation)
 async def q8_occupation_detail(message: Message, state: FSMContext):
+    await _delete_old(message, state)
     await state.update_data(occupation=message.text.strip())
     lang = await _lang(state)
     # → 9. Религиозность
@@ -501,8 +547,10 @@ async def _ask_religion(message_or_callback, state: FSMContext, lang: str):
 
     if hasattr(message_or_callback, "message"):
         await message_or_callback.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=message_or_callback.message.message_id)
     else:
-        await message_or_callback.answer(full_text, reply_markup=kb)
+        sent = await message_or_callback.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q16_religiosity)
 
 
@@ -521,6 +569,7 @@ async def q9_religiosity(callback: CallbackQuery, state: FSMContext):
         full_text,
         reply_markup=add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False),
     )
+    await state.update_data(last_bot_msg=callback.message.message_id)
     await state.set_state(QuestionnaireStates.q_marital_status)
     await callback.answer()
 
