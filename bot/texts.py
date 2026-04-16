@@ -52,18 +52,26 @@ T = {
     # ── Step 1: Language ──
     "welcome": {
         "ru": (
-            "👋 Assalomu alaykum!\n"
-            "Добро пожаловать в <b>Rishta!</b> 🤲\n\n"
-            "Первая цифровая платформа для сватовства в Узбекистане.\n\n"
-            "📢 @Rishta_uz\n\n"
-            "Выберите язык / Tilni tanlang:"
+            "🤝 Rishta\n\n"
+            "🇺🇿 Assalomu alaykum!\n"
+            "O'zbekistondagi birinchi raqamli\n"
+            "sovchilik platformasi.\n\n"
+            "Ishonchli, qulay va maxfiy. 🔒\n\n"
+            "🇷🇺 Здравствуйте!\n"
+            "Первая цифровая платформа\n"
+            "для сватовства в Узбекистане.\n\n"
+            "Надёжно, удобно и конфиденциально. 🔒"
         ),
         "uz": (
-            "👋 Assalomu alaykum!\n"
-            "<b>Rishta</b>ga xush kelibsiz! 🤲\n\n"
-            "O'zbekistondagi birinchi raqamli sovchilik platformasi.\n\n"
-            "📢 @Rishta_uz\n\n"
-            "Tilni tanlang / Выберите язык:"
+            "🤝 Rishta\n\n"
+            "🇺🇿 Assalomu alaykum!\n"
+            "O'zbekistondagi birinchi raqamli\n"
+            "sovchilik platformasi.\n\n"
+            "Ishonchli, qulay va maxfiy. 🔒\n\n"
+            "🇷🇺 Здравствуйте!\n"
+            "Первая цифровая платформа\n"
+            "для сватовства в Узбекистане.\n\n"
+            "Надёжно, удобно и конфиденциально. 🔒"
         ),
     },
 
