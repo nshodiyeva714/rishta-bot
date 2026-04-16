@@ -57,8 +57,8 @@ T = {
 
     # ── Step 2: Main menu ──
     "main_menu": {
-        "ru": "👋 Добро пожаловать в Rishta! 🤝",
-        "uz": "👋 Rishta'ga xush kelibsiz! 🤝",
+        "ru": "Главное меню",
+        "uz": "Bosh menyu",
     },
     "btn_search_bride": {"ru": "👦 Ищем невестку", "uz": "👦 Kelin qidiramiz"},
     "btn_search_groom": {"ru": "👧 Ищем жениха", "uz": "👧 Kuyov qidiramiz"},
@@ -68,8 +68,7 @@ T = {
     "btn_profile_son": {"ru": "👦 Анкета сына", "uz": "👦 O'g'il anketasi"},
     "btn_profile_daughter": {"ru": "👧 Анкета дочери", "uz": "👧 Qiz anketasi"},
     "btn_my_applications": {"ru": "📋 Мои заявки", "uz": "📋 Mening arizalarim"},
-    "btn_contact_moderator": {"ru": "💬 Связаться с модератором", "uz": "💬 Moderator bilan bog'lanish"},
-    "btn_feedback": {"ru": "💡 Предложение/Обратная связь", "uz": "💡 Taklif yuborish"},
+    "btn_contact_moderator": {"ru": "💬 Модератор", "uz": "💬 Moderator"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
     "submenu_search": {
         "ru": "🔍 <b>Найти кандидата</b>\n\nКого ищете?",
@@ -204,40 +203,40 @@ T = {
 
     # ── Questions ──
     "q1": {
-        "ru": "👤 <b>Вопрос 1/10</b>\n\nКак зовут вашего {child}?\n(можно вымышленное имя):",
-        "uz": "👤 <b>1/10-savol</b>\n\n{child}ning ismi?\n(to'qilgan ism ham bo'lishi mumkin):",
+        "ru": "<b>Вопрос 1 из 10</b>\nИмя {child} (можно вымышленное):",
+        "uz": "<b>1-savol (10 dan)</b>\n{child}ning ismi (taxallus bo'lishi mumkin):",
     },
     "q2": {
-        "ru": "🗓 <b>Вопрос 2/10</b>\n\nГод рождения (например: 1998):",
-        "uz": "🗓 <b>2/10-savol</b>\n\nTug'ilgan yili (masalan: 1998):",
+        "ru": "<b>Вопрос 2 из 10</b>\nГод рождения (например: 1998):",
+        "uz": "<b>2-savol (10 dan)</b>\nTug'ilgan yili (masalan: 1998):",
     },
     "q2_confirm": {
-        "ru": "✅ Возраст: {age} — верно?",
-        "uz": "✅ Yoshi: {age} — to'g'rimi?",
+        "ru": "Возраст: {age} — верно?",
+        "uz": "Yoshi: {age} — to'g'rimi?",
     },
     "q3": {
-        "ru": "📏 <b>Вопрос 3/10</b>\n\nРост (в см, например: 175):",
-        "uz": "📏 <b>3/10-savol</b>\n\nBo'yi (sm da, masalan: 175):",
+        "ru": "<b>Вопрос 3 из 10</b>\nРост в см (например: 175):",
+        "uz": "<b>3-savol (10 dan)</b>\nBo'yi sm da (masalan: 175):",
     },
     "q4": {
-        "ru": "⚖️ <b>Вопрос 4/10</b>\n\nВес (в кг, например: 70):",
-        "uz": "⚖️ <b>4/10-savol</b>\n\nVazni (kg da, masalan: 70):",
+        "ru": "<b>Вопрос 4 из 10</b>\nВес в кг (например: 70):",
+        "uz": "<b>4-savol (10 dan)</b>\nVazni kg da (masalan: 70):",
     },
     "q5": {
-        "ru": "🎓 <b>Вопрос 7/10</b>\n\nОбразование:",
-        "uz": "🎓 <b>7/10-savol</b>\n\nMa'lumoti:",
+        "ru": "<b>Вопрос 7 из 10</b>\nОбразование:",
+        "uz": "<b>7-savol (10 dan)</b>\nMa'lumoti:",
     },
     "q5_university": {
-        "ru": "🏫 Укажите название вуза и курс:",
-        "uz": "🏫 OTM nomi va kursini kiriting:",
+        "ru": "Укажите название вуза и курс:",
+        "uz": "OTM nomi va kursini kiriting:",
     },
     "q6_choice": {
-        "ru": "💼 <b>Вопрос 8/10</b>\n\nРабота / занятость:",
-        "uz": "💼 <b>8/10-savol</b>\n\nIsh / bandlik:",
+        "ru": "<b>Вопрос 8 из 10</b>\nРабота / занятость:",
+        "uz": "<b>8-savol (10 dan)</b>\nIsh / bandlik:",
     },
     "q6": {
-        "ru": "💼 Укажите место работы / род деятельности:",
-        "uz": "💼 Ish joyini / faoliyat turini ko'rsating:",
+        "ru": "Укажите место работы / род деятельности:",
+        "uz": "Ish joyini / faoliyat turini ko'rsating:",
     },
     "q7": {
         "ru": "🏠 <b>Вопрос 7</b>\n\nЖилищные условия:",
@@ -252,8 +251,8 @@ T = {
         "uz": "🚗 <b>8-savol</b>\n\nAvtomobil mavjudligi:",
     },
     "q9_city_district": {
-        "ru": "🏙 <b>Вопрос 6/10</b>\n\nВаш город и район:\n(например: Ташкент, Юнусабад)",
-        "uz": "🏙 <b>6/10-savol</b>\n\nShahringiz va tumaningiz:\n(masalan: Toshkent, Yunusobod)",
+        "ru": "<b>Вопрос 6 из 10</b>\nГород и район (например: Ташкент, Юнусабад):",
+        "uz": "<b>6-savol (10 dan)</b>\nShahringiz va tumaningiz (masalan: Toshkent, Yunusobod):",
     },
     "q9_address": {
         "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
@@ -284,8 +283,8 @@ T = {
         "uz": "🗺 <b>12-savol</b>\n\nOila kelib chiqqan hudud:",
     },
     "q12": {
-        "ru": "👥 <b>Вопрос 5/10</b>\n\nНациональность:",
-        "uz": "👥 <b>5/10-savol</b>\n\nMillati:",
+        "ru": "<b>Вопрос 5 из 10</b>\nНациональность:",
+        "uz": "<b>5-savol (10 dan)</b>\nMillati:",
     },
     "q13": {
         "ru": "👨 <b>Вопрос 14</b>\n\nОтец — чем занимается:",
@@ -308,24 +307,24 @@ T = {
         "uz": "Oiladagi o'rni:",
     },
     "q16": {
-        "ru": "🕌 <b>Вопрос 9/10</b>\n\nРелигиозность:",
-        "uz": "🕌 <b>9/10-savol</b>\n\nDindorlik:",
+        "ru": "<b>Вопрос 9 из 10</b>\nРелигиозность:",
+        "uz": "<b>9-savol (10 dan)</b>\nDindorlik:",
     },
     "q_marital_status": {
-        "ru": "💍 <b>Вопрос 10/10</b>\n\nСемейное положение:",
-        "uz": "💍 <b>10/10-savol</b>\n\nOilaviy holati:",
+        "ru": "<b>Вопрос 10 из 10</b>\nСемейное положение:",
+        "uz": "<b>10-savol (10 dan)</b>\nOilaviy holati:",
     },
     "q_children": {
-        "ru": "👶 Есть ли дети?",
-        "uz": "👶 Farzandlaringiz bormi?",
+        "ru": "Есть ли дети?",
+        "uz": "Farzandlaringiz bormi?",
     },
     "q_photo_optional": {
-        "ru": "📸 Фото (необязательно)\n\n🔒 Защищено от скриншотов",
-        "uz": "📸 Fotosurat (ixtiyoriy)\n\n🔒 Skrinshotdan himoyalangan",
+        "ru": "Фото (необязательно)\n\n🔒 Защищено от скриншотов",
+        "uz": "Fotosurat (ixtiyoriy)\n\n🔒 Skrinshotdan himoyalangan",
     },
     "q_phone_optional": {
-        "ru": "📞 Телефон родителей (необязательно):",
-        "uz": "📞 Ota-onalar telefoni (ixtiyoriy):",
+        "ru": "Телефон родителей (необязательно):",
+        "uz": "Ota-onalar telefoni (ixtiyoriy):",
     },
     "extend_invite": {
         "ru": (
@@ -351,81 +350,81 @@ T = {
     },
     # ── Stage 2: Extended Profile ──
     "ext_housing": {
-        "ru": "🏠 <b>Дополнение 1/14</b>\n\nЖилищные условия:",
-        "uz": "🏠 <b>Qo'shimcha 1/14</b>\n\nYashash sharoiti:",
+        "ru": "<b>Дополнение 1/14</b>\nЖилищные условия:",
+        "uz": "<b>Qo'shimcha 1/14</b>\nYashash sharoiti:",
     },
     "ext_housing_parent": {
-        "ru": "🏠 Уточните тип жилья родителей:",
-        "uz": "🏠 Ota-onaning uy turini aniqlashtiring:",
+        "ru": "Уточните тип жилья родителей:",
+        "uz": "Ota-onaning uy turini aniqlashtiring:",
     },
     "ext_car": {
-        "ru": "🚗 <b>Дополнение 2/14</b>\n\nНаличие автомобиля:",
-        "uz": "🚗 <b>Qo'shimcha 2/14</b>\n\nAvtomobil mavjudligi:",
+        "ru": "<b>Дополнение 2/14</b>\nНаличие автомобиля:",
+        "uz": "<b>Qo'shimcha 2/14</b>\nAvtomobil mavjudligi:",
     },
     "ext_address": {
-        "ru": "🏠 <b>Дополнение 3/14</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
-        "uz": "🏠 <b>Qo'shimcha 3/14</b>\n\nManzil (ko'cha/mahalla):\n\n⚠️ Manzil faqat to'lovdan keyin beriladi 🔒",
+        "ru": "<b>Дополнение 3/14</b>\nАдрес (улица/махалля):",
+        "uz": "<b>Qo'shimcha 3/14</b>\nManzil (ko'cha/mahalla):",
     },
     "ext_family_region": {
-        "ru": "🗺 <b>Дополнение 4/14</b>\n\nРегион происхождения семьи:\n(например: Ташкент, Самарканд)",
-        "uz": "🗺 <b>Qo'shimcha 4/14</b>\n\nOila kelib chiqqan hudud:\n(masalan: Toshkent, Samarqand)",
+        "ru": "<b>Дополнение 4/14</b>\nРегион происхождения семьи:\n(например: Ташкент, Самарканд)",
+        "uz": "<b>Qo'shimcha 4/14</b>\nOila kelib chiqqan hudud:\n(masalan: Toshkent, Samarqand)",
     },
     "ext_father": {
-        "ru": "👨 <b>Дополнение 5/14</b>\n\nОтец — чем занимается:",
-        "uz": "👨 <b>Qo'shimcha 5/14</b>\n\nOtasi — nima bilan shug'ullanadi:",
+        "ru": "<b>Дополнение 5/14</b>\nОтец — чем занимается:",
+        "uz": "<b>Qo'shimcha 5/14</b>\nOtasi — nima bilan shug'ullanadi:",
     },
     "ext_mother": {
-        "ru": "👩 <b>Дополнение 6/14</b>\n\nМать — чем занимается:",
-        "uz": "👩 <b>Qo'shimcha 6/14</b>\n\nOnasi — nima bilan shug'ullanadi:",
+        "ru": "<b>Дополнение 6/14</b>\nМать — чем занимается:",
+        "uz": "<b>Qo'shimcha 6/14</b>\nOnasi — nima bilan shug'ullanadi:",
     },
     "ext_brothers": {
-        "ru": "👨‍👩‍👧‍👦 <b>Дополнение 7/14</b>\n\nКоличество братьев (0 если нет):",
-        "uz": "👨‍👩‍👧‍👦 <b>Qo'shimcha 7/14</b>\n\nAkalar/ukalar soni (0 bo'lsa yo'q):",
+        "ru": "<b>Дополнение 7/14</b>\nКоличество братьев (0 если нет):",
+        "uz": "<b>Qo'shimcha 7/14</b>\nAkalar/ukalar soni (0 bo'lsa yo'q):",
     },
     "ext_sisters": {
         "ru": "Количество сестёр (0 если нет):",
         "uz": "Opalar/singillar soni (0 bo'lsa yo'q):",
     },
     "ext_position": {
-        "ru": "👶 <b>Дополнение 8/14</b>\n\nМесто в семье:",
-        "uz": "👶 <b>Qo'shimcha 8/14</b>\n\nOiladagi o'rni:",
+        "ru": "<b>Дополнение 8/14</b>\nМесто в семье:",
+        "uz": "<b>Qo'shimcha 8/14</b>\nOiladagi o'rni:",
     },
     "ext_health": {
-        "ru": "❤️ <b>Дополнение 9/14</b>\n\nОсобенности здоровья (деликатно, если важно):\n\nМожно пропустить ⏭",
-        "uz": "❤️ <b>Qo'shimcha 9/14</b>\n\nSog'lig'ining xususiyatlari (biron bir nuqsoni agar bo'lsa):\n\nO'tkazib yuborish mumkin ⏭",
+        "ru": "<b>Дополнение 9/14</b>\nОсобенности здоровья (деликатно, если важно):",
+        "uz": "<b>Qo'shimcha 9/14</b>\nSog'lig'ining xususiyatlari (biron bir nuqsoni agar bo'lsa):",
     },
     "ext_character": {
-        "ru": "✨ <b>Дополнение 10/14</b>\n\nХарактер и увлечения (пара слов):",
-        "uz": "✨ <b>Qo'shimcha 10/14</b>\n\nXarakter va qiziqishlar (bir necha so'z):",
+        "ru": "<b>Дополнение 10/14</b>\nХарактер и увлечения (пара слов):",
+        "uz": "<b>Qo'shimcha 10/14</b>\nXarakter va qiziqishlar (bir necha so'z):",
     },
     "ext_ideal_family": {
-        "ru": "💬 <b>Дополнение 11/14</b>\n\nКак вы представляете идеальную семейную жизнь?\n\nМожно пропустить ⏭",
-        "uz": "💬 <b>Qo'shimcha 11/14</b>\n\nIdeal oilaviy hayotni qanday tasavvur qilasiz?\n\nO'tkazib yuborish mumkin ⏭",
+        "ru": "<b>Дополнение 11/14</b>\nКак вы представляете идеальную семейную жизнь?",
+        "uz": "<b>Qo'shimcha 11/14</b>\nIdeal oilaviy hayotni qanday tasavvur qilasiz?",
     },
     "ext_qualities": {
-        "ru": "💎 <b>Дополнение 12/14</b>\n\nКакие качества в партнёре для вас самые важные?\n\nМожно пропустить ⏭",
-        "uz": "💎 <b>Qo'shimcha 12/14</b>\n\nNomzodning qanday fazilatlari siz uchun eng muhim?\n\nO'tkazib yuborish mumkin ⏭",
+        "ru": "<b>Дополнение 12/14</b>\nКакие качества в партнёре для вас самые важные?",
+        "uz": "<b>Qo'shimcha 12/14</b>\nNomzodning qanday fazilatlari siz uchun eng muhim?",
     },
     "ext_plans": {
-        "ru": "🎯 <b>Дополнение 13/14</b>\n\nПланы на ближайшие 5 лет?\n\nМожно пропустить ⏭",
-        "uz": "🎯 <b>Qo'shimcha 13/14</b>\n\nYaqin 5 yilga rejalaringiz?\n\nO'tkazib yuborish mumkin ⏭",
+        "ru": "<b>Дополнение 13/14</b>\nПланы на ближайшие 5 лет?",
+        "uz": "<b>Qo'shimcha 13/14</b>\nYaqin 5 yilga rejalaringiz?",
     },
     "ext_parent_telegram": {
-        "ru": "📱 <b>Дополнение 14/14</b>\n\nTelegram родителей:\n→ @__________\n\nМожно пропустить ⏭",
-        "uz": "📱 <b>Qo'shimcha 14/14</b>\n\nOta-onaning Telegrami:\n→ @__________\n\nO'tkazib yuborish mumkin ⏭",
+        "ru": "<b>Дополнение 14/14</b>\nTelegram родителей:\n→ @__________",
+        "uz": "<b>Qo'shimcha 14/14</b>\nOta-onaning Telegrami:\n→ @__________",
     },
     "ext_candidate_telegram": {
-        "ru": "💬 Telegram {child}:\n→ @__________ (или Пропустить)",
-        "uz": "💬 {child}ning Telegrami:\n→ @__________ (yoki O'tkazib yuborish)",
+        "ru": "Telegram {child}:\n→ @__________ (или Пропустить)",
+        "uz": "{child}ning Telegrami:\n→ @__________ (yoki O'tkazib yuborish)",
     },
     "ext_confirm": {
         "ru": (
-            "✅ <b>Готово!</b>\n\n"
+            "<b>Готово!</b>\n\n"
             "Все дополнительные данные заполнены.\n"
             "Сохранить в анкету?"
         ),
         "uz": (
-            "✅ <b>Tayyor!</b>\n\n"
+            "<b>Tayyor!</b>\n\n"
             "Barcha qo'shimcha ma'lumotlar to'ldirildi.\n"
             "Anketaga saqlashni xohlaysizmi?"
         ),
@@ -597,22 +596,14 @@ T = {
     # ── Step 8: Confirmation ──
     "profile_submitted": {
         "ru": (
-            "🎉 <b>Отлично! Анкета отправлена модератору!</b>\n\n"
-            "🔖 Ваш номер: <b>{display_id}</b>\n\n"
-            "Модератор проверит в течение 24 часов.\n"
-            "После публикации анкета сразу\n"
-            "появится в поиске 🤲\n\n"
-            "📢 @Rishta_uz — истории успеха\n"
-            "💬 @Rishta_chat — сообщество семей"
+            "Анкета отправлена на проверку.\n"
+            "Номер: <b>{display_id}</b>\n\n"
+            "Модератор проверит в течение 24 часов."
         ),
         "uz": (
-            "🎉 <b>Zo'r! Anketangiz moderatorga yuborildi!</b>\n\n"
-            "🔖 Raqamingiz: <b>{display_id}</b>\n\n"
-            "Moderator 24 soat ichida tekshiradi.\n"
-            "Nashr etilgandan so'ng anketangiz\n"
-            "qidirishda ko'rina boshlaydi 🤲\n\n"
-            "📢 @Rishta_uz — muvaffaqiyat tarihlari\n"
-            "💬 @Rishta_chat — oilalar jamoasi"
+            "Anketa tekshiruvga yuborildi.\n"
+            "Raqam: <b>{display_id}</b>\n\n"
+            "Moderator 24 soat ichida tekshiradi."
         ),
     },
 
@@ -771,18 +762,16 @@ T = {
     },
     "payment_card_transfer": {
         "ru": (
-            "🏦 Переведите на карту:\n"
+            "Переведите 30 000 сум на карту:\n\n"
             "<code>5614 6887 0899 8959</code>\n"
-            "Получатель: SHODIYEVA NASIBA\n\n"
-            "После перевода пришлите скриншот сюда 👇\n\n"
-            "⚠️ <i>Оплата невозвратна после передачи контакта</i>"
+            "SHODIYEVA NASIBA\n\n"
+            "После оплаты отправьте скриншот."
         ),
         "uz": (
-            "🏦 Kartaga o'tkazing:\n"
+            "30 000 so'm kartaga o'tkazing:\n\n"
             "<code>5614 6887 0899 8959</code>\n"
-            "Oluvchi: SHODIYEVA NASIBA\n\n"
-            "O'tkazgandan so'ng skrinshot yuboring 👇\n\n"
-            "⚠️ <i>Kontakt berilgandan keyin to'lov qaytarilmaydi</i>"
+            "SHODIYEVA NASIBA\n\n"
+            "To'lovdan so'ng skrinshot yuboring."
         ),
     },
 
@@ -927,7 +916,7 @@ T = {
     },
 
     # ── Common buttons ──
-    "btn_back": {"ru": "🔙 Назад", "uz": "🔙 Ortga"},
+    "btn_back": {"ru": "← Назад", "uz": "← Orqaga"},
     "btn_skip": {"ru": "⏭ Пропустить", "uz": "⏭ O'tkazib yuborish"},
     "btn_yes": {"ru": "✅ Да, верно", "uz": "✅ Ha, to'g'ri"},
     "btn_fix": {"ru": "✏️ Исправить", "uz": "✏️ Tuzatish"},
@@ -942,54 +931,54 @@ T = {
 
     # ── Validation ──
     "invalid_number": {
-        "ru": "❌ Введите число.",
-        "uz": "❌ Raqam kiriting.",
+        "ru": "Введите число.",
+        "uz": "Raqam kiriting.",
     },
     "invalid_year": {
-        "ru": "❌ Введите корректный год рождения (например: 1998).",
-        "uz": "❌ To'g'ri tug'ilgan yilni kiriting (masalan: 1998).",
+        "ru": "Введите корректный год рождения (например: 1998).",
+        "uz": "To'g'ri tug'ilgan yilni kiriting (masalan: 1998).",
     },
     "invalid_phone": {
-        "ru": "❌ Введите номер в формате +998XXXXXXXXX",
-        "uz": "❌ Raqamni +998XXXXXXXXX formatda kiriting",
+        "ru": "Введите номер в формате +998XXXXXXXXX",
+        "uz": "Raqamni +998XXXXXXXXX formatda kiriting",
     },
 
     # ── Edit profile ──
     "edit_menu_title": {
-        "ru": "✏️ <b>Редактирование анкеты</b>\n\nВыберите что хотите изменить:",
-        "uz": "✏️ <b>Anketani tahrirlash</b>\n\nNimani o'zgartirmoqchisiz:",
+        "ru": "<b>Редактирование анкеты</b>\nВыберите что изменить:",
+        "uz": "<b>Anketani tahrirlash</b>\nNimani o'zgartirmoqchisiz:",
     },
     "edit_name_prompt": {
-        "ru": "👤 Введите новое имя:",
-        "uz": "👤 Yangi ismni kiriting:",
+        "ru": "Введите новое имя:",
+        "uz": "Yangi ismni kiriting:",
     },
     "edit_birth_year_prompt": {
-        "ru": "🗓 Введите новый год рождения (например: 1998):",
-        "uz": "🗓 Yangi tug'ilgan yilni kiriting (masalan: 1998):",
+        "ru": "Введите год рождения (например: 1998):",
+        "uz": "Yangi tug'ilgan yilni kiriting (masalan: 1998):",
     },
     "edit_height_weight_prompt": {
-        "ru": "📏 Введите рост и вес через пробел (например: 175 70):",
-        "uz": "📏 Bo'yi va vaznini bo'sh joy bilan kiriting (masalan: 175 70):",
+        "ru": "Введите рост и вес через пробел (например: 175 70):",
+        "uz": "Bo'yi va vaznini bo'sh joy bilan kiriting (masalan: 175 70):",
     },
     "edit_city_prompt": {
-        "ru": "🏙 Введите город и район (например: Ташкент, Юнусабад):",
-        "uz": "🏙 Shahar va tumanni kiriting (masalan: Toshkent, Yunusobod):",
+        "ru": "Город и район (например: Ташкент, Юнусабад):",
+        "uz": "Shahar va tumanni kiriting (masalan: Toshkent, Yunusobod):",
     },
     "edit_occupation_prompt": {
-        "ru": "💼 Введите место работы / род деятельности:",
-        "uz": "💼 Ish joyi / faoliyat turini kiriting:",
+        "ru": "Место работы / род деятельности:",
+        "uz": "Ish joyi / faoliyat turini kiriting:",
     },
     "edit_photo_prompt": {
-        "ru": "📸 Отправьте новое фото:",
-        "uz": "📸 Yangi fotosuratni yuboring:",
+        "ru": "Отправьте новое фото:",
+        "uz": "Yangi fotosuratni yuboring:",
     },
     "edit_phone_prompt": {
-        "ru": "📞 Введите новый номер телефона:",
-        "uz": "📞 Yangi telefon raqamini kiriting:",
+        "ru": "Введите новый номер телефона:",
+        "uz": "Yangi telefon raqamini kiriting:",
     },
     "edit_saved": {
-        "ru": "✅ Сохранено!",
-        "uz": "✅ Saqlandi!",
+        "ru": "Сохранено.",
+        "uz": "Saqlandi.",
     },
 
     # child labels (genitive)

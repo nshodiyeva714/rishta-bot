@@ -135,35 +135,35 @@ def _lb(lang: str) -> dict:
 
 def _edu_map(lang: str = "ru") -> dict:
     return {
-        "secondary": "📚 Среднее" if lang == "ru" else "📚 O'rta",
-        "vocational": "📖 Среднее спец." if lang == "ru" else "📖 O'rta maxsus",
-        "higher": "🎓 Высшее" if lang == "ru" else "🎓 Oliy",
-        "studying": "🏛 Учится в вузе" if lang == "ru" else "🏛 OTMda o'qiydi",
+        "secondary": "Среднее" if lang == "ru" else "O'rta",
+        "vocational": "Среднее спец." if lang == "ru" else "O'rta maxsus",
+        "higher": "Высшее" if lang == "ru" else "Oliy",
+        "studying": "Студент/ка" if lang == "ru" else "Talaba",
     }
 
 
 def _housing_map(lang: str = "ru") -> dict:
     return {
-        "own_house": "🏠 Свой дом" if lang == "ru" else "🏠 O'z uyi",
-        "own_apartment": "🏢 Своя квартира" if lang == "ru" else "🏢 O'z kvartirasi",
-        "with_parents": "👨‍👩‍👧 С родителями" if lang == "ru" else "👨‍👩‍👧 Ota-onasi bilan",
-        "rent": "🔑 Аренда" if lang == "ru" else "🔑 Ijara",
+        "own_house": "Свой дом" if lang == "ru" else "O'z uyi",
+        "own_apartment": "Своя квартира" if lang == "ru" else "O'z kvartirasi",
+        "with_parents": "С родителями" if lang == "ru" else "Ota-ona bilan",
+        "rent": "Аренда" if lang == "ru" else "Ijara",
     }
 
 
 def _car_map(lang: str = "ru") -> dict:
     return {
-        "personal": "🚗 Личный" if lang == "ru" else "🚗 Shaxsiy",
-        "family": "🚗 Семейный" if lang == "ru" else "🚗 Oilaviy",
-        "none": "🚫 Нет" if lang == "ru" else "🚫 Yo'q",
+        "personal": "Личный автомобиль" if lang == "ru" else "Shaxsiy avtomobil",
+        "family": "Семейный автомобиль" if lang == "ru" else "Oilaviy avtomobil",
+        "none": "Нет" if lang == "ru" else "Yo'q",
     }
 
 
 def _rel_map(lang: str = "ru") -> dict:
     return {
         "practicing": "🕌 Практикующий" if lang == "ru" else "🕌 Amaliyotchi",
-        "moderate": "☪️ Умеренный" if lang == "ru" else "☪️ Mo'tadil",
-        "secular": "🌐 Светский" if lang == "ru" else "🌐 Dunyoviy",
+        "moderate": "Умеренный" if lang == "ru" else "Mo'tadil",
+        "secular": "Светский" if lang == "ru" else "Dunyoviy",
     }
 
 
@@ -299,15 +299,13 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
             compat += f"3️⃣ {profile.five_year_plans}\n"
 
     lang_badge = "🇺🇿 UZ" if L == "uz" else "🇷🇺 RU"
-    header = "🆕 YANGI ANKETA TEKSHIRUVGA" if L == "uz" else "🆕 НОВАЯ АНКЕТА НА ПРОВЕРКУ"
+    header = "Yangi anketa tekshiruvga" if L == "uz" else "Новая анкета на проверку"
     not_specified = "ko'rsatilmagan" if L == "uz" else "не указано"
     addr_empty = "ko'rsatilmagan" if L == "uz" else "не указан"
 
     text = (
-        f"<b>{header}</b>\n\n"
-        f"🔖 <b>{profile.display_id or '—'}</b>\n"
-        f"{icon} <b>{type_label}</b> · {lang_badge}\n"
-        f"━━━━━━━━━━━━━━━\n"
+        f"<b>{header}</b>\n"
+        f"{profile.display_id or '—'} · {type_label}\n\n"
         # Имя — введено вручную
         f"1. {profile.name or '—'}\n"
         # Возраст — фиксированный формат
@@ -367,102 +365,77 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
 # ══════════════════════════════════════════════════════
 
 def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") -> str:
-    """Публичная карточка ДО оплаты.
-    card_lang = язык заполнения анкеты (фиксированные метки).
-    Данные введённые вручную — показываем как есть.
-    """
+    """Публичная карточка — компактный формат."""
     L = _get_card_lang(profile)
     lb = _lb(L)
     is_son = profile.profile_type == ProfileType.SON
-    icon = "👦" if is_son else "👧"
 
-    vip = "⭐ VIP · " if profile.vip_status == VipStatus.ACTIVE else ""
+    vip = "⭐ VIP  " if profile.vip_status == VipStatus.ACTIVE else ""
 
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
     age_str = age_text(age, L) if isinstance(age, int) else str(age)
 
-    # Фиксированные значения — переводим
     edu = _edu_map(L).get(_ev(profile, "education"), "—")
-    # university_info — введено вручную, как есть
     if profile.university_info:
         edu += f", {profile.university_info}"
 
-    housing = _housing_map(L).get(_ev(profile, "housing"), "—")
-    car = _car_map(L).get(_ev(profile, "car"), "")
     nat = _nat_map(L).get(profile.nationality or "", profile.nationality or "—")
     rel = _rel_map(L).get(_ev(profile, "religiosity"), "—")
     mar = _marital_map(is_son, L).get(_ev(profile, "marital_status"), "—")
-    ch = _children_map(L).get(_ev(profile, "children_status"), "—")
-
-    position = ""
-    if profile.family_position:
-        position = _position_map(L).get(profile.family_position.value, "")
-
-    siblings = f"{profile.brothers_count or 0} {lb['brothers']} / {profile.sisters_count or 0} {lb['sisters']}"
-    if position:
-        siblings += f" ({position})"
-
-    not_specified = "ko'rsatilmagan" if L == "uz" else "не указано"
+    ch = _children_map(L).get(_ev(profile, "children_status"), "")
 
     lines = [
-        f"━━━━━━━━━━━━━━━",
-        f"{vip}✅ · 🔥 {score}%",
-        f"🔖 {profile.display_id or '—'}",
-        f"{icon} {age_str} · {profile.height_cm or '?'} {lb['cm']} / {profile.weight_kg or '?'} {lb['kg']}",
-        # Образование: метка на card_lang, вуз — как есть
-        f"🎓 {lb['edu']}: {edu}",
-        # Работа — введена вручную, как есть
-        f"💼 {lb['work']}: {profile.occupation or not_specified}",
-        # Жильё — фиксированное
-        f"🏠 {lb['housing']}: {housing}",
+        f"{vip}✅",
+        f"{profile.display_id or '—'}",
+        f"",
     ]
 
-    # Автомобиль — фиксированное
-    if car and "🚫" not in car:
-        lines.append(car)
+    # Line: age · height · weight
+    age_hw = f"{age_str} · {profile.height_cm or '?'} {lb['cm']} · {profile.weight_kg or '?'} {lb['kg']}"
+    lines.append(age_hw)
 
-    # Город/район — введено вручную (АДРЕС — только в платной части)
-    city_line = f"🏙 {lb['city']}: {profile.city or '—'}"
-    if profile.district:
-        city_line += f", {profile.district}"
-    lines.append(city_line)
+    # Line: education · city
+    city_edu = edu
+    if profile.city:
+        city_part = profile.city
+        if profile.district:
+            city_part += f", {profile.district}"
+        city_edu += f" · {city_part}"
+    lines.append(city_edu)
 
-    # Регион — выбор из кнопок
+    # Line: nationality · region
+    nat_region = nat
     if profile.family_region:
-        lines.append(f"🗺 {lb['region']}: {profile.family_region}")
+        fam_label = "oilasi" if L == "uz" else "семья"
+        nat_region += f" · {profile.family_region} {fam_label}"
+    lines.append(nat_region)
 
-    # Национальность — фиксированное
-    lines.append(f"🌍 {lb['nat']}: {nat}")
-
-    # Отец, Мать — введено вручную, как есть
+    # Line: father · mother (if present)
+    parents = []
     if profile.father_occupation:
-        lines.append(f"👨 {lb['father']}: {profile.father_occupation}")
+        father_l = lb['father']
+        parents.append(f"{father_l}: {profile.father_occupation}")
     if profile.mother_occupation:
-        lines.append(f"👩 {lb['mother']}: {profile.mother_occupation}")
+        mother_l = lb['mother']
+        parents.append(f"{mother_l}: {profile.mother_occupation}")
+    if parents:
+        lines.append(" · ".join(parents))
 
-    # Семья — фиксированное + числа
-    lines.append(f"👨‍👩‍👧‍👦 {lb['family']}: {siblings}")
+    # Line: religion · marital · children
+    status_parts = [rel, mar]
+    if ch and ch != "—":
+        ch_label = lb.get("children", "Дети")
+        status_parts.append(f"{ch_label}: {ch}")
+    lines.append(" · ".join(status_parts))
 
-    # Религиозность — фиксированное
-    lines.append(f"🕌 {lb['religion']}: {rel}")
-
-    # Семейное положение — фиксированное
-    lines.append(f"💍 {lb['marital']}: {mar}")
-
-    # Дети — фиксированное
-    lines.append(f"👶 {lb['children']}: {ch}")
-
-    # Здоровье — введено вручную, как есть
-    if profile.health_notes:
-        lines.append(f"❤️ {lb['health']}: {profile.health_notes}")
-
-    # Характер — введён вручную, как есть
+    # Character if present
     if profile.character_hobbies:
-        lines.append(f"✨ {lb['char']}: {profile.character_hobbies}")
+        lines.append(f"")
+        lines.append(profile.character_hobbies)
 
-    lines.append("")
-    lines.append(f"👁 {lb['views']}: {profile.views_count or 0}")
-    lines.append("")
+    lines.append(f"")
+    lines.append(f"👁 {profile.views_count or 0} {lb['views'].lower()}")
+    lines.append(f"")
     lines.append(lb["lock"])
 
     return "\n".join(lines)

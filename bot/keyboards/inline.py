@@ -10,12 +10,12 @@ def nav_kb(lang: str = "ru", back_cb: str = "back:menu",
     row = []
     if show_back:
         row.append(InlineKeyboardButton(
-            text="🔙 Ortga" if lang == "uz" else "🔙 Назад",
+            text="← Orqaga" if lang == "uz" else "← Назад",
             callback_data=back_cb,
         ))
     if show_main:
         row.append(InlineKeyboardButton(
-            text="🏠 Bosh menyu" if lang == "uz" else "🏠 Главное меню",
+            text="Menyu" if lang == "uz" else "Меню",
             callback_data="menu:main",
         ))
     return [row] if row else []
@@ -63,13 +63,11 @@ def main_menu_kb(lang: str = "ru", user_id: int = 0) -> InlineKeyboardMarkup:
 
 
 def _full_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Главное меню — 6 кнопок."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search_sub")],
         [InlineKeyboardButton(text=t("btn_create_profile", lang), callback_data="menu:create_sub")],
         [InlineKeyboardButton(text=t("btn_my_applications", lang), callback_data="menu:my")],
         [InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator")],
-        [InlineKeyboardButton(text=t("btn_feedback", lang), callback_data="menu:feedback")],
         [InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about")],
     ])
 
@@ -127,8 +125,8 @@ def confirm_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["📚 Среднее", "📖 Среднее специальное", "🎓 Высшее", "🏛 Учится в вузе"],
-        "uz": ["📚 O'rta", "📖 O'rta maxsus", "🎓 Oliy", "🏛 OTMda o'qiydi"],
+        "ru": ["Среднее", "Среднее специальное", "Высшее", "Студент/ка"],
+        "uz": ["O'rta", "O'rta maxsus", "Oliy", "Talaba"],
     }
     values = ["secondary", "vocational", "higher", "studying"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -139,8 +137,8 @@ def education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def housing_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🏠 Свой дом", "🏢 Своя квартира", "👨‍👩‍👧 С родителями", "🔑 Аренда"],
-        "uz": ["🏠 O'z uyi", "🏢 O'z kvartirasi", "👨‍👩‍👧 Ota-onasi bilan", "🔑 Ijara"],
+        "ru": ["Свой дом", "Своя квартира", "С родителями", "Аренда"],
+        "uz": ["O'z uyi", "O'z kvartirasi", "Ota-ona bilan", "Ijara"],
     }
     values = ["own_house", "own_apartment", "with_parents", "rent"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -150,7 +148,7 @@ def housing_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def parent_housing_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {"ru": ["🏠 Дом", "🏢 Квартира"], "uz": ["🏠 Uy", "🏢 Kvartira"]}
+    labels = {"ru": ["Дом", "Квартира"], "uz": ["Uy", "Kvartira"]}
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=labels.get(lang, labels["ru"])[0], callback_data="phousing:house"),
@@ -161,8 +159,8 @@ def parent_housing_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def car_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🚗 Есть личный", "🚗 Есть семейный", "🚫 Нет"],
-        "uz": ["🚗 Shaxsiy bor", "🚗 Oilaviy bor", "🚫 Yo'q"],
+        "ru": ["Личный автомобиль", "Семейный автомобиль", "Нет"],
+        "uz": ["Shaxsiy avtomobil", "Oilaviy avtomobil", "Yo'q"],
     }
     values = ["personal", "family", "none"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -263,8 +261,8 @@ def family_position_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🕌 Практикующий", "☪️ Умеренный", "🌐 Светский"],
-        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy"],
+        "ru": ["🕌 Практикующий", "Умеренный", "Светский"],
+        "uz": ["🕌 Amaliyotchi", "Mo'tadil", "Dunyoviy"],
     }
     values = ["practicing", "moderate", "secular"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -277,13 +275,13 @@ def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
     """Шаг 1: семейное положение (3 кнопки)."""
     if is_male:
         labels = {
-            "ru": ["💍 Не был женат", "💔 Разведён", "🖤 Вдовец"],
-            "uz": ["💍 Hech uylanmagan", "💔 Ajrashgan", "🖤 Beva"],
+            "ru": ["Не был женат", "Разведён", "Вдовец"],
+            "uz": ["Hech uylanmagan", "Ajrashgan", "Beva"],
         }
     else:
         labels = {
-            "ru": ["💍 Не была замужем", "💔 Разведена", "🖤 Вдова"],
-            "uz": ["💍 Hech turmushga chiqmagan", "💔 Ajrashgan", "🖤 Beva"],
+            "ru": ["Не была замужем", "Разведена", "Вдова"],
+            "uz": ["Hech turmushga chiqmagan", "Ajrashgan", "Beva"],
         }
     values = ["never_married", "divorced", "widowed"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -296,13 +294,13 @@ def children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Шаг 2: дети (2 кнопки, только если разведён/вдовец)."""
     if lang == "uz":
         opts = [
-            ("👶 Farzand yo'q", "child:no"),
-            ("👶 Farzand bor", "child:yes"),
+            ("Farzand yo'q", "child:no"),
+            ("Farzand bor", "child:yes"),
         ]
     else:
         opts = [
-            ("👶 Детей нет", "child:no"),
-            ("👶 Есть дети", "child:yes"),
+            ("Детей нет", "child:no"),
+            ("Есть дети", "child:yes"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
@@ -635,27 +633,19 @@ def profile_card_kb(profile_id: int, lang: str = "ru", display_id: str = "") -> 
     from bot.config import get_moderator_username
     username = get_moderator_username("tashkent")
     if lang == "uz":
-        interest = "💬 Moderatordan so'rash"
-        fav = "❤️ Sevimlilarga"
-        report = "🚩 Shikoyat qilish"
-        skip = "❌ Mos emas"
+        interest = "💬 Kontaktni olish"
+        fav = "❤️ Saqlash"
+        next_btn = "➡️ Keyingisi"
     else:
-        interest = "💬 Узнать подробнее у модератора"
+        interest = "💬 Узнать контакт"
         fav = "❤️ В избранное"
-        report = "🚩 Пожаловаться"
-        skip = "❌ Не подходит"
-
-    # Живая ссылка на модератора с номером анкеты
-    mod_text = f"Анкета {display_id}" if display_id else "Анкета"
-    mod_url = f"https://t.me/{username}?text={mod_text.replace(' ', '+')}"
+        next_btn = "➡️ Следующая"
 
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=interest, callback_data=f"interest:{profile_id}")],
-        [InlineKeyboardButton(text=f"💬 @{username}", url=mod_url)],
-        [InlineKeyboardButton(text=fav, callback_data=f"fav:{profile_id}")],
         [
-            InlineKeyboardButton(text=report, callback_data=f"report:{profile_id}"),
-            InlineKeyboardButton(text=skip, callback_data=f"skip_profile:{profile_id}"),
+            InlineKeyboardButton(text=fav, callback_data=f"fav:{profile_id}"),
+            InlineKeyboardButton(text=next_btn, callback_data=f"skip_profile:{profile_id}"),
         ],
     ])
 
@@ -888,8 +878,8 @@ def complaint_reason_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMark
 def edit_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура образования для редактирования (prefix editedu:)."""
     labels = {
-        "ru": ["📚 Среднее", "📖 Среднее специальное", "🎓 Высшее", "🏛 Учится в вузе"],
-        "uz": ["📚 O'rta", "📖 O'rta maxsus", "🎓 Oliy", "🏛 OTMda o'qiydi"],
+        "ru": ["Среднее", "Среднее специальное", "Высшее", "Студент/ка"],
+        "uz": ["O'rta", "O'rta maxsus", "Oliy", "Talaba"],
     }
     values = ["secondary", "vocational", "higher", "studying"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -901,8 +891,8 @@ def edit_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 def edit_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура религиозности для редактирования (prefix editrel:)."""
     labels = {
-        "ru": ["🕌 Практикующий", "☪️ Умеренный", "🌐 Светский"],
-        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy"],
+        "ru": ["🕌 Практикующий", "Умеренный", "Светский"],
+        "uz": ["🕌 Amaliyotchi", "Mo'tadil", "Dunyoviy"],
     }
     values = ["practicing", "moderate", "secular"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -915,13 +905,13 @@ def edit_marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMar
     """Клавиатура семейного положения для редактирования (prefix editmar:)."""
     if is_male:
         labels = {
-            "ru": ["💍 Не был женат", "💔 Разведён", "🖤 Вдовец"],
-            "uz": ["💍 Hech uylanmagan", "💔 Ajrashgan", "🖤 Beva"],
+            "ru": ["Не был женат", "Разведён", "Вдовец"],
+            "uz": ["Hech uylanmagan", "Ajrashgan", "Beva"],
         }
     else:
         labels = {
-            "ru": ["💍 Не была замужем", "💔 Разведена", "🖤 Вдова"],
-            "uz": ["💍 Hech turmushga chiqmagan", "💔 Ajrashgan", "🖤 Beva"],
+            "ru": ["Не была замужем", "Разведена", "Вдова"],
+            "uz": ["Hech turmushga chiqmagan", "Ajrashgan", "Beva"],
         }
     values = ["never_married", "divorced", "widowed"]
     return InlineKeyboardMarkup(inline_keyboard=[
