@@ -423,9 +423,26 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
     await show_search_filters(callback, session, state)
 
 
+# ── Вспомогательная функция показа подменю фильтра ──
+async def _show_filter_submenu(callback: CallbackQuery, title: str, kb: InlineKeyboardMarkup):
+    """Безопасно показать подменю фильтра с try/except."""
+    try:
+        await callback.message.edit_text(title, reply_markup=kb)
+    except Exception:
+        try:
+            await callback.message.answer(title, reply_markup=kb)
+        except Exception as e:
+            logger.error(f"_show_filter_submenu error: {e}")
+    try:
+        await callback.answer()
+    except Exception:
+        pass
+
+
 # ── Фильтр: возраст (кнопки-диапазоны) ──
 @router.callback_query(F.data == "filter:age")
 async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    logger.info(f"filter:age triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     not_imp = "Muhim emas" if lang == "uz" else "Не важно"
     title = "Yosh:" if lang == "uz" else "Возраст:"
@@ -439,13 +456,13 @@ async def filter_age_start(callback: CallbackQuery, session: AsyncSession, state
          InlineKeyboardButton(text=not_imp, callback_data="fval:age:any")],
     ]
     buttons.extend(nav_kb(lang, "search:manual"))
-    await callback.message.edit_text(title, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
 # ── Фильтр: религиозность ──
 @router.callback_query(F.data == "filter:religion")
 async def filter_religion(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:religion triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("🕌 " + ("Практикующий" if lang == "ru" else "Amaliyotchi"), "fval:religion:practicing"),
@@ -454,13 +471,13 @@ async def filter_religion(callback: CallbackQuery, session: AsyncSession):
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:religion:any"),
     ]
     title = "Религиозность:" if lang == "ru" else "Dindorlik:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Фильтр: образование ──
 @router.callback_query(F.data == "filter:education")
 async def filter_education(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:education triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("Среднее" if lang == "ru" else "O'rta", "fval:education:secondary"),
@@ -470,13 +487,13 @@ async def filter_education(callback: CallbackQuery, session: AsyncSession):
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:education:any"),
     ]
     title = "Образование:" if lang == "ru" else "Ma'lumot:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Фильтр: семейное положение ──
 @router.callback_query(F.data == "filter:marital")
 async def filter_marital(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:marital triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
         ("Не был(а) в браке" if lang == "ru" else "Turmush qurmagan", "fval:marital:never_married"),
@@ -485,31 +502,31 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:marital:any"),
     ]
     title = "Семейное положение:" if lang == "ru" else "Oilaviy holat:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Фильтр: проживание ──
 @router.callback_query(F.data == "filter:residence")
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:residence triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
-        ("СНГ" if lang == "ru" else "MDH", "fval:residence:cis"),
-        ("США" if lang == "ru" else "AQSH", "fval:residence:usa"),
-        ("Европа" if lang == "ru" else "Yevropa", "fval:residence:europe"),
-        ("Другое" if lang == "ru" else "Boshqa", "fval:residence:other_country"),
+        ("🇺🇿 " + ("Узбекистан" if lang == "ru" else "O'zbekiston"), "filter:residence:uzb"),
+        ("🇷🇺 " + ("СНГ" if lang == "ru" else "MDH"), "fval:residence:cis"),
+        ("🇺🇸 " + ("США" if lang == "ru" else "AQSH"), "fval:residence:usa"),
+        ("🌍 " + ("Европа" if lang == "ru" else "Yevropa"), "fval:residence:europe"),
+        ("🌏 " + ("Другое" if lang == "ru" else "Boshqa"), "fval:residence:other_country"),
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:residence:any"),
     ]
     title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Узбекистан → выбор региона ──
 @router.callback_query(F.data == "filter:residence:uzb")
 async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """После выбора Узбекистан показываем регионы."""
+    logger.info(f"filter:residence:uzb triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
 
     regions_ru = ["Ташкент", "Самарканд", "Фергана", "Бухара", "Наманган", "Андижан", "Нукус"]
@@ -535,46 +552,46 @@ async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession, s
     buttons.extend(nav_kb(lang, "search:manual"))
 
     title = "Hududni tanlang:" if lang == "uz" else "Выберите регион:"
-    await callback.message.edit_text(title, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
 # ── Фильтр: национальность ──
 @router.callback_query(F.data == "filter:nationality")
 async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:nationality triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Узбек" if lang == "ru" else "O'zbek", "fval:nationality:uzbek"),
-        ("Русский" if lang == "ru" else "Rus", "fval:nationality:russian"),
-        ("Кореец" if lang == "ru" else "Koreys", "fval:nationality:korean"),
-        ("Таджик" if lang == "ru" else "Tojik", "fval:nationality:tajik"),
-        ("Казах" if lang == "ru" else "Qozoq", "fval:nationality:kazakh"),
-        ("Другая" if lang == "ru" else "Boshqa", "fval:nationality:other"),
+        ("🇺🇿 " + ("Узбек" if lang == "ru" else "O'zbek"), "fval:nationality:uzbek"),
+        ("🇷🇺 " + ("Русский" if lang == "ru" else "Rus"), "fval:nationality:russian"),
+        ("🇰🇷 " + ("Кореец" if lang == "ru" else "Koreys"), "fval:nationality:korean"),
+        ("🇹🇯 " + ("Таджик" if lang == "ru" else "Tojik"), "fval:nationality:tajik"),
+        ("🇰🇿 " + ("Казах" if lang == "ru" else "Qozoq"), "fval:nationality:kazakh"),
+        ("🌍 " + ("Другая" if lang == "ru" else "Boshqa"), "fval:nationality:other"),
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:nationality:any"),
     ]
     title = "Национальность:" if lang == "ru" else "Millat:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Фильтр: наличие детей ──
 @router.callback_query(F.data == "filter:children")
 async def filter_children(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f"filter:children triggered by user {callback.from_user.id}")
     lang = await get_lang(session, callback.from_user.id)
     options = [
-        ("Без детей" if lang == "ru" else "Farzandsiz", "fval:children:no"),
-        ("Есть дети" if lang == "ru" else "Farzandli", "fval:children:has_children"),
+        ("👶 " + ("Без детей" if lang == "ru" else "Farzandsiz"), "fval:children:no"),
+        ("👨‍👩‍👧 " + ("Есть дети" if lang == "ru" else "Farzandli"), "fval:children:has_children"),
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:children:any"),
     ]
     title = "Наличие детей:" if lang == "ru" else "Farzandlar:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
-    await callback.answer()
+    await _show_filter_submenu(callback, title, filter_option_kb(options, lang))
 
 
 # ── Универсальный обработчик значений фильтров ──
 @router.callback_query(F.data.startswith("fval:"))
 async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Callback: fval:<field>:<value>"""
+    logger.info(f"fval: {callback.data} triggered by user {callback.from_user.id}")
     parts = callback.data.split(":")
     field = parts[1]
     value = parts[2]
