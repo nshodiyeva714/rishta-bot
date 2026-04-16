@@ -51,28 +51,8 @@ T = {
 
     # ── Step 1: Language ──
     "welcome": {
-        "ru": (
-            "🇺🇿 Assalomu alaykum!\n"
-            "Rishta — O'zbekistondagi birinchi\n"
-            "raqamli sovchilik platformasi.\n"
-            "Ishonchli, qulay va maxfiy. 🔒\n\n"
-            "➖➖➖➖➖➖➖➖\n\n"
-            "🇷🇺 Здравствуйте!\n"
-            "Rishta — Первая цифровая платформа\n"
-            "для сватовства в Узбекистане.\n"
-            "Надёжно, удобно и конфиденциально. 🔒"
-        ),
-        "uz": (
-            "🇺🇿 Assalomu alaykum!\n"
-            "Rishta — O'zbekistondagi birinchi\n"
-            "raqamli sovchilik platformasi.\n"
-            "Ishonchli, qulay va maxfiy. 🔒\n\n"
-            "➖➖➖➖➖➖➖➖\n\n"
-            "🇷🇺 Здравствуйте!\n"
-            "Rishta — Первая цифровая платформа\n"
-            "для сватовства в Узбекистане.\n"
-            "Надёжно, удобно и конфиденциально. 🔒"
-        ),
+        "ru": "Tilni tanlang / Выберите язык:",
+        "uz": "Tilni tanlang / Выберите язык:",
     },
 
     # ── Step 2: Main menu ──
