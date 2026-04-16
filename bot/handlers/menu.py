@@ -63,10 +63,67 @@ async def menu_main_compat(callback: CallbackQuery, state: FSMContext, session: 
 
 @router.callback_query(F.data == "menu:about")
 async def about_platform(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 3 — О платформе."""
+    """Шаг 3 — О платформе с живой статистикой."""
     await state.clear()
     lang = await get_lang(session, callback.from_user.id)
-    await _safe_edit(callback, t("about", lang), reply_markup=back_kb(lang))
+
+    # Живая статистика
+    from sqlalchemy import func
+    from bot.db.models import Feedback, FeedbackResult
+    from datetime import datetime
+
+    total_result = await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PUBLISHED)
+    )
+    total_ankety = total_result.scalar() or 0
+
+    nikoh_result = await session.execute(
+        select(func.count(Feedback.id)).where(Feedback.result == FeedbackResult.NIKOH)
+    )
+    total_nikoh = nikoh_result.scalar() or 0
+
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    views_result = await session.execute(
+        select(func.coalesce(func.sum(Profile.views_count), 0)).where(
+            Profile.status == ProfileStatus.PUBLISHED
+        )
+    )
+    total_views = views_result.scalar() or 0
+
+    if lang == "uz":
+        text = (
+            f"ℹ️ <b>RISHTA HAQIDA</b>\n\n"
+            f"O'zbekistondagi birinchi raqamli\n"
+            f"sovchilik platformasi 🇺🇿\n\n"
+            f"📊 <b>Bugungi holat:</b>\n"
+            f"👥 Faol anketalar: <b>{total_ankety}</b>\n"
+            f"💍 Nikohlar: <b>{total_nikoh}</b>\n"
+            f"👀 Jami ko'rishlar: <b>{total_views}</b>\n\n"
+            f"✅ Har bir anketa shaxsan tekshiriladi\n"
+            f"✅ To'liq maxfiylik\n"
+            f"✅ Kontakt faqat to'lovdan keyin\n"
+            f"✅ Moderator yordam beradi\n"
+            f"🔒 Foto skrinshotdan himoyalangan\n\n"
+            f"📢 @Rishta_uz | 💬 @Rishta_chat"
+        )
+    else:
+        text = (
+            f"ℹ️ <b>О RISHTA</b>\n\n"
+            f"Первая цифровая платформа\n"
+            f"для сватовства в Узбекистане 🇺🇿\n\n"
+            f"📊 <b>Сейчас на платформе:</b>\n"
+            f"👥 Активных анкет: <b>{total_ankety}</b>\n"
+            f"💍 Никохов состоялось: <b>{total_nikoh}</b>\n"
+            f"👀 Просмотров всего: <b>{total_views}</b>\n\n"
+            f"✅ Каждая анкета проверяется лично\n"
+            f"✅ Полная конфиденциальность\n"
+            f"✅ Контакт только после оплаты\n"
+            f"✅ Модератор сопровождает процесс\n"
+            f"🔒 Фото защищены от скриншотов\n\n"
+            f"📢 @Rishta_uz | 💬 @Rishta_chat"
+        )
+
+    await _safe_edit(callback, text, reply_markup=back_kb(lang))
     await callback.answer()
 
 

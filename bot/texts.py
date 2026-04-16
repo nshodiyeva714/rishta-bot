@@ -477,20 +477,22 @@ T = {
     # ── Step 8: Confirmation ──
     "profile_submitted": {
         "ru": (
-            "✅ <b>Анкета принята на проверку!</b>\n\n"
-            "🔖 Ваш номер: {display_id}\n\n"
-            "Модератор проверит данные в течение 24 часов.\n\n"
-            "После публикации вы получите уведомление 🤝\n\n"
+            "🎉 <b>Отлично! Анкета отправлена модератору!</b>\n\n"
+            "🔖 Ваш номер: <b>{display_id}</b>\n\n"
+            "Модератор проверит в течение 24 часов.\n"
+            "После публикации анкета сразу\n"
+            "появится в поиске 🤲\n\n"
             "📢 @Rishta_uz — истории успеха\n"
-            "💬 @Rishta_chat — сообщество"
+            "💬 @Rishta_chat — сообщество семей"
         ),
         "uz": (
-            "✅ <b>Anketa tekshiruvga qabul qilindi!</b>\n\n"
-            "🔖 Sizning raqamingiz: {display_id}\n\n"
-            "Moderator ma'lumotlarni 24 soat ichida tekshiradi.\n\n"
-            "Nashr etilgandan so'ng sizga xabar beriladi 🤝\n\n"
-            "📢 @Rishta_uz — muvaffaqiyat tarixi\n"
-            "💬 @Rishta_chat — jamoa"
+            "🎉 <b>Zo'r! Anketangiz moderatorga yuborildi!</b>\n\n"
+            "🔖 Raqamingiz: <b>{display_id}</b>\n\n"
+            "Moderator 24 soat ichida tekshiradi.\n"
+            "Nashr etilgandan so'ng anketangiz\n"
+            "qidirishda ko'rina boshlaydi 🤲\n\n"
+            "📢 @Rishta_uz — muvaffaqiyat tarihlari\n"
+            "💬 @Rishta_chat — oilalar jamoasi"
         ),
     },
 
@@ -516,8 +518,22 @@ T = {
         ),
     },
     "mod_profile_published": {
-        "ru": "🎉 Ваша анкета {display_id} опубликована! Теперь она видна другим пользователям.",
-        "uz": "🎉 Anketa {display_id} nashr etildi! Endi u boshqa foydalanuvchilarga ko'rinadi.",
+        "ru": (
+            "✅ <b>Ваша анкета опубликована!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Теперь тысячи семей могут\n"
+            "увидеть вашу анкету.\n\n"
+            "Пусть поиск будет успешным! 🤲\n"
+            "Никохингиз муборак бўлсин!"
+        ),
+        "uz": (
+            "✅ <b>Anketangiz nashr etildi!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Endi minglab oilalar\n"
+            "anketangizni ko'rishi mumkin.\n\n"
+            "Qidiruv muvaffaqiyatli bo'lsin! 🤲\n"
+            "Nikohingiz muborak bo'lsin!"
+        ),
     },
     "mod_profile_rejected": {
         "ru": "❌ Анкета {display_id} отклонена модератором. Свяжитесь с модератором для уточнения.",
@@ -741,16 +757,20 @@ T = {
     # ── Step 18: Reminder ──
     "reminder_30d": {
         "ru": (
-            "🔔 <b>Rishta напоминает!</b>\n"
-            "🔖 Ваша анкета: {display_id}\n\n"
-            "Анкета размещена 30 дней назад.\n"
-            "Всё ли актуально?"
+            "🔔 <b>Rishta напоминает!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Анкета активна уже 30 дней.\n"
+            "Хорошие новости — её уже\n"
+            "просмотрели много семей! 👀\n\n"
+            "Всё ещё актуально?"
         ),
         "uz": (
-            "🔔 <b>Rishta eslatadi!</b>\n"
-            "🔖 Anketangiz: {display_id}\n\n"
-            "Anketa 30 kun oldin joylashtirilgan.\n"
-            "Hammasi dolzarbmi?"
+            "🔔 <b>Rishta eslatmoqda!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Anketangiz 30 kundan beri faol.\n"
+            "Yaxshi xabar — uni allaqachon\n"
+            "ko'p oilalar ko'rdi! 👀\n\n"
+            "Hali ham dolzarbmi?"
         ),
     },
 

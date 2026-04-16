@@ -32,8 +32,21 @@ async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, pr
     """Шаг 15 — Отправить контакты и адрес пользователю."""
     lang = await get_lang(session, user_id)
 
-    # Подтверждение оплаты
-    confirm_text = f"✅ <b>{'Оплата подтверждена!' if lang == 'ru' else 'To`lov tasdiqlandi!'}</b>\n🔖 {profile.display_id or '—'}"
+    # Подтверждение оплаты — тёплый текст
+    display_id = profile.display_id or "—"
+    if lang == "uz":
+        confirm_text = (
+            f"✅ <b>To'lov tasdiqlandi!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Bu uchrashuv baxtning boshlanishi bo'lsin! 🤲"
+        )
+    else:
+        confirm_text = (
+            f"✅ <b>Оплата подтверждена!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Пусть эта встреча станет\n"
+            f"началом счастья! 🤲"
+        )
     await bot.send_message(user_id, confirm_text)
 
     # Контакты и адрес

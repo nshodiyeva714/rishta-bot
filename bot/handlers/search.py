@@ -1,5 +1,8 @@
 """Поиск анкет — 3 режима: по требованиям, ручные фильтры, все."""
 
+import random
+import asyncio
+import logging
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -20,7 +23,105 @@ from bot.utils.helpers import age_text, calculate_age, format_anketa_public
 from bot.config import config
 from bot.states import SearchStates
 
+logger = logging.getLogger(__name__)
+
 router = Router()
+
+
+# ── Уведомления владельцу анкеты ──
+
+NOTIFY_AT_VIEWS = {1, 5, 10, 25, 50, 100, 200, 500}
+
+
+async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, viewer_id: int):
+    """Уведомляет владельца о просмотре при 1, 5, 10, 25, 50, 100..."""
+    views = profile.views_count or 0
+    if views not in NOTIFY_AT_VIEWS and views % 100 != 0:
+        return
+    if not profile.user_id or profile.user_id == viewer_id:
+        return
+
+    result = await session.execute(select(User).where(User.id == profile.user_id))
+    user = result.scalar_one_or_none()
+    lang = user.language.value if user and user.language else "ru"
+
+    display_id = profile.display_id or "—"
+    if lang == "uz":
+        text = (
+            f"👀 <b>Anketangizga qiziqish bor!</b>\n\n"
+            f"🔖 {display_id}\n"
+            f"Ko'rishlar soni: <b>{views}</b>\n\n"
+            f"Anketangiz ishlayapti! 🤲"
+        )
+    else:
+        text = (
+            f"👀 <b>Вашу анкету просматривают!</b>\n\n"
+            f"🔖 {display_id}\n"
+            f"Просмотров уже: <b>{views}</b>\n\n"
+            f"Ваша анкета работает! 🤲"
+        )
+    try:
+        await bot.send_message(profile.user_id, text)
+    except Exception as e:
+        logger.error(f"Ошибка уведомления о просмотре: {e}")
+
+
+async def _notify_owner_favorite(bot: Bot, session: AsyncSession, profile: Profile, user_id: int):
+    """Уведомляет владельца что анкету добавили в избранное."""
+    if not profile.user_id or profile.user_id == user_id:
+        return
+
+    result = await session.execute(select(User).where(User.id == profile.user_id))
+    user = result.scalar_one_or_none()
+    lang = user.language.value if user and user.language else "ru"
+
+    display_id = profile.display_id or "—"
+    if lang == "uz":
+        text = (
+            f"❤️ <b>Anketangiz tanlanganlar ga qo'shildi!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Bu yaxshi belgi — oila qiziqyapti! 😊"
+        )
+    else:
+        text = (
+            f"❤️ <b>Вашу анкету добавили в избранное!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Хороший знак — семья заинтересовалась! 😊"
+        )
+    try:
+        await bot.send_message(profile.user_id, text)
+    except Exception as e:
+        logger.error(f"Ошибка уведомления об избранном: {e}")
+
+
+async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile: Profile):
+    """Уведомляет владельца что запросили контакт."""
+    if not profile.user_id:
+        return
+
+    result = await session.execute(select(User).where(User.id == profile.user_id))
+    user = result.scalar_one_or_none()
+    lang = user.language.value if user and user.language else "ru"
+
+    display_id = profile.display_id or "—"
+    if lang == "uz":
+        text = (
+            f"🔥 <b>Anketangizga jiddiy qiziqish!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Bir oila sizning kontaktingizni so'radi.\n"
+            f"Moderator tez orada siz bilan bog'lanadi 🤝"
+        )
+    else:
+        text = (
+            f"🔥 <b>Серьёзный интерес к вашей анкете!</b>\n\n"
+            f"🔖 {display_id}\n\n"
+            f"Семья запросила ваши контакты.\n"
+            f"Модератор свяжется с вами в ближайшее время 🤝"
+        )
+    try:
+        await bot.send_message(profile.user_id, text)
+    except Exception as e:
+        logger.error(f"Ошибка уведомления о запросе контакта: {e}")
 
 PROFILES_PER_PAGE = 3
 
@@ -572,12 +673,18 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     to = min(offset + PROFILES_PER_PAGE, total)
     header = t("search_found", lang, total=total, from_=from_, to=to)
 
+    # Иллюзия загрузки
+    loading = "🔍 Siz uchun eng yaxshilarini tanlamoqdamiz..." if lang == "uz" else "🔍 Подбираем лучшие варианты для вас..."
     try:
+        await callback.message.edit_text(loading)
+        await asyncio.sleep(0.8)
         await callback.message.edit_text(header)
     except Exception:
         await callback.message.answer(header)
 
-    # Показываем карточки
+    # Показываем карточки + уведомляем владельцев
+    from aiogram import Bot as _Bot
+    bot: _Bot = callback.bot
     for p, score in page_profiles:
         p.views_count = (p.views_count or 0) + 1
         card_text = format_anketa_public(p, score, lang)
@@ -585,6 +692,11 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
             card_text,
             reply_markup=profile_card_kb(p.id, lang, p.display_id or ""),
         )
+        # Уведомление владельца о просмотре
+        try:
+            await _notify_owner_view(bot, session, p, callback.from_user.id)
+        except Exception:
+            pass
 
     await session.commit()
 
@@ -679,7 +791,17 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession):
     fav = Favorite(user_id=user_id, profile_id=profile_id)
     session.add(fav)
     await session.commit()
-    await callback.answer("❤️ " + ("Sevimlilarga qo'shildi" if lang == "uz" else "Добавлено в избранное"))
+
+    # Микро-реакция
+    await callback.answer("❤️ " + ("Saqlandi! Yaxshi tanlov 😊" if lang == "uz" else "Сохранено! Хороший выбор 😊"))
+
+    # Уведомление владельцу
+    profile = await session.get(Profile, profile_id)
+    if profile:
+        try:
+            await _notify_owner_favorite(callback.bot, session, profile, user_id)
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("interest:"))
@@ -702,6 +824,12 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
     session.add(cr)
     target_profile.requests_count = (target_profile.requests_count or 0) + 1
     await session.commit()
+
+    # Уведомление владельца о запросе контакта
+    try:
+        await _notify_owner_contact_request(bot, session, target_profile)
+    except Exception:
+        pass
 
     result = await session.execute(
         select(Profile).where(Profile.user_id == user_id).limit(1)
@@ -815,5 +943,10 @@ async def get_contact_payment(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("skip_profile:"))
-async def skip_profile(callback: CallbackQuery):
-    await callback.answer("❌ Пропущено")
+async def skip_profile(callback: CallbackQuery, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    if lang == "uz":
+        phrases = ["Keyingisi! 👉", "Davom etamiz 🔍", "Izlashda davom etamiz..."]
+    else:
+        phrases = ["Идём дальше! 👉", "Продолжаем поиск 🔍", "Ищем дальше..."]
+    await callback.answer(random.choice(phrases))
