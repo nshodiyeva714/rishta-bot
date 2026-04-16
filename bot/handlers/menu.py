@@ -542,19 +542,36 @@ async def extend_skip(callback: CallbackQuery):
 
 
 @router.callback_query(F.data.startswith("extend:"))
-async def extend_start(callback: CallbackQuery, session: AsyncSession):
-    """Пользователь хочет дополнить анкету — пока заглушка."""
-    profile_id = int(callback.data.split(":")[1])
+async def extend_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Пользователь хочет дополнить анкету — запускаем Этап 2."""
+    profile_id_str = callback.data.split(":")[1]
+    if not profile_id_str.isdigit():
+        await callback.answer()
+        return
+
+    profile_id = int(profile_id_str)
     lang = await get_lang(session, callback.from_user.id)
 
-    text = (
-        "✏️ <b>Дополнение анкеты</b>\n\n"
-        "Эта функция скоро будет доступна!\n"
-        "Мы уведомим вас 🤝"
-    ) if lang == "ru" else (
-        "✏️ <b>Anketani to'ldirish</b>\n\n"
-        "Bu funksiya tez orada tayyor bo'ladi!\n"
-        "Sizga xabar beramiz 🤝"
+    profile = await session.get(Profile, profile_id)
+    if not profile or profile.user_id != callback.from_user.id:
+        await callback.answer("⛔")
+        return
+
+    # Запускаем расширенную анкету
+    await state.clear()
+    await state.update_data(
+        ext_profile_id=profile_id,
+        lang=lang,
+        profile_type=profile.profile_type.value if profile.profile_type else "son",
     )
-    await _safe_edit(callback, text, reply_markup=back_kb(lang))
+
+    from bot.keyboards.inline import housing_kb
+    from bot.states import QuestionnaireStates
+
+    await _safe_edit(
+        callback,
+        t("ext_housing", lang),
+        reply_markup=housing_kb(lang),
+    )
+    await state.set_state(QuestionnaireStates.ext_housing)
     await callback.answer()

@@ -12,7 +12,7 @@ from bot.config import config
 from bot.db.engine import engine
 from bot.db.models import Base
 from bot.middlewares.db import DbSessionMiddleware
-from bot.handlers import start, menu, questionnaire, tariff, moderator, search, payment, meeting, feedback, complaint, fallback
+from bot.handlers import start, menu, questionnaire, questionnaire_ext, tariff, moderator, search, payment, meeting, feedback, complaint, fallback
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(menu.router)
     dp.include_router(questionnaire.router)
+    dp.include_router(questionnaire_ext.router)
     dp.include_router(tariff.router)
     dp.include_router(moderator.router)
     dp.include_router(search.router)

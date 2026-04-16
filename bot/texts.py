@@ -345,6 +345,88 @@ T = {
             "Atigi 5 daqiqa vaqt oladi!"
         ),
     },
+    # ── Stage 2: Extended Profile ──
+    "ext_housing": {
+        "ru": "🏠 <b>Дополнение 1/14</b>\n\nЖилищные условия:",
+        "uz": "🏠 <b>Qo'shimcha 1/14</b>\n\nYashash sharoiti:",
+    },
+    "ext_housing_parent": {
+        "ru": "🏠 Уточните тип жилья родителей:",
+        "uz": "🏠 Ota-onaning uy turini aniqlashtiring:",
+    },
+    "ext_car": {
+        "ru": "🚗 <b>Дополнение 2/14</b>\n\nНаличие автомобиля:",
+        "uz": "🚗 <b>Qo'shimcha 2/14</b>\n\nAvtomobil mavjudligi:",
+    },
+    "ext_address": {
+        "ru": "🏠 <b>Дополнение 3/14</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
+        "uz": "🏠 <b>Qo'shimcha 3/14</b>\n\nManzil (ko'cha/mahalla):\n\n⚠️ Manzil faqat to'lovdan keyin beriladi 🔒",
+    },
+    "ext_family_region": {
+        "ru": "🗺 <b>Дополнение 4/14</b>\n\nРегион происхождения семьи:\n(например: Ташкент, Самарканд)",
+        "uz": "🗺 <b>Qo'shimcha 4/14</b>\n\nOila kelib chiqqan hudud:\n(masalan: Toshkent, Samarqand)",
+    },
+    "ext_father": {
+        "ru": "👨 <b>Дополнение 5/14</b>\n\nОтец — чем занимается:",
+        "uz": "👨 <b>Qo'shimcha 5/14</b>\n\nOtasi — nima bilan shug'ullanadi:",
+    },
+    "ext_mother": {
+        "ru": "👩 <b>Дополнение 6/14</b>\n\nМать — чем занимается:",
+        "uz": "👩 <b>Qo'shimcha 6/14</b>\n\nOnasi — nima bilan shug'ullanadi:",
+    },
+    "ext_brothers": {
+        "ru": "👨‍👩‍👧‍👦 <b>Дополнение 7/14</b>\n\nКоличество братьев (0 если нет):",
+        "uz": "👨‍👩‍👧‍👦 <b>Qo'shimcha 7/14</b>\n\nAkalar/ukalar soni (0 bo'lsa yo'q):",
+    },
+    "ext_sisters": {
+        "ru": "Количество сестёр (0 если нет):",
+        "uz": "Opalar/singillar soni (0 bo'lsa yo'q):",
+    },
+    "ext_position": {
+        "ru": "👶 <b>Дополнение 8/14</b>\n\nМесто в семье:",
+        "uz": "👶 <b>Qo'shimcha 8/14</b>\n\nOiladagi o'rni:",
+    },
+    "ext_health": {
+        "ru": "❤️ <b>Дополнение 9/14</b>\n\nОсобенности здоровья (деликатно, если важно):\n\nМожно пропустить ⏭",
+        "uz": "❤️ <b>Qo'shimcha 9/14</b>\n\nSog'lig'ining xususiyatlari (biron bir nuqsoni agar bo'lsa):\n\nO'tkazib yuborish mumkin ⏭",
+    },
+    "ext_character": {
+        "ru": "✨ <b>Дополнение 10/14</b>\n\nХарактер и увлечения (пара слов):",
+        "uz": "✨ <b>Qo'shimcha 10/14</b>\n\nXarakter va qiziqishlar (bir necha so'z):",
+    },
+    "ext_ideal_family": {
+        "ru": "💬 <b>Дополнение 11/14</b>\n\nКак вы представляете идеальную семейную жизнь?\n\nМожно пропустить ⏭",
+        "uz": "💬 <b>Qo'shimcha 11/14</b>\n\nIdeal oilaviy hayotni qanday tasavvur qilasiz?\n\nO'tkazib yuborish mumkin ⏭",
+    },
+    "ext_qualities": {
+        "ru": "💎 <b>Дополнение 12/14</b>\n\nКакие качества в партнёре для вас самые важные?\n\nМожно пропустить ⏭",
+        "uz": "💎 <b>Qo'shimcha 12/14</b>\n\nNomzodning qanday fazilatlari siz uchun eng muhim?\n\nO'tkazib yuborish mumkin ⏭",
+    },
+    "ext_plans": {
+        "ru": "🎯 <b>Дополнение 13/14</b>\n\nПланы на ближайшие 5 лет?\n\nМожно пропустить ⏭",
+        "uz": "🎯 <b>Qo'shimcha 13/14</b>\n\nYaqin 5 yilga rejalaringiz?\n\nO'tkazib yuborish mumkin ⏭",
+    },
+    "ext_parent_telegram": {
+        "ru": "📱 <b>Дополнение 14/14</b>\n\nTelegram родителей:\n→ @__________\n\nМожно пропустить ⏭",
+        "uz": "📱 <b>Qo'shimcha 14/14</b>\n\nOta-onaning Telegrami:\n→ @__________\n\nO'tkazib yuborish mumkin ⏭",
+    },
+    "ext_candidate_telegram": {
+        "ru": "💬 Telegram {child}:\n→ @__________ (или Пропустить)",
+        "uz": "💬 {child}ning Telegrami:\n→ @__________ (yoki O'tkazib yuborish)",
+    },
+    "ext_confirm": {
+        "ru": (
+            "✅ <b>Готово!</b>\n\n"
+            "Все дополнительные данные заполнены.\n"
+            "Сохранить в анкету?"
+        ),
+        "uz": (
+            "✅ <b>Tayyor!</b>\n\n"
+            "Barcha qo'shimcha ma'lumotlar to'ldirildi.\n"
+            "Anketaga saqlashni xohlaysizmi?"
+        ),
+    },
+
     "q17": {
         "ru": "💍 <b>Вопрос 18</b>\n\nСемейное положение:",
         "uz": "💍 <b>18-savol</b>\n\nOilaviy holat:",
