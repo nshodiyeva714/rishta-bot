@@ -396,19 +396,18 @@ async def show_search_filters(callback: CallbackQuery, session: AsyncSession, st
     selected = build_selected_filters_text(filters, lang)
     text = header + ("\n" + selected if selected else "")
 
+    kb = search_filter_kb(lang, filters)
     try:
-        await callback.message.edit_text(
-            text,
-            reply_markup=search_filter_kb(lang, filters),
-            parse_mode="HTML",
-        )
+        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     except Exception:
-        await callback.message.answer(
-            text,
-            reply_markup=search_filter_kb(lang, filters),
-            parse_mode="HTML",
-        )
-    await callback.answer()
+        try:
+            await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"show_search_filters answer error: {e}")
+    try:
+        await callback.answer()
+    except Exception:
+        pass
 
 
 @router.callback_query(F.data == "search:manual")
@@ -590,6 +589,11 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
     else:
         filters[field] = value
 
+    # Возраст: при выборе/сбросе через кнопки — убираем старые age_from/age_to
+    if field == "age":
+        filters.pop("age_from", None)
+        filters.pop("age_to", None)
+
     # Если выбран регион — также ставим residence = uzbekistan
     if field == "region":
         filters["residence"] = "uzbekistan"
@@ -606,8 +610,8 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
 @router.callback_query(F.data == "filter:clear")
 async def filter_clear(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     await state.update_data(search_filters={}, search_offset=0)
-    lang = await get_lang(session, callback.from_user.id)
-    await callback.answer(t("search_filters_cleared", lang), show_alert=True)
+
+    # Обновляем экран фильтров (show_search_filters сам вызовет callback.answer)
     await show_search_filters(callback, session, state)
 
 
