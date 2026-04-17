@@ -1,35 +1,46 @@
-"""Анкета — ЭТАП 2: Расширенный профиль.
+"""Анкета — ЭТАП 2: Расширенный профиль (9 вопросов).
 
-Порядок: Жильё → Машина → Адрес → Геолокация →
-         Отец → Мать → Братья → Сёстры → Место в семье →
-         Здоровье → Характер → Идеальная семья →
-         Качества → Планы → Telegram родителей →
-         Telegram кандидата → Статус → Подтверждение
+Порядок:
+  Блок 1 — Семья:    1.Отец → 2.Мать → 3.Братья/Сёстры/Место
+  Блок 2 — Личное:   4.Характер → 5.Здоровье → 6.О себе
+  Блок 3 — Быт:      7.Жильё → 8.Автомобиль
+  Блок 4 — Контакты: 9.Телефон → TG родителей → TG кандидата → Адрес
 """
 
 import logging
 
 from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import (
+    Message, CallbackQuery,
+    InlineKeyboardMarkup, InlineKeyboardButton,
+    ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
+)
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.states import QuestionnaireStates
 from bot.texts import t
-from bot.keyboards.inline import (
-    housing_kb, parent_housing_kb, car_kb, skip_kb,
-    family_position_kb, back_kb, main_menu_kb,
-    add_nav, nav_kb,
-)
+from bot.keyboards.inline import skip_kb, back_kb, main_menu_kb
 from bot.db.models import (
-    Profile, ProfileStatus, User,
+    Profile, User,
     Housing, ParentHousing, CarStatus, FamilyPosition,
 )
 
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+SEP = "\n\n━━━━━━━━━━━━\n\n"
+
+
+# ══════════════════════════════════════
+# Утилиты
+# ══════════════════════════════════════
+
+async def _lang(state: FSMContext) -> str:
+    data = await state.get_data()
+    return data.get("lang", "ru")
 
 
 async def _get_lang(session: AsyncSession, user_id: int) -> str:
@@ -45,424 +56,708 @@ async def _get_profile(session: AsyncSession, profile_id: int, user_id: int):
     return None
 
 
-async def _lang(state: FSMContext) -> str:
+def ext_progress_bar(current: int, total: int = 9) -> str:
+    """Прогресс-бар для Этапа 2."""
+    filled = round(current / total * 13)
+    empty = 13 - filled
+    bar = "▓" * filled + "░" * empty
+    pct = round(current / total * 100)
+    return f"{bar}  {pct}%"
+
+
+def build_ext_card(data: dict, lang: str = "ru") -> str:
+    """Накопленная карточка Этапа 2."""
+    lines = []
+    L = lang if lang in ("ru", "uz") else "ru"
+
+    # Базовые данные из Этапа 1
+    name = data.get("name")
+    age = data.get("age")
+    height = data.get("height_cm")
+    header = []
+    if name:
+        header.append(name)
+    if age:
+        header.append(f"{age} {'лет' if L == 'ru' else 'yosh'}")
+    if height:
+        header.append(f"{height} {'см' if L == 'ru' else 'sm'}")
+    if header:
+        lines.append("👤 " + " · ".join(header))
+
+    # Семья
+    father = data.get("father_occupation")
+    mother = data.get("mother_occupation")
+    if father:
+        lines.append(f"{'Отец' if L == 'ru' else 'Otasi'}: {father}")
+    if mother:
+        lines.append(f"{'Мать' if L == 'ru' else 'Onasi'}: {mother}")
+
+    # Братья/сёстры/место
+    brothers = data.get("brothers_count")
+    sisters = data.get("sisters_count")
+    position = data.get("family_position")
+    if brothers is not None or sisters is not None:
+        fam = []
+        if brothers is not None:
+            fam.append(f"{brothers} {'бр.' if L == 'ru' else 'aka-uka'}")
+        if sisters is not None:
+            fam.append(f"{sisters} {'сест.' if L == 'ru' else 'opa-singil'}")
+        if position:
+            pos_map = {
+                "ru": {"first": "старший/ая", "middle": "средний/яя",
+                       "last": "младший/ая", "only": "единственный/ая"},
+                "uz": {"first": "katta", "middle": "o'rtancha",
+                       "last": "kenja", "only": "yagona"},
+            }
+            fam.append(pos_map[L].get(position, position))
+        lines.append(" · ".join(fam))
+
+    # Характер
+    char = data.get("character_hobbies")
+    if char:
+        snippet = char[:40] + ("..." if len(char) > 40 else "")
+        lines.append(f"✨ {snippet}")
+
+    # Жильё
+    house_map = {
+        "ru": {"own_house": "Свой дом", "own_apt": "Своя квартира",
+               "parents": "С родителями", "rent": "Аренда"},
+        "uz": {"own_house": "O'z uyi", "own_apt": "O'z kvartirasi",
+               "parents": "Ota-ona bilan", "rent": "Ijara"},
+    }
+    house = data.get("housing")
+    if house:
+        lines.append(f"🏠 {house_map[L].get(house, house)}")
+
+    # Автомобиль
+    car_map = {
+        "ru": {"own": "Личный авто", "family": "Семейный авто", "no": "Нет авто"},
+        "uz": {"own": "Shaxsiy avto", "family": "Oilaviy avto", "no": "Avto yo'q"},
+    }
+    car = data.get("car")
+    if car:
+        lines.append(f"🚗 {car_map[L].get(car, car)}")
+
+    # Телефон
+    phone = data.get("parent_phone")
+    if phone:
+        lines.append(f"📞 {phone}")
+
+    if not lines:
+        return ""
+
+    return "📋 " + "\n   ".join(lines)
+
+
+def _with_card(data: dict, lang: str, question_text: str) -> str:
+    card = build_ext_card(data, lang)
+    return (card + SEP + question_text) if card else question_text
+
+
+# ══════════════════════════════════════
+# СТАРТ ЭТАПА 2
+# ══════════════════════════════════════
+
+@router.callback_query(F.data == "ext:start")
+async def ext_start(callback: CallbackQuery, state: FSMContext):
+    """Старт Этапа 2 — сразу к вопросу 1 (отец)."""
+    lang = await _lang(state)
     data = await state.get_data()
-    return data.get("lang", "ru")
+    bar = ext_progress_bar(1)
 
-
-# ══════════════════════════════════════
-# ЭТАП 2 — Расширенный профиль
-# ══════════════════════════════════════
-
-# ── 1. Жильё ──
-@router.callback_query(F.data.startswith("housing:"), QuestionnaireStates.ext_housing)
-async def ext_housing(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(housing=value)
-    lang = await _lang(state)
-
-    if value == "with_parents":
-        await callback.message.edit_text(
-            t("ext_housing_parent", lang),
-            reply_markup=add_nav(parent_housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-        )
-        await state.set_state(QuestionnaireStates.ext_housing_parent)
+    if lang == "uz":
+        q_text = f"1/9\n{bar}\n\n👨 Otasi — nima bilan shug'ullanadi:"
     else:
-        await callback.message.edit_text(
-            t("ext_car", lang),
-            reply_markup=add_nav(car_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-        )
-        await state.set_state(QuestionnaireStates.ext_car)
-    await callback.answer()
+        q_text = f"Вопрос 1/9\n{bar}\n\n👨 Отец — чем занимается:"
 
-
-# ── 1b. Тип жилья родителей ──
-@router.callback_query(F.data.startswith("phousing:"), QuestionnaireStates.ext_housing_parent)
-async def ext_housing_parent(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(parent_housing_type=value)
-    lang = await _lang(state)
-    await callback.message.edit_text(
-        t("ext_car", lang),
-        reply_markup=add_nav(car_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_car)
-    await callback.answer()
-
-
-# ── 2. Машина ──
-@router.callback_query(F.data.startswith("car:"), QuestionnaireStates.ext_car)
-async def ext_car(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(car=value)
-    lang = await _lang(state)
-    await callback.message.edit_text(t("ext_address", lang), reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_address)
-    await callback.answer()
-
-
-# ── 3. Адрес ──
-@router.message(QuestionnaireStates.ext_address)
-async def ext_address(message: Message, state: FSMContext):
-    await state.update_data(address=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(t("ext_family_region", lang), reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_family_region)
-
-
-# ── 4. Регион семьи ──
-@router.message(QuestionnaireStates.ext_family_region)
-async def ext_family_region(message: Message, state: FSMContext):
-    await state.update_data(family_region=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(t("ext_father", lang), reply_markup=back_kb(lang))
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_father)
+    await callback.answer()
 
 
-# ── 5. Отец ──
+# ══════════════════════════════════════
+# БЛОК 1: СЕМЬЯ
+# ══════════════════════════════════════
+
+# ── 1. Отец ──
 @router.message(QuestionnaireStates.ext_father)
 async def ext_father(message: Message, state: FSMContext):
     await state.update_data(father_occupation=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_mother", lang), reply_markup=back_kb(lang))
+    data = await state.get_data()
+    bar = ext_progress_bar(2)
+
+    if lang == "uz":
+        q_text = f"2/9\n{bar}\n\n👩 Onasi — nima bilan shug'ullanadi:"
+    else:
+        q_text = f"Вопрос 2/9\n{bar}\n\n👩 Мать — чем занимается:"
+
+    full_text = _with_card(data, lang, q_text)
+    await message.answer(full_text, reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_mother)
 
 
-# ── 6. Мать ──
+# ── 2. Мать → 3. Братья ──
+def _brothers_kb(lang: str) -> InlineKeyboardMarkup:
+    label = "Aka-uka:" if lang == "uz" else "Братьев:"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data="noop")],
+        [InlineKeyboardButton(text="0", callback_data="brothers:0"),
+         InlineKeyboardButton(text="1", callback_data="brothers:1"),
+         InlineKeyboardButton(text="2", callback_data="brothers:2"),
+         InlineKeyboardButton(text="3", callback_data="brothers:3"),
+         InlineKeyboardButton(text="4+", callback_data="brothers:4")],
+    ])
+
+
+def _sisters_kb(lang: str) -> InlineKeyboardMarkup:
+    label = "Opa-singillar:" if lang == "uz" else "Сестёр:"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=label, callback_data="noop")],
+        [InlineKeyboardButton(text="0", callback_data="sisters:0"),
+         InlineKeyboardButton(text="1", callback_data="sisters:1"),
+         InlineKeyboardButton(text="2", callback_data="sisters:2"),
+         InlineKeyboardButton(text="3", callback_data="sisters:3"),
+         InlineKeyboardButton(text="4+", callback_data="sisters:4")],
+    ])
+
+
+def _position_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [
+            ("Katta farzand", "fpos:first"),
+            ("O'rtancha", "fpos:middle"),
+            ("Kenja farzand", "fpos:last"),
+            ("Yagona farzand", "fpos:only"),
+        ]
+    else:
+        opts = [
+            ("Старший/ая", "fpos:first"),
+            ("Средний/яя", "fpos:middle"),
+            ("Младший/ая", "fpos:last"),
+            ("Единственный/ая", "fpos:only"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
 @router.message(QuestionnaireStates.ext_mother)
 async def ext_mother(message: Message, state: FSMContext):
     await state.update_data(mother_occupation=message.text.strip())
     lang = await _lang(state)
-    await message.answer(t("ext_brothers", lang), reply_markup=back_kb(lang))
+    data = await state.get_data()
+    bar = ext_progress_bar(3)
+
+    if lang == "uz":
+        q_text = f"3/9\n{bar}\n\n👨‍👩‍👧 Aka-uka va opa-singillar:"
+    else:
+        q_text = f"Вопрос 3/9\n{bar}\n\n👨‍👩‍👧 Братья и сёстры:"
+
+    full_text = _with_card(data, lang, q_text)
+    await message.answer(full_text, reply_markup=_brothers_kb(lang))
     await state.set_state(QuestionnaireStates.ext_brothers)
 
 
-# ── 7. Братья ──
-@router.message(QuestionnaireStates.ext_brothers)
-async def ext_brothers(message: Message, state: FSMContext):
+# ── 3a. Братья ──
+@router.callback_query(F.data.startswith("brothers:"), QuestionnaireStates.ext_brothers)
+async def ext_brothers(callback: CallbackQuery, state: FSMContext):
+    count = int(callback.data.replace("brothers:", ""))
+    await state.update_data(brothers_count=count)
     lang = await _lang(state)
-    text = message.text.strip()
-    if not text.isdigit() or int(text) > 20:
-        await message.answer(t("invalid_number", lang))
-        return
-    await state.update_data(brothers_count=int(text))
-    await message.answer(t("ext_sisters", lang), reply_markup=back_kb(lang))
+    # Меняем только клавиатуру (текст вопроса тот же — "Братья и сёстры")
+    await callback.message.edit_reply_markup(reply_markup=_sisters_kb(lang))
     await state.set_state(QuestionnaireStates.ext_sisters)
-
-
-# ── 8. Сёстры ──
-@router.message(QuestionnaireStates.ext_sisters)
-async def ext_sisters(message: Message, state: FSMContext):
-    lang = await _lang(state)
-    text = message.text.strip()
-    if not text.isdigit() or int(text) > 20:
-        await message.answer(t("invalid_number", lang))
-        return
-    await state.update_data(sisters_count=int(text))
-    await message.answer(
-        t("ext_position", lang),
-        reply_markup=add_nav(family_position_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_position)
-
-
-# ── 9. Место в семье ──
-@router.callback_query(F.data.startswith("fpos:"), QuestionnaireStates.ext_position)
-async def ext_position(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(family_position=value)
-    lang = await _lang(state)
-    await callback.message.edit_text(
-        t("ext_health", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_health)
     await callback.answer()
 
 
-# ── 10. Здоровье ──
+# ── 3b. Сёстры → Место в семье ──
+@router.callback_query(F.data.startswith("sisters:"), QuestionnaireStates.ext_sisters)
+async def ext_sisters(callback: CallbackQuery, state: FSMContext):
+    count = int(callback.data.replace("sisters:", ""))
+    await state.update_data(sisters_count=count)
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(3)
+
+    if lang == "uz":
+        q_text = f"3/9\n{bar}\n\nOiladagi o'rni:"
+    else:
+        q_text = f"Вопрос 3/9\n{bar}\n\nМесто в семье:"
+
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=_position_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_position)
+    await callback.answer()
+
+
+# ── 3c. Место в семье → 4. Характер ──
+@router.callback_query(F.data.startswith("fpos:"), QuestionnaireStates.ext_position)
+async def ext_position(callback: CallbackQuery, state: FSMContext):
+    position = callback.data.replace("fpos:", "")
+    await state.update_data(family_position=position)
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(4)
+
+    if lang == "uz":
+        q_text = f"4/9\n{bar}\n\n✨ Xarakter va qiziqishlar\n(ixtiyoriy):"
+    else:
+        q_text = f"Вопрос 4/9\n{bar}\n\n✨ Характер и увлечения\n(необязательно):"
+
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(full_text, reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_character)
+    await callback.answer()
+
+
+# ══════════════════════════════════════
+# БЛОК 2: ЛИЧНОЕ
+# ══════════════════════════════════════
+
+# ── 4. Характер → 5. Здоровье ──
+async def _ask_health(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(5)
+
+    if lang == "uz":
+        q_text = f"5/9\n{bar}\n\n❤️ Sog'lig'ining xususiyatlari\n(ixtiyoriy):"
+    else:
+        q_text = f"Вопрос 5/9\n{bar}\n\n❤️ Особенности здоровья\n(необязательно):"
+
+    full_text = _with_card(data, lang, q_text)
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
+    else:
+        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_health)
+
+
+@router.message(QuestionnaireStates.ext_character)
+async def ext_character(message: Message, state: FSMContext):
+    await state.update_data(character_hobbies=message.text.strip())
+    await _ask_health(message, state)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.ext_character)
+async def ext_character_skip(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(character_hobbies=None)
+    await _ask_health(callback, state)
+    await callback.answer()
+
+
+# ── 5. Здоровье → 6. О себе ──
+async def _ask_about(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(6)
+
+    if lang == "uz":
+        q_text = f"6/9\n{bar}\n\n💬 O'zingiz va kutganlaringiz haqida\n(ixtiyoriy):"
+    else:
+        q_text = f"Вопрос 6/9\n{bar}\n\n💬 О себе и ожиданиях\n(необязательно):"
+
+    full_text = _with_card(data, lang, q_text)
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
+    else:
+        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_ideal_family)
+
+
 @router.message(QuestionnaireStates.ext_health)
 async def ext_health(message: Message, state: FSMContext):
     await state.update_data(health_notes=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(t("ext_character", lang), reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_character)
+    await _ask_about(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_health)
 async def ext_health_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    await callback.message.edit_text(t("ext_character", lang), reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_character)
+    await state.update_data(health_notes=None)
+    await _ask_about(callback, state)
     await callback.answer()
 
 
-# ── 11. Характер ──
-@router.message(QuestionnaireStates.ext_character)
-async def ext_character(message: Message, state: FSMContext):
-    await state.update_data(character_hobbies=message.text.strip())
+# ── 6. О себе → 7. Жильё ──
+async def _ask_housing(m_or_cb, state: FSMContext):
     lang = await _lang(state)
-    await message.answer(
-        t("ext_ideal_family", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_ideal_family)
+    data = await state.get_data()
+    bar = ext_progress_bar(7)
+
+    if lang == "uz":
+        q_text = f"7/9\n{bar}\n\n🏠 Turar joy:"
+        opts = [
+            ("O'z uyi", "housing:own_house"),
+            ("O'z kvartirasi", "housing:own_apt"),
+            ("Ota-ona bilan", "housing:parents"),
+            ("Ijara", "housing:rent"),
+        ]
+    else:
+        q_text = f"Вопрос 7/9\n{bar}\n\n🏠 Жильё:"
+        opts = [
+            ("Свой дом", "housing:own_house"),
+            ("Своя квартира", "housing:own_apt"),
+            ("С родителями", "housing:parents"),
+            ("Аренда", "housing:rent"),
+        ]
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+    full_text = _with_card(data, lang, q_text)
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(full_text, reply_markup=kb)
+    else:
+        await m_or_cb.answer(full_text, reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_housing)
 
 
-# ── 12. Идеальная семья ──
 @router.message(QuestionnaireStates.ext_ideal_family)
-async def ext_ideal_family(message: Message, state: FSMContext):
+async def ext_about(message: Message, state: FSMContext):
     await state.update_data(ideal_family_life=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(
-        t("ext_qualities", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_qualities)
+    await _ask_housing(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_ideal_family)
-async def ext_ideal_family_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    await callback.message.edit_text(
-        t("ext_qualities", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_qualities)
+async def ext_about_skip(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(ideal_family_life=None)
+    await _ask_housing(callback, state)
     await callback.answer()
 
 
-# ── 13. Качества ──
-@router.message(QuestionnaireStates.ext_qualities)
-async def ext_qualities(message: Message, state: FSMContext):
-    await state.update_data(important_qualities=message.text.strip())
-    lang = await _lang(state)
-    await message.answer(
-        t("ext_plans", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_plans)
+# ══════════════════════════════════════
+# БЛОК 3: МАТЕРИАЛЬНОЕ
+# ══════════════════════════════════════
 
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_qualities)
-async def ext_qualities_skip(callback: CallbackQuery, state: FSMContext):
+# ── 7. Жильё → (тип жилья родителей) → 8. Автомобиль ──
+@router.callback_query(F.data.startswith("housing:"), QuestionnaireStates.ext_housing)
+async def ext_housing(callback: CallbackQuery, state: FSMContext):
+    housing = callback.data.replace("housing:", "")
+    await state.update_data(housing=housing)
     lang = await _lang(state)
-    await callback.message.edit_text(
-        t("ext_plans", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_plans)
+
+    if housing == "parents":
+        if lang == "uz":
+            opts = [("Uy", "phousing:house"), ("Kvartira", "phousing:apt")]
+            title = "Ota-ona uyining turi:"
+        else:
+            opts = [("Дом", "phousing:house"), ("Квартира", "phousing:apt")]
+            title = "Тип жилья родителей:"
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+        ])
+        await callback.message.edit_text(title, reply_markup=kb)
+        await state.set_state(QuestionnaireStates.ext_housing_parent)
+    else:
+        await _ask_car(callback, state)
     await callback.answer()
 
 
-# ── 14. Планы ──
-@router.message(QuestionnaireStates.ext_plans)
-async def ext_plans(message: Message, state: FSMContext):
-    await state.update_data(five_year_plans=message.text.strip())
+@router.callback_query(F.data.startswith("phousing:"), QuestionnaireStates.ext_housing_parent)
+async def ext_housing_parent(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(parent_housing_type=callback.data.replace("phousing:", ""))
+    await _ask_car(callback, state)
+    await callback.answer()
+
+
+# ── 8. Автомобиль → 9. Контакты ──
+async def _ask_car(m_or_cb, state: FSMContext):
     lang = await _lang(state)
-    await message.answer(
-        t("ext_parent_telegram", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
+    data = await state.get_data()
+    bar = ext_progress_bar(8)
+
+    if lang == "uz":
+        q_text = f"8/9\n{bar}\n\n🚗 Avtomobil:"
+        opts = [
+            ("Shaxsiy", "car:own"),
+            ("Oilaviy", "car:family"),
+            ("Yo'q", "car:no"),
+        ]
+    else:
+        q_text = f"Вопрос 8/9\n{bar}\n\n🚗 Автомобиль:"
+        opts = [
+            ("Личный", "car:own"),
+            ("Семейный", "car:family"),
+            ("Нет", "car:no"),
+        ]
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+    full_text = _with_card(data, lang, q_text)
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(full_text, reply_markup=kb)
+    else:
+        await m_or_cb.answer(full_text, reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_car)
+
+
+@router.callback_query(F.data.startswith("car:"), QuestionnaireStates.ext_car)
+async def ext_car(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(car=callback.data.replace("car:", ""))
+    await _ask_parent_phone(callback, state)
+    await callback.answer()
+
+
+# ══════════════════════════════════════
+# БЛОК 4: КОНТАКТЫ
+# ══════════════════════════════════════
+
+# ── 9a. Телефон родителей ──
+async def _ask_parent_phone(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(9)
+
+    if lang == "uz":
+        q_text = f"9/9\n{bar}\n\n📞 Ota-onalar telefoni\n(ixtiyoriy):"
+    else:
+        q_text = f"Вопрос 9/9\n{bar}\n\n📞 Телефон родителей\n(необязательно):"
+
+    full_text = _with_card(data, lang, q_text)
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
+    else:
+        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_parent_phone)
+
+
+@router.message(QuestionnaireStates.ext_parent_phone)
+async def ext_parent_phone(message: Message, state: FSMContext):
+    phone = message.text.strip()
+    digits = "".join(filter(str.isdigit, phone))
+    if len(digits) == 9:
+        phone = f"+998{digits}"
+    elif len(digits) == 12 and digits.startswith("998"):
+        phone = f"+{digits}"
+    await state.update_data(parent_phone=phone)
+    await _ask_parent_tg(message, state)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_phone)
+async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(parent_phone=None)
+    await _ask_parent_tg(callback, state)
+    await callback.answer()
+
+
+# ── 9b. Telegram родителей ──
+async def _ask_parent_tg(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    if lang == "uz":
+        text = "📱 Ota-onalar Telegram (@username)\n(ixtiyoriy):"
+    else:
+        text = "📱 Telegram родителей (@username)\n(необязательно):"
+
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(text, reply_markup=skip_kb(lang))
+    else:
+        await m_or_cb.answer(text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
 
 
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_plans)
-async def ext_plans_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    await callback.message.edit_text(
-        t("ext_parent_telegram", lang),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_parent_telegram)
-    await callback.answer()
-
-
-# ── 15. Telegram родителей ──
 @router.message(QuestionnaireStates.ext_parent_telegram)
-async def ext_parent_telegram(message: Message, state: FSMContext):
+async def ext_parent_tg(message: Message, state: FSMContext):
     tg = message.text.strip()
     if not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(parent_telegram=tg)
-    lang = await _lang(state)
-    data = await state.get_data()
-    ptype = data.get("profile_type", "son")
-    child = t("son", lang) if ptype == "son" else t("daughter", lang)
-    await message.answer(
-        t("ext_candidate_telegram", lang, child=child),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+    await _ask_candidate_tg(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_telegram)
 async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    ptype = data.get("profile_type", "son")
-    child = t("son", lang) if ptype == "son" else t("daughter", lang)
-    await callback.message.edit_text(
-        t("ext_candidate_telegram", lang, child=child),
-        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+    await state.update_data(parent_telegram=None)
+    await _ask_candidate_tg(callback, state)
     await callback.answer()
 
 
-# ── 16. Telegram кандидата ──
+# ── 9c. Telegram кандидата ──
+async def _ask_candidate_tg(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    if lang == "uz":
+        text = "💬 Nomzod Telegram (@username)\n(ixtiyoriy):"
+    else:
+        text = "💬 Telegram кандидата (@username)\n(необязательно):"
+
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(text, reply_markup=skip_kb(lang))
+    else:
+        await m_or_cb.answer(text, reply_markup=skip_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+
+
 @router.message(QuestionnaireStates.ext_candidate_telegram)
-async def ext_candidate_telegram(message: Message, state: FSMContext):
+async def ext_candidate_tg(message: Message, state: FSMContext):
     tg = message.text.strip()
     if not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(candidate_telegram=tg)
-    lang = await _lang(state)
-    await _show_ext_confirm(message, state, lang)
+    await _ask_address(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_candidate_telegram)
 async def ext_candidate_tg_skip(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    await _show_ext_confirm(callback.message, state, lang, edit=True)
+    await state.update_data(candidate_telegram=None)
+    await _ask_address(callback, state)
     await callback.answer()
 
 
-# ── Подтверждение расширенного профиля ──
-async def _show_ext_confirm(message, state: FSMContext, lang: str, edit: bool = False):
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="✅ Сохранить" if lang == "ru" else "✅ Saqlash",
-            callback_data="ext_confirm:save",
-        )],
-        [InlineKeyboardButton(
-            text="❌ Отменить" if lang == "ru" else "❌ Bekor qilish",
-            callback_data="ext_confirm:cancel",
-        )],
-        *nav_kb(lang, "back:menu"),
-    ])
-    text = t("ext_confirm", lang)
-    if edit:
-        await message.edit_text(text, reply_markup=kb)
+# ── 9d. Адрес / Геолокация / Ссылка ──
+async def _ask_address(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    if lang == "uz":
+        text = "🏠 Manzil yoki joylashuv:"
+        opts = [
+            ("🏠 Manzil yozish", "addr:text"),
+            ("📍 Geolokatsiya yuborish", "addr:geo"),
+            ("🗺 Xarita havolasi", "addr:link"),
+            ("⏭ O'tkazib yuborish", "addr:skip"),
+        ]
     else:
-        await message.answer(text, reply_markup=kb)
-    await state.set_state(QuestionnaireStates.ext_confirm)
+        text = "🏠 Адрес или геолокация:"
+        opts = [
+            ("🏠 Написать адрес", "addr:text"),
+            ("📍 Отправить геолокацию", "addr:geo"),
+            ("🗺 Ссылка на карту", "addr:link"),
+            ("⏭ Пропустить", "addr:skip"),
+        ]
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+    if hasattr(m_or_cb, "message"):
+        await m_or_cb.message.edit_text(text, reply_markup=kb)
+    else:
+        await m_or_cb.answer(text, reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_address)
 
 
-@router.callback_query(F.data == "ext_confirm:save", QuestionnaireStates.ext_confirm)
-async def ext_confirm_save(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
-    """Сохраняем расширенные данные в профиль."""
+@router.callback_query(F.data.startswith("addr:"), QuestionnaireStates.ext_address)
+async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
+    choice = callback.data.replace("addr:", "")
+    lang = await _lang(state)
+
+    if choice == "text":
+        text = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
+        await callback.message.edit_text(text, reply_markup=skip_kb(lang))
+        await state.set_state(QuestionnaireStates.ext_address_text)
+    elif choice == "geo":
+        geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
+        title = "📍 Geolokatsiya:" if lang == "uz" else "📍 Геолокация:"
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=geo_label, request_location=True)]],
+            resize_keyboard=True, one_time_keyboard=True,
+        )
+        await callback.message.answer(title, reply_markup=kb)
+        await state.set_state(QuestionnaireStates.ext_location)
+    elif choice == "link":
+        text = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
+        await callback.message.edit_text(text, reply_markup=skip_kb(lang))
+        await state.set_state(QuestionnaireStates.ext_address_link)
+    elif choice == "skip":
+        await _show_ext_complete(callback, state)
+
+    await callback.answer()
+
+
+@router.message(QuestionnaireStates.ext_address_text)
+async def ext_address_text(message: Message, state: FSMContext):
+    await state.update_data(address=message.text.strip())
+    await _show_ext_complete(message, state)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.ext_address_text)
+async def ext_address_text_skip(callback: CallbackQuery, state: FSMContext):
+    await _show_ext_complete(callback, state)
+    await callback.answer()
+
+
+@router.message(QuestionnaireStates.ext_location)
+async def ext_location(message: Message, state: FSMContext):
+    if message.location:
+        lat = message.location.latitude
+        lon = message.location.longitude
+        await state.update_data(
+            location_lat=lat,
+            location_lon=lon,
+            location_link=f"https://maps.google.com/?q={lat},{lon}",
+        )
+    # Убираем reply-клавиатуру
+    try:
+        await message.answer("✓", reply_markup=ReplyKeyboardRemove())
+    except Exception:
+        pass
+    await _show_ext_complete(message, state)
+
+
+@router.message(QuestionnaireStates.ext_address_link)
+async def ext_address_link(message: Message, state: FSMContext):
+    await state.update_data(location_link=message.text.strip())
+    await _show_ext_complete(message, state)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.ext_address_link)
+async def ext_address_link_skip(callback: CallbackQuery, state: FSMContext):
+    await _show_ext_complete(callback, state)
+    await callback.answer()
+
+
+# ══════════════════════════════════════
+# noop — заглушка для label-кнопок
+# ══════════════════════════════════════
+@router.callback_query(F.data == "noop")
+async def noop(callback: CallbackQuery):
+    await callback.answer()
+
+
+# ══════════════════════════════════════
+# Финальный экран Этапа 2
+# ══════════════════════════════════════
+
+async def _show_ext_complete(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
     data = await state.get_data()
-    lang = data.get("lang", "ru")
-    profile_id = data.get("ext_profile_id")
+    card = build_ext_card(data, lang)
 
-    if not profile_id:
-        await callback.answer("⛔")
-        await state.clear()
-        return
-
-    profile = await _get_profile(session, profile_id, callback.from_user.id)
-    if not profile:
-        await callback.answer("⛔")
-        await state.clear()
-        return
-
-    # Безопасное преобразование enum
-    def safe_enum(enum_cls, val):
-        if val is None:
-            return None
-        try:
-            return enum_cls(val)
-        except (ValueError, KeyError):
-            return None
-
-    # Обновляем только заполненные поля
-    if data.get("housing"):
-        profile.housing = safe_enum(Housing, data["housing"])
-    if data.get("parent_housing_type"):
-        profile.parent_housing_type = safe_enum(ParentHousing, data["parent_housing_type"])
-    if data.get("car"):
-        profile.car = safe_enum(CarStatus, data["car"])
-    if data.get("address"):
-        profile.address = data["address"]
-    if data.get("family_region"):
-        profile.family_region = data["family_region"]
-    if data.get("father_occupation"):
-        profile.father_occupation = data["father_occupation"]
-    if data.get("mother_occupation"):
-        profile.mother_occupation = data["mother_occupation"]
-    if data.get("brothers_count") is not None:
-        profile.brothers_count = data["brothers_count"]
-    if data.get("sisters_count") is not None:
-        profile.sisters_count = data["sisters_count"]
-    if data.get("family_position"):
-        profile.family_position = safe_enum(FamilyPosition, data["family_position"])
-    if data.get("health_notes"):
-        profile.health_notes = data["health_notes"]
-    if data.get("character_hobbies"):
-        profile.character_hobbies = data["character_hobbies"]
-    if data.get("ideal_family_life"):
-        profile.ideal_family_life = data["ideal_family_life"]
-    if data.get("important_qualities"):
-        profile.important_qualities = data["important_qualities"]
-    if data.get("five_year_plans"):
-        profile.five_year_plans = data["five_year_plans"]
-    if data.get("parent_telegram"):
-        profile.parent_telegram = data["parent_telegram"]
-    if data.get("candidate_telegram"):
-        profile.candidate_telegram = data["candidate_telegram"]
-
-    await session.commit()
-
-    display_id = profile.display_id or "—"
-
-    # Уведомляем модераторов об обновлении
-    from bot.config import get_all_moderator_ids
-    from bot.utils.helpers import format_full_anketa
-    from bot.keyboards.inline import mod_review_kb
-
-    mod_text = (
-        f"📝 <b>АНКЕТА ДОПОЛНЕНА</b>\n"
-        f"🔖 {display_id}\n\n"
-    ) + format_full_anketa(profile, lang="ru")
-
-    for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text, reply_markup=mod_review_kb(profile.id))
-        except Exception:
-            pass
-
-    # Успех
     if lang == "uz":
         text = (
             f"✅ <b>Anketa to'ldirildi!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Qo'shimcha ma'lumotlar saqlandi.\n"
-            f"Anketangiz endi to'liqroq ko'rinadi ⭐\n\n"
-            f"Ko'proq oilalar sizni ko'radi! 👀"
+            f"{card}\n\n"
+            f"Nashr etishga tayyormisiz?"
         )
+        buttons = [
+            [InlineKeyboardButton(text="🚀 Nashr etish", callback_data="profile:confirm")],
+            [InlineKeyboardButton(text="← Orqaga", callback_data="ext:back")],
+        ]
     else:
         text = (
             f"✅ <b>Анкета дополнена!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Дополнительные данные сохранены.\n"
-            f"Ваша анкета теперь полнее ⭐\n\n"
-            f"Больше семей увидят вас! 👀"
+            f"{card}\n\n"
+            f"Готовы опубликовать?"
         )
+        buttons = [
+            [InlineKeyboardButton(text="🚀 Опубликовать", callback_data="profile:confirm")],
+            [InlineKeyboardButton(text="← Назад", callback_data="ext:back")],
+        ]
 
-    await callback.message.edit_text(text, reply_markup=main_menu_kb(lang, callback.from_user.id))
-    await state.clear()
-    await callback.answer()
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-
-@router.callback_query(F.data == "ext_confirm:cancel", QuestionnaireStates.ext_confirm)
-async def ext_confirm_cancel(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    lang = await _get_lang(session, callback.from_user.id)
-    await state.clear()
-    if lang == "uz":
-        text = "❌ Bekor qilindi. Ma'lumotlar saqlanmadi."
+    if hasattr(m_or_cb, "message"):
+        try:
+            await m_or_cb.message.edit_text(text, reply_markup=kb)
+        except Exception:
+            await m_or_cb.message.answer(text, reply_markup=kb)
     else:
-        text = "❌ Отменено. Данные не сохранены."
-    await callback.message.edit_text(text, reply_markup=main_menu_kb(lang, callback.from_user.id))
+        await m_or_cb.answer(text, reply_markup=kb)
+
+    await state.set_state(QuestionnaireStates.ext_confirm)
+
+
+# ── «← Назад» с финального экрана Этапа 2 → снова адрес ──
+@router.callback_query(F.data == "ext:back", QuestionnaireStates.ext_confirm)
+async def ext_back(callback: CallbackQuery, state: FSMContext):
+    await _ask_address(callback, state)
     await callback.answer()

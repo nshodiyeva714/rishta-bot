@@ -430,27 +430,133 @@ async def profile_back_enhance(callback: CallbackQuery, state: FSMContext):
     await _show_summary(callback, state, is_callback=True)
 
 
-# ── «✏️ Дополнить сейчас» — сначала публикуем, потом Этап 2 ──
+# ── «✏️ Дополнить сейчас» (legacy) — сначала публикуем, потом Этап 2 ──
 @router.callback_query(F.data == "profile:extend_now", RequirementStates.summary)
 async def profile_extend_now(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
-    """Сохраняем анкету → отправляем модератору → запускаем Этап 2."""
+    """Legacy-хендлер (не используется после обновления, но оставлен для совместимости)."""
     profile, display_id = await _save_profile(callback, state, session, bot)
     if not profile:
         return
 
     data = await state.get_data()
     lang = data.get("lang", "ru")
-
-    # Сохраняем profile_id для Этапа 2
     await state.update_data(ext_profile_id=profile.id)
 
-    # Запускаем Этап 2
     await callback.message.edit_text(
         t("ext_housing", lang),
         reply_markup=add_nav(housing_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
     )
     from bot.states import QuestionnaireStates
     await state.set_state(QuestionnaireStates.ext_housing)
+    await callback.answer()
+
+
+# ── «🚀 Опубликовать как есть» (profile:confirm с экрана enhance_intro) ──
+@router.callback_query(F.data == "profile:confirm", RequirementStates.summary)
+async def profile_confirm_summary(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Публикация без Этапа 2 — сохраняем профиль и показываем успех."""
+    await publish_profile(callback, state, session, bot)
+
+
+# ── «🚀 Опубликовать» с финального экрана Этапа 2 ──
+@router.callback_query(F.data == "profile:confirm")
+async def profile_confirm_after_ext(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Публикация после Этапа 2 — сохраняем профиль со всеми данными Этапа 2."""
+    from bot.states import QuestionnaireStates
+    current = await state.get_state()
+    if current != QuestionnaireStates.ext_confirm.state:
+        # Неожиданный стейт — просто публикуем
+        await publish_profile(callback, state, session, bot)
+        return
+
+    # Сохраняем профиль с данными Этапа 1 + Этапа 2 (они все в FSM state)
+    profile, display_id = await _save_profile(callback, state, session, bot)
+    if not profile:
+        return
+
+    # Обновляем профиль доп. полями из Этапа 2, которых нет в _save_profile
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    def safe_enum(enum_cls, val):
+        if val is None:
+            return None
+        try:
+            return enum_cls(val)
+        except (ValueError, KeyError):
+            return None
+
+    updated = False
+    if data.get("housing") and not profile.housing:
+        profile.housing = safe_enum(Housing, data["housing"])
+        updated = True
+    if data.get("parent_housing_type") and not profile.parent_housing_type:
+        profile.parent_housing_type = safe_enum(ParentHousing, data["parent_housing_type"])
+        updated = True
+    if data.get("car") and not profile.car:
+        profile.car = safe_enum(CarStatus, data["car"])
+        updated = True
+    if data.get("father_occupation") and not profile.father_occupation:
+        profile.father_occupation = data["father_occupation"]
+        updated = True
+    if data.get("mother_occupation") and not profile.mother_occupation:
+        profile.mother_occupation = data["mother_occupation"]
+        updated = True
+    if data.get("brothers_count") is not None and not profile.brothers_count:
+        profile.brothers_count = data["brothers_count"]
+        updated = True
+    if data.get("sisters_count") is not None and not profile.sisters_count:
+        profile.sisters_count = data["sisters_count"]
+        updated = True
+    if data.get("family_position") and not profile.family_position:
+        profile.family_position = safe_enum(FamilyPosition, data["family_position"])
+        updated = True
+    if data.get("character_hobbies") and not getattr(profile, "character_hobbies", None):
+        profile.character_hobbies = data["character_hobbies"]
+        updated = True
+    if data.get("health_notes") and not getattr(profile, "health_notes", None):
+        profile.health_notes = data["health_notes"]
+        updated = True
+    if data.get("ideal_family_life") and not getattr(profile, "ideal_family_life", None):
+        profile.ideal_family_life = data["ideal_family_life"]
+        updated = True
+    if data.get("parent_telegram") and not getattr(profile, "parent_telegram", None):
+        profile.parent_telegram = data["parent_telegram"]
+        updated = True
+    if data.get("candidate_telegram") and not getattr(profile, "candidate_telegram", None):
+        profile.candidate_telegram = data["candidate_telegram"]
+        updated = True
+    if data.get("parent_phone") and not getattr(profile, "parent_phone", None):
+        try:
+            profile.parent_phone = data["parent_phone"]
+        except Exception:
+            pass
+        updated = True
+    if data.get("address") and not profile.address:
+        profile.address = data["address"]
+        updated = True
+
+    if updated:
+        await session.commit()
+
+    # Показываем финальный экран «опубликовано»
+    if lang == "uz":
+        submitted_text = (
+            f"🎉 <b>Anketa yuborildi!</b>\n\n"
+            f"🔖 #{display_id}\n\n"
+            f"Moderator 24 soat ichida tekshiradi\n"
+            f"va nashr etadi 🤝"
+        )
+    else:
+        submitted_text = (
+            f"🎉 <b>Анкета отправлена!</b>\n\n"
+            f"🔖 #{display_id}\n\n"
+            f"Модератор проверит в течение\n"
+            f"24 часов и опубликует 🤝"
+        )
+
+    await callback.message.edit_text(submitted_text, reply_markup=main_menu_kb(lang, callback.from_user.id))
+    await state.clear()
     await callback.answer()
 
 

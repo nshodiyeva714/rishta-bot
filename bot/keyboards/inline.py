@@ -450,13 +450,13 @@ def enhance_or_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     back_text = "← Orqaga" if lang == "uz" else "← Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="profile:extend_now")],
-            [InlineKeyboardButton(text="🚀 Shundayicha nashr etish", callback_data="profile:publish")],
+            [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="ext:start")],
+            [InlineKeyboardButton(text="🚀 Shundayicha nashr etish", callback_data="profile:confirm")],
             [InlineKeyboardButton(text=back_text, callback_data="profile:back_enhance")],
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Дополнить сейчас", callback_data="profile:extend_now")],
-        [InlineKeyboardButton(text="🚀 Опубликовать как есть", callback_data="profile:publish")],
+        [InlineKeyboardButton(text="✏️ Дополнить сейчас", callback_data="ext:start")],
+        [InlineKeyboardButton(text="🚀 Опубликовать как есть", callback_data="profile:confirm")],
         [InlineKeyboardButton(text=back_text, callback_data="profile:back_enhance")],
     ])
 

@@ -44,8 +44,12 @@ class QuestionnaireStates(StatesGroup):
     ext_ideal_family = State()
     ext_qualities = State()
     ext_plans = State()
+    ext_parent_phone = State()
     ext_parent_telegram = State()
     ext_candidate_telegram = State()
+    ext_address_text = State()
+    ext_address_link = State()
+    ext_location = State()
     ext_confirm = State()
 
 
