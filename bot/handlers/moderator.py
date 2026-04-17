@@ -1723,25 +1723,7 @@ async def _active_requests(session: AsyncSession) -> list:
 
 async def _render_requests_list(target_message: Message, session: AsyncSession, *, edit: bool = False):
     """Отрисовать список активных запросов — в новое сообщение или edit_text."""
-    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
-    logger.warning("RENDER_REQUESTS: start")
-    try:
-        requests = await _active_requests(session)
-        logger.warning(f"RENDER_REQUESTS: found {len(requests)} requests")
-        if hasattr(target_message, "answer"):
-            try:
-                await target_message.answer(f"DEBUG requests: found {len(requests)}")
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
-    except Exception as e:
-        logger.error(f"RENDER_REQUESTS ERROR: {e}", exc_info=True)
-        if hasattr(target_message, "answer"):
-            try:
-                await target_message.answer(f"ERROR: {type(e).__name__}: {e}")
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
-        return
-    # ── КОНЕЦ DEBUG ────────────────────────────────────────
+    requests = await _active_requests(session)
 
     if not requests:
         text = "📋 Активных запросов нет."
@@ -1754,19 +1736,15 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
             logger.debug("ignored: %s", _e)
         return
 
-    # ── DEBUG: построение кнопок ───────────────────────────
-    logger.warning(f"RENDER: building buttons for {len(requests)} requests")
-
     text = f"📋 <b>Активные запросы ({len(requests)}):</b>"
     buttons: list[list[InlineKeyboardButton]] = []
-    for i, req in enumerate(requests):
+    for req in requests:
         try:
             profile = await session.get(Profile, req.target_profile_id)
             p_name = profile.name if profile else "—"
             # User.username не хранится в БД — показываем только ID
             username = f"ID:{req.requester_user_id}"
             req_id = req.display_id or f"ЗАП-{req.id}"
-            logger.warning(f"RENDER: req {i} → {req_id} from {username} → {p_name}")
             label = f"📋 #{req_id} · {username} · {p_name}"
             if len(label.encode("utf-8")) > 60:
                 label = label[:55] + "…"
@@ -1774,25 +1752,8 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
                 text=label, callback_data=f"view_req:{req.id}:0",
             )])
         except Exception as e:
-            logger.error(f"RENDER: req {i} error: {e}", exc_info=True)
-            # Показать первую ошибку пользователю
-            if i == 0 and hasattr(target_message, "answer"):
-                try:
-                    await target_message.answer(
-                        f"ERROR req {i}: {type(e).__name__}: {e}"
-                    )
-                except Exception as _e:
-                    logger.debug("ignored: %s", _e)
+            logger.error(f"render request {req.id} failed: {e}", exc_info=True)
             continue
-
-    logger.warning(f"RENDER: buttons built: {len(buttons)}")
-
-    # Отправить debug-счётчик пользователю
-    if hasattr(target_message, "answer"):
-        try:
-            await target_message.answer(f"DEBUG: buttons={len(buttons)}")
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
 
     if not buttons:
         try:
@@ -1817,17 +1778,6 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
 @router.message(Command("requests"))
 async def cmd_requests(message: Message, session: AsyncSession):
     """Список активных запросов контакта."""
-    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
-    logger.warning(
-        f"CMD_REQUESTS: from {message.from_user.id} "
-        f"is_mod={is_moderator(message.from_user.id)}"
-    )
-    await message.answer(
-        f"DEBUG: id={message.from_user.id} "
-        f"is_mod={is_moderator(message.from_user.id)}"
-    )
-    # ── КОНЕЦ DEBUG ────────────────────────────────────────
-
     if not is_moderator(message.from_user.id):
         return
     await _render_requests_list(message, session, edit=False)
