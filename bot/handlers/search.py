@@ -207,14 +207,14 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "children":    "Дети",
         },
         "uz": {
-            "age":         "Yosh",
-            "religion":    "Dindorlik",
-            "education":   "Ma'lumot",
+            "age":         "Yoshi",
+            "religion":    "Dindorligi",
+            "education":   "Ma'lumoti",
             "residence":   "Yashash joyi",
             "region":      "Hudud",
-            "nationality": "Millat",
-            "marital":     "Oilaviy holat",
-            "children":    "Farzandlar",
+            "nationality": "Millati",
+            "marital":     "Oilaviy holati",
+            "children":    "Farzandlari",
         },
     }
 
