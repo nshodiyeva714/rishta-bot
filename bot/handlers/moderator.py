@@ -660,9 +660,8 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
 
 @router.message(Command("dbcheck"))
 async def db_check(message: Message, session: AsyncSession):
-    from bot.config import get_all_moderator_ids
-    if message.from_user.id not in get_all_moderator_ids():
-        return
+    # Временно: открыт всем для диагностики
+    await message.answer(f"🛠 /dbcheck запущен от id={message.from_user.id}")
 
     from sqlalchemy import text
     try:
@@ -764,4 +763,11 @@ async def db_check(message: Message, session: AsyncSession):
             full_text = full_text[:4000] + "\n…(обрезано)"
         await message.answer(full_text, parse_mode="HTML")
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        import traceback
+        tb = traceback.format_exc()
+        err_msg = f"❌ Ошибка: {e}\n\n<pre>{tb[:3500]}</pre>"
+        try:
+            await message.answer(err_msg, parse_mode="HTML")
+        except Exception:
+            # если даже ошибка не проходит — шлём без HTML
+            await message.answer(f"❌ {type(e).__name__}: {e}")
