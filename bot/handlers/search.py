@@ -543,7 +543,8 @@ async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
         ("Наманган" if lang == "ru" else "Namangan",       "fval:region:namangan"),
         ("Андижан" if lang == "ru" else "Andijon",         "fval:region:andijan"),
         ("Нукус" if lang == "ru" else "Nukus",             "fval:region:nukus"),
-        ("Весь Узбекистан" if lang == "ru" else "Barcha",  "fval:residence:uzbekistan"),
+        ("Другой город" if lang == "ru" else "Boshqa shahar", "fval:region:other"),
+        ("Не важно" if lang == "ru" else "Muhim emas",     "fval:region:any"),
     ]
     title = "Выберите регион:" if lang == "ru" else "Hududni tanlang:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -764,27 +765,33 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
 
     # Фильтр: регион (город) — по city_code или ILIKE по city/family_region
     if filters.get("region"):
-        region_map = {
-            "tashkent": "ташкент%", "samarkand": "самарканд%",
-            "fergana": "ферган%", "bukhara": "бухар%",
-            "namangan": "наманган%", "andijan": "андижан%", "nukus": "нукус%",
-        }
-        region_map_uz = {
-            "tashkent": "toshkent%", "samarkand": "samarqand%",
-            "fergana": "farg'ona%", "bukhara": "buxoro%",
-            "namangan": "namangan%", "andijan": "andijon%", "nukus": "nukus%",
-        }
         region_val = filters["region"]
-        pat_ru = region_map.get(region_val, f"{region_val}%")
-        pat_uz = region_map_uz.get(region_val, f"{region_val}%")
-        from sqlalchemy import or_
-        conditions.append(or_(
-            Profile.city_code == region_val,
-            Profile.family_region.ilike(pat_ru),
-            Profile.family_region.ilike(pat_uz),
-            Profile.city.ilike(pat_ru),
-            Profile.city.ilike(pat_uz),
-        ))
+        if region_val == "any":
+            pass  # не фильтровать
+        elif region_val == "other":
+            # Анкеты с city_code="other" (пользователь ввёл город свободным текстом)
+            conditions.append(Profile.city_code == "other")
+        else:
+            region_map = {
+                "tashkent": "ташкент%", "samarkand": "самарканд%",
+                "fergana": "ферган%", "bukhara": "бухар%",
+                "namangan": "наманган%", "andijan": "андижан%", "nukus": "нукус%",
+            }
+            region_map_uz = {
+                "tashkent": "toshkent%", "samarkand": "samarqand%",
+                "fergana": "farg'ona%", "bukhara": "buxoro%",
+                "namangan": "namangan%", "andijan": "andijon%", "nukus": "nukus%",
+            }
+            pat_ru = region_map.get(region_val, f"{region_val}%")
+            pat_uz = region_map_uz.get(region_val, f"{region_val}%")
+            from sqlalchemy import or_
+            conditions.append(or_(
+                Profile.city_code == region_val,
+                Profile.family_region.ilike(pat_ru),
+                Profile.family_region.ilike(pat_uz),
+                Profile.city.ilike(pat_ru),
+                Profile.city.ilike(pat_uz),
+            ))
 
     # Фильтр: национальность
     if filters.get("nationality") and filters["nationality"] != "any":

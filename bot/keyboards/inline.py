@@ -201,17 +201,6 @@ def search_scope_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
-def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    cities_ru = ["Ташкент", "Самарканд", "Фергана", "Бухара", "Наманган", "Андижан", "Нукус", "Другой город"]
-    cities_uz = ["Toshkent", "Samarqand", "Farg'ona", "Buxoro", "Namangan", "Andijon", "Nukus", "Boshqa shahar"]
-    cities = cities_uz if lang == "uz" else cities_ru
-    rows = []
-    for i in range(0, len(cities), 2):
-        row = [InlineKeyboardButton(text=cities[j], callback_data=f"city:{cities_ru[j]}") for j in range(i, min(i + 2, len(cities)))]
-        rows.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
 def diaspora_country_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["🇷🇺 СНГ", "🇺🇸 США", "🌍 Европа", "🌏 Другая страна"],
