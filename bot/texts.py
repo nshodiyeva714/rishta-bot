@@ -243,8 +243,8 @@ T = {
         "uz": "🌍 5/10-savol\n{bar}\n\nMillati:",
     },
     "q6_city": {
-        "ru": "🏡 Вопрос 6/10\n{bar}\n\nГород проживания:",
-        "uz": "🏡 6/10-savol\n{bar}\n\nYashash shahri:",
+        "ru": "🏡 Вопрос 6/10\n{bar}\n\nГород (район) проживания:\n(например: Ташкент, Юнусабад)",
+        "uz": "🏡 6/10-savol\n{bar}\n\nYashash shahri (tumani):\n(masalan: Toshkent, Yunusobod)",
     },
     "q7_education": {
         "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
