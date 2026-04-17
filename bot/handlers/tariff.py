@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -437,6 +437,41 @@ async def profile_back(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "profile:back_enhance", RequirementStates.summary)
 async def profile_back_enhance(callback: CallbackQuery, state: FSMContext):
     await _show_summary(callback, state, is_callback=True)
+
+
+# ── «👁 Посмотреть анкету» — предпросмотр карточки перед публикацией ──
+@router.callback_query(F.data == "profile:preview", RequirementStates.summary)
+async def profile_preview(callback: CallbackQuery, state: FSMContext):
+    from bot.handlers.questionnaire import build_card
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    card = build_card(data, lang)
+
+    if lang == "uz":
+        header = "👁 <b>Anketangiz shunday ko'rinadi:</b>\n\n"
+        footer = "\n\n🔒 Kontakt · manzil · foto — to'lovdan keyin"
+        buttons = [
+            [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
+            [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="profile:back_enhance")],
+        ]
+    else:
+        header = "👁 <b>Вот как выглядит ваша анкета:</b>\n\n"
+        footer = "\n\n🔒 Контакты · адрес · фото — только после оплаты"
+        buttons = [
+            [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
+            [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="profile:back_enhance")],
+        ]
+
+    preview_text = header + (card or "—") + footer
+    await callback.message.edit_text(
+        preview_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+        parse_mode="HTML",
+    )
+    await callback.answer()
 
 
 # ── «✏️ Дополнить сейчас» (legacy) — сначала публикуем, потом Этап 2 ──

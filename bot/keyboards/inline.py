@@ -419,15 +419,17 @@ def profile_status_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Экран завершения Этапа 1: опубликовать или дополнить."""
+    """Экран завершения Этапа 1: предпросмотр / опубликовать / дополнить."""
     back_text = "← Orqaga" if lang == "uz" else "← Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="👁 Anketani ko'rish", callback_data="profile:preview")],
             [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
             [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👁 Посмотреть анкету", callback_data="profile:preview")],
         [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
         [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
         [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
