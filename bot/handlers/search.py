@@ -797,13 +797,18 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
         filters.pop("age_from", None)
         filters.pop("age_to", None)
 
-    # Если выбран конкретный регион — также ставим residence = uzbekistan
-    # "any" / "abroad" по региону — НЕ ставим residence и очищаем предыдущий
+    # residence автоматически выставляется только когда выбран регион Узбекистана
+    # (чтобы не применить residence=uzbekistan при выборе иностранной страны)
+    _UZ_REGION_CODES = {
+        "tashkent", "samarkand", "fergana",
+        "bukhara", "namangan", "andijan",
+        "nukus", "uz_other", "uzbekistan",
+    }
     if field == "region":
-        if value in ("any", "abroad"):
-            filters.pop("residence", None)
-        else:
+        if value in _UZ_REGION_CODES:
             filters["residence"] = "uzbekistan"
+        else:
+            filters.pop("residence", None)
 
     # Если выбрано residence — убираем регион
     if field == "residence":
