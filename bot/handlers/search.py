@@ -1013,6 +1013,32 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             ))
         else:
             # Конкретный регион Узбекистана — ILIKE всеми вариантами написания
+            # DEBUG (временно): детальный лог
+            logger.warning(
+                f"SAMARKAND DEBUG: "
+                f"region_val={region_val} "
+                f"filters={filters} "
+                f"search_type={search_type} "
+                f"user_id={user_id}"
+            )
+            try:
+                test = await session.execute(
+                    select(Profile).where(Profile.city_code == region_val)
+                )
+                test_results = test.scalars().all()
+                logger.warning(
+                    f"TEST QUERY city_code={region_val}: "
+                    f"found={len(test_results)} profiles"
+                )
+                for p in test_results:
+                    logger.warning(
+                        f"  → id={p.id} city={p.city} code={p.city_code} "
+                        f"status={p.status} active={p.is_active} "
+                        f"type={p.profile_type} user_id={p.user_id}"
+                    )
+            except Exception as e:
+                logger.warning(f"TEST QUERY error: {e}")
+
             region_map_ru = {
                 "tashkent": "%ташкент%", "samarkand": "%самарканд%",
                 "fergana": "%ферган%", "bukhara": "%бухар%",
