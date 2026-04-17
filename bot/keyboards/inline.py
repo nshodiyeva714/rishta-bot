@@ -125,8 +125,8 @@ def confirm_age_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["Среднее", "Среднее специальное", "Высшее", "Студент/ка"],
-        "uz": ["O'rta", "O'rta maxsus", "Oliy", "Talaba"],
+        "ru": ["📚 Среднее", "📋 Среднее специальное", "🎓 Высшее", "🏛 Студент/ка"],
+        "uz": ["📚 O'rta", "📋 O'rta maxsus", "🎓 Oliy", "🏛 Talaba"],
     }
     values = ["secondary", "vocational", "higher", "studying"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -250,8 +250,8 @@ def family_position_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
-        "ru": ["🕌 Практикующий", "Умеренный", "Светский"],
-        "uz": ["🕌 Amaliyotchi", "Mo'tadil", "Dunyoviy"],
+        "ru": ["🕌 Практикующий/ая", "☪️ Умеренный/ая", "🌐 Светский/ая"],
+        "uz": ["🕌 Amaliyotchi", "☪️ Mo'tadil", "🌐 Dunyoviy"],
     }
     values = ["practicing", "moderate", "secular"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -264,13 +264,13 @@ def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
     """Шаг 1: семейное положение (3 кнопки)."""
     if is_male:
         labels = {
-            "ru": ["Не был женат", "Разведён", "Вдовец"],
-            "uz": ["Hech uylanmagan", "Ajrashgan", "Beva"],
+            "ru": ["💍 Не был женат", "💔 Разведён", "🕊 Вдовец"],
+            "uz": ["💍 Uylanmagan", "💔 Ajrashgan", "🕊 Beva"],
         }
     else:
         labels = {
-            "ru": ["Не была замужем", "Разведена", "Вдова"],
-            "uz": ["Hech turmushga chiqmagan", "Ajrashgan", "Beva"],
+            "ru": ["💍 Не была замужем", "💔 Разведена", "🕊 Вдова"],
+            "uz": ["💍 Turmush qurmagan", "💔 Ajrashgan", "🕊 Beva"],
         }
     values = ["never_married", "divorced", "widowed"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -283,13 +283,13 @@ def children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Шаг 2: дети (2 кнопки, только если разведён/вдовец)."""
     if lang == "uz":
         opts = [
-            ("Farzand yo'q", "child:no"),
-            ("Farzand bor", "child:yes"),
+            ("👶 Farzand yo'q", "child:no"),
+            ("👨\u200d👧 Farzand bor", "child:yes"),
         ]
     else:
         opts = [
-            ("Детей нет", "child:no"),
-            ("Есть дети", "child:yes"),
+            ("👶 Детей нет", "child:no"),
+            ("👨\u200d👧 Есть дети", "child:yes"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
@@ -323,13 +323,13 @@ def body_type_kb(lang: str = "ru", gender: str = "son") -> InlineKeyboardMarkup:
     """Клавиатура телосложения — gender-aware labels."""
     if gender == "son":
         labels = {
-            "ru": ["Стройный", "Среднее", "Спортивный", "Плотный"],
-            "uz": ["Ozg'in", "O'rtacha", "Sportchilarga xos", "To'ladan kelgan"],
+            "ru": ["🪶 Стройный", "🍃 Среднее", "🏃 Спортивный", "🌳 Плотный"],
+            "uz": ["🪶 Ozg'in", "🍃 O'rtacha", "🏃 Sportchilarga xos", "🌳 To'ladan kelgan"],
         }
     else:
         labels = {
-            "ru": ["Стройная", "Среднее", "Спортивная", "Плотная"],
-            "uz": ["Ozg'in", "O'rtacha", "Sportchilarga xos", "To'ladan kelgan"],
+            "ru": ["🪶 Стройная", "🍃 Среднее", "🏃 Спортивная", "🌳 Плотная"],
+            "uz": ["🪶 Ozg'in", "🍃 O'rtacha", "🏃 Sportchilarga xos", "🌳 To'ladan kelgan"],
         }
     values = ["slim", "average", "athletic", "full"]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -343,34 +343,34 @@ def occupation_kb(lang: str = "ru", gender: str = "son") -> InlineKeyboardMarkup
     if gender == "son":
         if lang == "uz":
             opts = [
-                ("Ishlaydi", "occ:works"),
-                ("Talaba", "occ:student"),
-                ("O'z biznesi bor", "occ:business"),
-                ("Boshqa", "occ:other"),
+                ("💼 Ishlaydi", "occ:works"),
+                ("🏛 Talaba", "occ:student"),
+                ("📈 O'z biznesi bor", "occ:business"),
+                ("📌 Boshqa", "occ:other"),
             ]
         else:
             opts = [
-                ("Работает", "occ:works"),
-                ("Студент", "occ:student"),
-                ("Свой бизнес", "occ:business"),
-                ("Другое", "occ:other"),
+                ("💼 Работает", "occ:works"),
+                ("🏛 Студент", "occ:student"),
+                ("📈 Свой бизнес", "occ:business"),
+                ("📌 Другое", "occ:other"),
             ]
     else:
         if lang == "uz":
             opts = [
-                ("Ishlaydi", "occ:works"),
-                ("Talaba", "occ:student"),
-                ("O'z biznesi bor", "occ:business"),
-                ("Uy bekaligi", "occ:housewife"),
-                ("Boshqa", "occ:other"),
+                ("💼 Ishlaydi", "occ:works"),
+                ("🏛 Talaba", "occ:student"),
+                ("📈 O'z biznesi bor", "occ:business"),
+                ("🌸 Uy bekasi", "occ:housewife"),
+                ("📌 Boshqa", "occ:other"),
             ]
         else:
             opts = [
-                ("Работает", "occ:works"),
-                ("Студентка", "occ:student"),
-                ("Свой бизнес", "occ:business"),
-                ("Домохозяйка", "occ:housewife"),
-                ("Другое", "occ:other"),
+                ("💼 Работает", "occ:works"),
+                ("🏛 Студентка", "occ:student"),
+                ("📈 Свой бизнес", "occ:business"),
+                ("🌸 Домохозяйка", "occ:housewife"),
+                ("📌 Другое", "occ:other"),
             ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts

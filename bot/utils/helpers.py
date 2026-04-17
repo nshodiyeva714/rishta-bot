@@ -135,10 +135,10 @@ def _lb(lang: str) -> dict:
 
 def _edu_map(lang: str = "ru") -> dict:
     return {
-        "secondary": "Среднее" if lang == "ru" else "O'rta",
-        "vocational": "Среднее спец." if lang == "ru" else "O'rta maxsus",
-        "higher": "Высшее" if lang == "ru" else "Oliy",
-        "studying": "Студент/ка" if lang == "ru" else "Talaba",
+        "secondary": "📚 Среднее" if lang == "ru" else "📚 O'rta",
+        "vocational": "📋 Среднее спец." if lang == "ru" else "📋 O'rta maxsus",
+        "higher": "🎓 Высшее" if lang == "ru" else "🎓 Oliy",
+        "studying": "🏛 Студент/ка" if lang == "ru" else "🏛 Talaba",
     }
 
 
@@ -161,37 +161,39 @@ def _car_map(lang: str = "ru") -> dict:
 
 def _rel_map(lang: str = "ru") -> dict:
     return {
-        "practicing": "🕌 Практикующий" if lang == "ru" else "🕌 Amaliyotchi",
-        "moderate": "Умеренный" if lang == "ru" else "Mo'tadil",
-        "secular": "Светский" if lang == "ru" else "Dunyoviy",
+        "practicing": "🕌 Практикующий/ая" if lang == "ru" else "🕌 Amaliyotchi",
+        "moderate": "☪️ Умеренный/ая" if lang == "ru" else "☪️ Mo'tadil",
+        "secular": "🌐 Светский/ая" if lang == "ru" else "🌐 Dunyoviy",
     }
 
 
 def _marital_map(is_male: bool, lang: str = "ru") -> dict:
     if lang == "ru":
         return {
-            "never_married": "Никогда не был женат" if is_male else "Никогда не была замужем",
-            "divorced": "Разведён" if is_male else "Разведена",
-            "widowed": "Вдовец" if is_male else "Вдова",
+            "never_married": "💍 Не был женат" if is_male else "💍 Не была замужем",
+            "divorced": "💔 Разведён" if is_male else "💔 Разведена",
+            "widowed": "🕊 Вдовец" if is_male else "🕊 Вдова",
         }
     return {
-        "never_married": "Hech uylanmagan" if is_male else "Hech turmushga chiqmagan",
-        "divorced": "Ajrashgan",
-        "widowed": "Beva",
+        "never_married": "💍 Uylanmagan" if is_male else "💍 Turmush qurmagan",
+        "divorced": "💔 Ajrashgan",
+        "widowed": "🕊 Beva",
     }
 
 
 def _children_map(lang: str = "ru") -> dict:
     if lang == "ru":
         return {
-            "no": "Нет",
-            "yes_with_me": "Да, живут со мной",
-            "yes_with_ex": "Да, живут с бывшим супругом",
+            "no": "👶 Детей нет",
+            "yes": "👨\u200d👧 Есть дети",
+            "yes_with_me": "👨\u200d👧 Да, живут со мной",
+            "yes_with_ex": "👨\u200d👧 Да, живут с бывшим супругом",
         }
     return {
-        "no": "Yo'q",
-        "yes_with_me": "Ha, men bilan yashaydi",
-        "yes_with_ex": "Ha, sobiq turmush o'rtoq bilan yashaydi",
+        "no": "👶 Farzand yo'q",
+        "yes": "👨\u200d👧 Farzand bor",
+        "yes_with_me": "👨\u200d👧 Ha, men bilan yashaydi",
+        "yes_with_ex": "👨\u200d👧 Ha, sobiq turmush o'rtoq bilan yashaydi",
     }
 
 
@@ -243,8 +245,8 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
 
     # Телосложение
     body_type_map = {
-        "ru": {"slim": "Стройный", "average": "Среднее", "athletic": "Спортивный", "full": "Плотный"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
+        "ru": {"slim": "🪶 Стройный", "average": "🍃 Среднее", "athletic": "🏃 Спортивный", "full": "🌳 Плотный"},
+        "uz": {"slim": "🪶 Ozg'in", "average": "🍃 O'rtacha", "athletic": "🏃 Sportchilarga xos", "full": "🌳 To'ladan kelgan"},
     }
     bt = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
 
@@ -381,8 +383,8 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
 
     # Значения-мапы
     body_type_map = {
-        "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
+        "ru": {"slim": "🪶 Стройный/ая", "average": "🍃 Среднее", "athletic": "🏃 Спортивный/ая", "full": "🌳 Плотный/ая"},
+        "uz": {"slim": "🪶 Ozg'in", "average": "🍃 O'rtacha", "athletic": "🏃 Sportchilarga xos", "full": "🌳 To'ladan kelgan"},
     }
     housing_card_map = {
         "ru": {"own_house": "Свой дом", "own_apartment": "Своя квартира",
@@ -395,23 +397,23 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         "uz": {"personal": "Shaxsiy", "family": "Oilaviy", "none": "Yo'q"},
     }
     rel_plain = {
-        "ru": {"practicing": "Практикующий/ая", "moderate": "Умеренный/ая", "secular": "Светский/ая"},
-        "uz": {"practicing": "Amaliyotchi", "moderate": "Mo'tadil", "secular": "Dunyoviy"},
+        "ru": {"practicing": "🕌 Практикующий/ая", "moderate": "☪️ Умеренный/ая", "secular": "🌐 Светский/ая"},
+        "uz": {"practicing": "🕌 Amaliyotchi", "moderate": "☪️ Mo'tadil", "secular": "🌐 Dunyoviy"},
     }
     occ_map = {
         "ru": {
-            "works": "Работает",
-            "student": "Студент/ка",
-            "business": "Свой бизнес",
-            "housewife": "Домохозяйка",
-            "other": "Другое",
+            "works": "💼 Работает",
+            "student": "🏛 Студент/ка",
+            "business": "📈 Свой бизнес",
+            "housewife": "🌸 Домохозяйка",
+            "other": "📌 Другое",
         },
         "uz": {
-            "works": "Ishlaydi",
-            "student": "Talaba",
-            "business": "O'z biznesi",
-            "housewife": "Uy bekasi",
-            "other": "Boshqa",
+            "works": "💼 Ishlaydi",
+            "student": "🏛 Talaba",
+            "business": "📈 O'z biznesi",
+            "housewife": "🌸 Uy bekasi",
+            "other": "📌 Boshqa",
         },
     }
 
@@ -440,10 +442,10 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     if header_parts:
         lines.append("🪪 " + " · ".join(header_parts))
 
-    # 2. ⚡ Телосложение
+    # 2. Телосложение (иконка уже в значении)
     bt_val = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
     if bt_val:
-        lines.append(f"⚡ {bt_val}")
+        lines.append(bt_val)
 
     # 3. Национальность (флаг уже в значении — без доп. иконки)
     if profile.nationality:
@@ -457,34 +459,34 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
             city_part += f", {profile.district}"
         lines.append(f"🏡 {city_part}")
 
-    # 5. 🎓 Образование (+ ВУЗ/курс)
+    # 5. Образование (+ ВУЗ/курс) — иконка в значении
     edu_raw = _ev(profile, "education")
     if edu_raw:
         edu_label = _edu_map(L).get(edu_raw, edu_raw)
         uni = profile.university_info
         if edu_raw == "studying" and uni:
-            edu_label = uni
+            edu_label = f"🏛 {uni}"
         elif uni:
             edu_label += f", {uni}"
-        lines.append(f"🎓 {edu_label}")
+        lines.append(edu_label)
 
-    # 6. 💼 Занятость (переводим ключевые значения; свободный текст показываем как есть)
+    # 6. Занятость — иконка в значении
     occ_raw = profile.occupation
     if occ_raw:
-        occ_val = occ_map.get(L, occ_map["ru"]).get(occ_raw, occ_raw)
-        lines.append(f"💼 {occ_val}")
+        occ_val = occ_map.get(L, occ_map["ru"]).get(occ_raw, f"💼 {occ_raw}")
+        lines.append(occ_val)
 
-    # 7. 🕌 Религиозность
+    # 7. Религиозность — иконка в значении
     rel_raw = _ev(profile, "religiosity")
     if rel_raw:
         rel_val = rel_plain.get(L, rel_plain["ru"]).get(rel_raw, rel_raw)
-        lines.append(f"🕌 {rel_val}")
+        lines.append(rel_val)
 
-    # 8. 💍 Семейное положение (+ дети при необходимости)
+    # 8. Семейное положение (+ дети) — иконка в значении
     mar_raw = _ev(profile, "marital_status")
     if mar_raw:
         mar_val = _marital_map(is_son, L).get(mar_raw, mar_raw)
-        mar_line = f"💍 {mar_val}"
+        mar_line = mar_val
         ch_raw = _ev(profile, "children_status")
         if ch_raw and ch_raw != "no" and mar_raw != "never_married":
             ch_val = _children_map(L).get(ch_raw, "")
