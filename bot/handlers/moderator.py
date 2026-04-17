@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus
+from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus, Favorite
 from bot.states import ModeratorReplyStates, ModeratorEditStates
 from bot.texts import t
 from bot.config import config, is_moderator
@@ -44,35 +44,238 @@ EDITABLE_FIELDS = {
 }
 
 
-# ── /ankety — список анкет на модерации ──
+MOD_PAGE_SIZE = 5
+
+_MOD_STATUS_MAP = {
+    "pending":   ProfileStatus.PENDING,
+    "published": ProfileStatus.PUBLISHED,
+    "paused":    ProfileStatus.PAUSED,
+    "rejected":  ProfileStatus.REJECTED,
+}
+
+_MOD_STATUS_LABELS = {
+    "pending":   "🆕 На проверке",
+    "published": "✅ Активные",
+    "paused":    "⏸ На паузе",
+    "rejected":  "❌ Отклонённые",
+}
+
+
+async def _mod_ankety_submenu_kb(session: AsyncSession) -> InlineKeyboardMarkup:
+    """Подменю /ankety с актуальными счётчиками по статусам."""
+    counts = {}
+    for key, st in _MOD_STATUS_MAP.items():
+        res = await session.execute(
+            select(func.count(Profile.id)).where(Profile.status == st)
+        )
+        counts[key] = res.scalar() or 0
+    buttons = [
+        [InlineKeyboardButton(
+            text=f"🆕 На проверке ({counts['pending']})",
+            callback_data="modlist:pending:0",
+        )],
+        [InlineKeyboardButton(
+            text=f"✅ Активные ({counts['published']})",
+            callback_data="modlist:published:0",
+        )],
+        [InlineKeyboardButton(
+            text=f"⏸ На паузе ({counts['paused']})",
+            callback_data="modlist:paused:0",
+        )],
+        [InlineKeyboardButton(
+            text=f"❌ Отклонённые ({counts['rejected']})",
+            callback_data="modlist:rejected:0",
+        )],
+        [InlineKeyboardButton(
+            text="🔍 Найти по ID",
+            callback_data="modlist:find",
+        )],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+# ── /ankety — подменю по статусам ──
 @router.message(Command("ankety"))
 async def cmd_ankety(message: Message, session: AsyncSession, bot: Bot):
     if not is_moderator(message.from_user.id):
         await message.answer("⛔ Только для модераторов")
         return
+    kb = await _mod_ankety_submenu_kb(session)
+    await message.answer("📋 <b>Анкеты:</b>", reply_markup=kb, parse_mode="HTML")
 
-    result = await session.execute(
-        select(Profile).where(Profile.status == ProfileStatus.PENDING).order_by(Profile.created_at)
-    )
-    profiles = result.scalars().all()
 
-    if not profiles:
-        await message.answer("✅ Нет анкет на модерации.")
+# ── Подменю /ankety: список по статусу с пагинацией ──
+
+@router.callback_query(F.data == "modlist:back")
+async def mod_list_back(callback: CallbackQuery, session: AsyncSession):
+    """Назад в подменю /ankety."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    kb = await _mod_ankety_submenu_kb(session)
+    try:
+        await callback.message.edit_text(
+            "📋 <b>Анкеты:</b>", reply_markup=kb, parse_mode="HTML"
+        )
+    except Exception:
+        await callback.message.answer(
+            "📋 <b>Анкеты:</b>", reply_markup=kb, parse_mode="HTML"
+        )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "modlist:find")
+async def mod_list_find(callback: CallbackQuery):
+    """Подсказка по команде /find."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="modlist:back")],
+    ])
+    try:
+        await callback.message.edit_text(
+            "🔍 Введите команду:\n\n<code>/find &lt;display_id или @username&gt;</code>",
+            reply_markup=kb,
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("modlist:"))
+async def mod_list_profiles(callback: CallbackQuery, session: AsyncSession):
+    """modlist:{status}:{offset} — список анкет в категории с пагинацией."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
         return
 
-    await message.answer(f"📋 Анкет на модерации: <b>{len(profiles)}</b>")
+    parts = callback.data.split(":")
+    # back и find обрабатываются выше, но на всякий случай
+    if len(parts) < 3:
+        await callback.answer()
+        return
+    status_key = parts[1]
+    try:
+        offset = int(parts[2])
+    except ValueError:
+        offset = 0
 
-    for p in profiles[:20]:  # макс 20 чтобы не спамить
-        age = datetime.now().year - p.birth_year if p.birth_year else "?"
-        icon = "👦" if p.profile_type and p.profile_type.value == "son" else "👧"
-        text = (
-            f"🔖 {p.display_id or '—'}\n"
-            f"{icon} {p.name or '—'} · {age}\n"
-            f"📍 {p.city or '—'}\n"
-            f"📞 {p.parent_phone or '—'}\n"
-            f"📸 {'Есть' if p.photo_file_id else 'Нет'}"
+    status_enum = _MOD_STATUS_MAP.get(status_key)
+    if not status_enum:
+        await callback.answer("❌")
+        return
+
+    total_res = await session.execute(
+        select(func.count(Profile.id)).where(Profile.status == status_enum)
+    )
+    total = total_res.scalar() or 0
+
+    # Подзапрос: кол-во лайков по каждой анкете
+    fav_count_sub = (
+        select(Favorite.profile_id, func.count(Favorite.id).label("fc"))
+        .group_by(Favorite.profile_id)
+        .subquery()
+    )
+    prof_res = await session.execute(
+        select(Profile, fav_count_sub.c.fc)
+        .outerjoin(fav_count_sub, fav_count_sub.c.profile_id == Profile.id)
+        .where(Profile.status == status_enum)
+        .order_by(Profile.created_at.desc())
+        .offset(offset)
+        .limit(MOD_PAGE_SIZE)
+    )
+    rows = prof_res.all()
+
+    label = _MOD_STATUS_LABELS.get(status_key, status_key)
+    if not rows:
+        text = f"{label} ({total})\n\n📋 Анкет не найдено."
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="modlist:back")],
+        ])
+        try:
+            await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            pass
+        await callback.answer()
+        return
+
+    text_parts = [f"<b>{label} ({total})</b>", ""]
+    buttons: list[list[InlineKeyboardButton]] = []
+    now_year = datetime.now().year
+    for p, fav_count in rows:
+        age = (now_year - p.birth_year) if p.birth_year else "?"
+        city = p.city or "—"
+        views = p.views_count or 0
+        favs = fav_count or 0
+        text_parts.append(
+            f"🔖 {p.display_id or '—'} · {p.name or '—'} · {age} · {city}\n"
+            f"👁 {views} · ❤️ {favs}"
         )
-        await message.answer(text, reply_markup=mod_review_kb(p.id))
+        text_parts.append("")
+        buttons.append([InlineKeyboardButton(
+            text=f"🔖 {p.display_id or p.id}",
+            callback_data=f"modlist_open:{p.id}",
+        )])
+
+    # Пагинация
+    nav: list[InlineKeyboardButton] = []
+    if offset > 0:
+        nav.append(InlineKeyboardButton(
+            text="⬅️ Пред.",
+            callback_data=f"modlist:{status_key}:{max(0, offset - MOD_PAGE_SIZE)}",
+        ))
+    if offset + MOD_PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton(
+            text="➡️ След.",
+            callback_data=f"modlist:{status_key}:{offset + MOD_PAGE_SIZE}",
+        ))
+    if nav:
+        buttons.append(nav)
+    buttons.append([InlineKeyboardButton(text="🔙 Назад", callback_data="modlist:back")])
+
+    try:
+        await callback.message.edit_text(
+            "\n".join(text_parts).rstrip(),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            parse_mode="HTML",
+        )
+    except Exception:
+        await callback.message.answer(
+            "\n".join(text_parts).rstrip(),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            parse_mode="HTML",
+        )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("modlist_open:"))
+async def mod_list_open_profile(callback: CallbackQuery, session: AsyncSession):
+    """Открыть анкету из списка — показать полный текст + mod_review_kb."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    profile_id = int(callback.data.split(":", 1)[1])
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+    is_paused = profile.status == ProfileStatus.PAUSED
+    text = format_full_anketa(profile, lang="ru")
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=mod_review_kb(profile_id, is_paused=is_paused),
+            parse_mode="HTML",
+        )
+    except Exception:
+        await callback.message.answer(
+            text,
+            reply_markup=mod_review_kb(profile_id, is_paused=is_paused),
+            parse_mode="HTML",
+        )
+    await callback.answer()
 
 
 # ── /stats — статистика платформы ──
