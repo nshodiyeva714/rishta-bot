@@ -123,7 +123,7 @@ async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile
     except Exception as e:
         logger.error(f"Ошибка уведомления о запросе контакта: {e}")
 
-PROFILES_PER_PAGE = 3
+PROFILES_PER_PAGE = 1  # Показывать по одной анкете
 
 
 # ── helpers ──
@@ -1122,7 +1122,7 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
 
 
 async def _show_search_results(callback: CallbackQuery, session: AsyncSession, state: FSMContext, lang: str):
-    """Показать результаты поиска — 3 анкеты за раз."""
+    """Показать одну анкету за раз."""
     data = await state.get_data()
     filters = data.get("search_filters", {})
     offset = data.get("search_offset", 0)
@@ -1131,26 +1131,36 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     user_id = callback.from_user.id
 
     profiles, user_req = await _build_search_query(session, user_id, search_type, filters, is_guest=is_guest)
-
     total = len(profiles)
 
+    # Нет анкет
     if total == 0:
+        if lang == "uz":
+            text = "🔍 Anketalar topilmadi."
+        else:
+            text = "🔍 Анкеты не найдены."
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
-                text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
+                text="🔧 Filtrlarni o'zgartirish" if lang == "uz" else "🔧 Изменить фильтры",
                 callback_data="search:manual",
             )],
             [InlineKeyboardButton(
-                text="👀 " + ("Barchasini ko'rish" if lang == "uz" else "Показать все"),
+                text="👀 Barchasini ko'rish" if lang == "uz" else "👀 Показать все",
                 callback_data="search:all",
             )],
-            *nav_kb(lang, "back:menu"),
+            [InlineKeyboardButton(
+                text="🏠 Menyu" if lang == "uz" else "🏠 Меню",
+                callback_data="menu:main",
+            )],
         ])
-        await callback.message.edit_text(t("search_empty", lang), reply_markup=kb)
+        try:
+            await callback.message.edit_text(text, reply_markup=kb)
+        except Exception:
+            await callback.message.answer(text, reply_markup=kb)
         await callback.answer()
         return
 
-    # Вычисляем score и сортируем: VIP → score → дата
+    # Сортировка: VIP по дате оплаты → score → дата публикации
     scored = []
     for p in profiles:
         score = compute_match_score(p, user_req)
@@ -1158,106 +1168,113 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
 
     scored.sort(key=lambda x: (
         0 if x[0].vip_status == VipStatus.ACTIVE else 1,
+        -(x[0].vip_expires_at.timestamp()
+          if x[0].vip_status == VipStatus.ACTIVE and x[0].vip_expires_at else 0),
         -x[1],
+        -(x[0].published_at.timestamp() if x[0].published_at else 0),
     ))
 
-    # Пагинация
-    page_profiles = scored[offset:offset + PROFILES_PER_PAGE]
-
-    if not page_profiles and offset > 0:
-        # Вернулись назад но анкеты кончились — сбрасываем
-        await state.update_data(search_offset=0)
-        page_profiles = scored[0:PROFILES_PER_PAGE]
-        offset = 0
-
-    # Заголовок
-    from_ = offset + 1
-    to = min(offset + PROFILES_PER_PAGE, total)
-    header = t("search_found", lang, total=total, from_=from_, to=to)
-
-    # Иллюзия загрузки
-    loading = "🔍 Siz uchun eng yaxshilarini tanlamoqdamiz..." if lang == "uz" else "🔍 Подбираем лучшие варианты для вас..."
-    try:
-        await callback.message.edit_text(loading)
-        await asyncio.sleep(0.8)
-    except Exception:
-        pass
-
-    # Заголовок с результатами
-    try:
-        await callback.message.edit_text(header, parse_mode="HTML")
-    except Exception:
-        try:
-            await callback.message.answer(header, parse_mode="HTML")
-        except Exception:
-            await callback.message.answer(header)
-
-    # Навигационные кнопки (собираем заранее — будут прикреплены к последней карточке)
-    nav_buttons = []
-    if offset + PROFILES_PER_PAGE < total:
-        remaining = total - offset - PROFILES_PER_PAGE
-        nav_buttons.append([InlineKeyboardButton(
-            text=f"➡️ {'Keyingi 3' if lang == 'uz' else 'Следующие 3'} "
-                 f"({'qoldi' if lang == 'uz' else 'осталось'}: {remaining})",
-            callback_data="search:next",
-        )])
-    if offset > 0:
-        nav_buttons.append([InlineKeyboardButton(
-            text=f"⬅️ {'Oldingi' if lang == 'uz' else 'Предыдущие'}",
-            callback_data="search:prev",
-        )])
-    nav_buttons.append([InlineKeyboardButton(
-        text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
-        callback_data="search:manual",
-    )])
-    nav_buttons.extend(nav_kb(lang, "back:menu"))
-
-    # Показываем карточки + уведомляем владельцев
-    bot = callback.bot
-    last_idx = len(page_profiles) - 1
-    for i, (p, score) in enumerate(page_profiles):
-        p.views_count = (p.views_count or 0) + 1
-        card_text = format_anketa_public(p, score, lang)
-
-        # На последней карточке — прикрепляем навигацию сразу под кнопками карточки
-        if i == last_idx:
-            card_kb = profile_card_kb(p.id, lang, p.display_id or "")
-            combined_rows = list(card_kb.inline_keyboard) + nav_buttons
-            kb = InlineKeyboardMarkup(inline_keyboard=combined_rows)
+    # Все просмотрены
+    if offset >= total:
+        if lang == "uz":
+            text = f"🔍 Siz barcha {total} ta anketani ko'rdingiz!"
         else:
-            kb = profile_card_kb(p.id, lang, p.display_id or "")
+            text = f"🔍 Вы просмотрели все {total} анкет!"
 
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🔄 Boshidan boshlash" if lang == "uz" else "🔄 Начать сначала",
+                callback_data="search:restart",
+            )],
+            [InlineKeyboardButton(
+                text="🔧 Filtrlarni o'zgartirish" if lang == "uz" else "🔧 Изменить фильтры",
+                callback_data="search:manual",
+            )],
+            [InlineKeyboardButton(
+                text="🏠 Menyu" if lang == "uz" else "🏠 Меню",
+                callback_data="menu:main",
+            )],
+        ])
         try:
-            await callback.message.answer(card_text, reply_markup=kb)
-        except Exception as e:
-            logger.error(f"Ошибка отправки карточки {p.id}: {e}")
-        # Уведомление владельца о просмотре
+            await callback.message.edit_text(text, reply_markup=kb)
+        except Exception:
+            await callback.message.answer(text, reply_markup=kb)
+        await callback.answer()
+        return
+
+    # Текущая анкета
+    profile, score = scored[offset]
+
+    # Иллюзия загрузки только при первом показе
+    if offset == 0:
+        loading = (
+            "🔍 Siz uchun eng yaxshilarini tanlamoqdamiz..."
+            if lang == "uz" else
+            "🔍 Подбираем лучшие варианты для вас..."
+        )
         try:
-            await _notify_owner_view(bot, session, p, callback.from_user.id)
+            await callback.message.edit_text(loading)
+            await asyncio.sleep(0.8)
         except Exception:
             pass
+
+    # Счётчик
+    if lang == "uz":
+        counter = f"🔍 Anketa {offset + 1} / {total}"
+    else:
+        counter = f"🔍 Анкета {offset + 1} из {total}"
+
+    # Карточка анкеты
+    card_text = format_anketa_public(profile, score, lang)
+    full_text = counter + "\n\n" + card_text
+
+    # Показывать "Следующая" только если есть ещё анкеты
+    show_next = (offset + 1) < total
+
+    kb = profile_card_kb(
+        profile.id, lang,
+        profile.display_id or "",
+        show_next=show_next,
+        current=offset + 1,
+        total=total,
+    )
+
+    try:
+        await callback.message.edit_text(full_text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        try:
+            await callback.message.answer(full_text, reply_markup=kb, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Ошибка показа анкеты: {e}")
+
+    # Счётчик просмотров + уведомление владельцу
+    profile.views_count = (profile.views_count or 0) + 1
+    try:
+        await _notify_owner_view(callback.bot, session, profile, user_id)
+    except Exception:
+        pass
 
     await session.commit()
     await callback.answer()
 
 
-# ── Пагинация ──
+# ── Навигация: следующая / рестарт ──
 
-@router.callback_query(F.data == "search:next")
-async def search_next(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+@router.callback_query(F.data == "search:next_one")
+async def search_next_one(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Следующая анкета."""
     lang = await get_lang(session, callback.from_user.id)
     data = await state.get_data()
-    offset = data.get("search_offset", 0) + PROFILES_PER_PAGE
-    await state.update_data(search_offset=offset)
+    offset = data.get("search_offset", 0)
+    await state.update_data(search_offset=offset + 1)
     await _show_search_results(callback, session, state, lang)
 
 
-@router.callback_query(F.data == "search:prev")
-async def search_prev(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+@router.callback_query(F.data == "search:restart")
+async def search_restart(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Начать поиск сначала."""
     lang = await get_lang(session, callback.from_user.id)
-    data = await state.get_data()
-    offset = max(0, data.get("search_offset", 0) - PROFILES_PER_PAGE)
-    await state.update_data(search_offset=offset)
+    await state.update_data(search_offset=0)
     await _show_search_results(callback, session, state, lang)
 
 
@@ -1276,7 +1293,7 @@ async def search_page_compat(callback: CallbackQuery, session: AsyncSession, sta
 # ══════════════════════════════════════════════════════════
 
 @router.callback_query(F.data.startswith("fav:"))
-async def add_favorite(callback: CallbackQuery, session: AsyncSession):
+async def add_favorite(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     profile_id = int(callback.data.split(":")[1])
     user_id = callback.from_user.id
     lang = await get_lang(session, user_id)
@@ -1289,37 +1306,44 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession):
     )
     existing = result.scalar_one_or_none()
 
-    if existing:
-        await callback.answer("❤️ " + ("Allaqachon sevimlilarda" if lang == "uz" else "Уже в избранном"))
-        return
+    if not existing:
+        fav = Favorite(user_id=user_id, profile_id=profile_id)
+        session.add(fav)
+        await session.commit()
 
-    fav = Favorite(user_id=user_id, profile_id=profile_id)
-    session.add(fav)
-    await session.commit()
+        # Уведомление владельцу
+        profile = await session.get(Profile, profile_id)
+        if profile:
+            try:
+                await _notify_owner_favorite(callback.bot, session, profile, user_id)
+            except Exception:
+                pass
 
     # Микро-реакция — случайная фраза
     import random
-    if lang == "uz":
-        phrases = [
-            "❤️ Saqlandi! Yaxshi tanlov 😊",
-            "❤️ Ajoyib! Saqlandi 👌",
-            "❤️ Zo'r tanlov!",
-        ]
+    if existing:
+        toast = "❤️ " + ("Allaqachon sevimlilarda" if lang == "uz" else "Уже в избранном")
     else:
-        phrases = [
-            "❤️ Сохранено! Хороший выбор 😊",
-            "❤️ Отлично! Сохранено 👌",
-            "❤️ Хороший выбор!",
-        ]
-    await callback.answer(random.choice(phrases))
+        if lang == "uz":
+            phrases = [
+                "❤️ Saqlandi! Yaxshi tanlov 😊",
+                "❤️ Ajoyib! Saqlandi 👌",
+                "❤️ Zo'r tanlov!",
+            ]
+        else:
+            phrases = [
+                "❤️ Сохранено! Хороший выбор 😊",
+                "❤️ Отлично! Сохранено 👌",
+                "❤️ Хороший выбор!",
+            ]
+        toast = random.choice(phrases)
+    await callback.answer(toast, show_alert=False)
 
-    # Уведомление владельцу
-    profile = await session.get(Profile, profile_id)
-    if profile:
-        try:
-            await _notify_owner_favorite(callback.bot, session, profile, user_id)
-        except Exception:
-            pass
+    # Автоматически к следующей анкете
+    data = await state.get_data()
+    offset = data.get("search_offset", 0)
+    await state.update_data(search_offset=offset + 1)
+    await _show_search_results(callback, session, state, lang)
 
 
 @router.callback_query(F.data.startswith("unfav:"))

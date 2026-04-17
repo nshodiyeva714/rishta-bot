@@ -802,25 +802,38 @@ def mod_payment_kb(payment_id: int) -> InlineKeyboardMarkup:
 
 # ── Search / browsing keyboards ──
 
-def profile_card_kb(profile_id: int, lang: str = "ru", display_id: str = "") -> InlineKeyboardMarkup:
-    from bot.config import get_moderator_username
-    username = get_moderator_username("tashkent")
+def profile_card_kb(
+    profile_id: int,
+    lang: str = "ru",
+    display_id: str = "",
+    show_next: bool = True,
+    current: int = 0,
+    total: int = 0,
+) -> InlineKeyboardMarkup:
     if lang == "uz":
-        interest = "💬 Kontaktni olish"
-        fav = "❤️ Saqlash"
-        next_btn = "➡️ Keyingisi"
+        interest_txt = "💌 Ma'lumotni olish"
+        fav_txt = "❤️ Saqlash"
+        next_txt = "➡️ Keyingisi"
+        filters_txt = "🔧 Filtrlarni o'zgartirish"
+        menu_txt = "🏠 Menyu"
     else:
-        interest = "💬 Узнать контакт"
-        fav = "❤️ В избранное"
-        next_btn = "➡️ Следующая"
+        interest_txt = "💌 Узнать контакт"
+        fav_txt = "❤️ В избранное"
+        next_txt = "➡️ Следующая"
+        filters_txt = "🔧 Изменить фильтры"
+        menu_txt = "🏠 Меню"
 
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=interest, callback_data=f"get_contact:{profile_id}")],
-        [
-            InlineKeyboardButton(text=fav, callback_data=f"fav:{profile_id}"),
-            InlineKeyboardButton(text=next_btn, callback_data=f"skip_profile:{profile_id}"),
-        ],
-    ])
+    buttons = [
+        [InlineKeyboardButton(text=interest_txt, callback_data=f"get_contact:{profile_id}")],
+    ]
+    row2 = [InlineKeyboardButton(text=fav_txt, callback_data=f"fav:{profile_id}")]
+    if show_next:
+        row2.append(InlineKeyboardButton(text=next_txt, callback_data="search:next_one"))
+    buttons.append(row2)
+    buttons.append([InlineKeyboardButton(text=filters_txt, callback_data="search:manual")])
+    buttons.append([InlineKeyboardButton(text=menu_txt, callback_data="menu:main")])
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def get_contact_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
