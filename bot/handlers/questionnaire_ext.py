@@ -505,23 +505,81 @@ async def ext_car(callback: CallbackQuery, state: FSMContext):
 # БЛОК 4: КОНТАКТЫ
 # ══════════════════════════════════════
 
-# ── 9a. Телефон родителей ──
+# ══════════════════════════════════════
+# Общие тексты о защите контактов
+# ══════════════════════════════════════
+
+_CONTACT_NOTICE_RU = (
+    "Ваши контакты будут переданы\n"
+    "только с вашего одобрения.\n"
+    "Модератор сначала свяжется\n"
+    "с вами и спросит разрешения. 🤝"
+)
+_CONTACT_NOTICE_UZ = (
+    "Kontaktlaringiz faqat sizning\n"
+    "roziligingiz bilan beriladi.\n"
+    "Moderator avval siz bilan\n"
+    "bog'lanib ruxsat so'raydi. 🤝"
+)
+
+_CONTACT_NOTICE_SHORT_RU = (
+    "Ваши контакты — только\n"
+    "с вашего одобрения. 🤝"
+)
+_CONTACT_NOTICE_SHORT_UZ = (
+    "Kontaktlaringiz faqat sizning\n"
+    "roziligingiz bilan beriladi. 🤝"
+)
+
+
+# ── 9a. Телефон родителей (с вступлением) ──
 async def _ask_parent_phone(m_or_cb, state: FSMContext):
     lang = await _lang(state)
     data = await state.get_data()
+    card = build_ext_card(data, lang)
     bar = ext_progress_bar(9)
 
     if lang == "uz":
-        q_text = f"9/9\n{bar}\n\n📞 Ota-onalar telefoni\n(ixtiyoriy):"
+        body = (
+            f"9/9\n{bar}\n\n"
+            f"📞 <b>Kontaktlar</b>\n\n"
+            f"{_CONTACT_NOTICE_UZ}\n\n"
+            f"Ota-onalar telefoni:\n"
+            f"Prefiks bilan yoki usiz kiriting:\n"
+            f"+998 90 123 45 67\n"
+            f"yoki shunchaki: 901234567"
+        )
     else:
-        q_text = f"Вопрос 9/9\n{bar}\n\n📞 Телефон родителей\n(необязательно):"
+        body = (
+            f"Вопрос 9/9\n{bar}\n\n"
+            f"📞 <b>Контактные данные</b>\n\n"
+            f"{_CONTACT_NOTICE_RU}\n\n"
+            f"Телефон родителей:\n"
+            f"Можно с префиксом или без:\n"
+            f"+998 90 123 45 67\n"
+            f"или просто: 901234567"
+        )
 
-    full_text = _with_card(data, lang, q_text)
+    full_text = (card + SEP + body) if card else body
     if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
+        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
     else:
-        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_parent_phone)
+
+
+def _parent_tg_text(lang: str) -> str:
+    if lang == "uz":
+        return (
+            "📱 Ota-onalar Telegram:\n"
+            "(@username)\n\n"
+            f"{_CONTACT_NOTICE_SHORT_UZ}"
+        )
+    return (
+        "📱 Telegram родителей:\n"
+        "(@username)\n\n"
+        f"{_CONTACT_NOTICE_SHORT_RU}"
+    )
 
 
 @router.message(QuestionnaireStates.ext_parent_phone)
@@ -533,29 +591,42 @@ async def ext_parent_phone(message: Message, state: FSMContext):
     elif len(digits) == 12 and digits.startswith("998"):
         phone = f"+{digits}"
     await state.update_data(parent_phone=phone)
-    await _ask_parent_tg(message, state)
+    lang = await _lang(state)
+
+    # Удаляем сообщение пользователя, чтобы экран был чистым
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    text = _parent_tg_text(lang)
+    await message.answer(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await state.set_state(QuestionnaireStates.ext_parent_telegram)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_phone)
 async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_phone=None)
-    await _ask_parent_tg(callback, state)
+    lang = await _lang(state)
+    text = _parent_tg_text(lang)
+    await callback.message.edit_text(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await state.set_state(QuestionnaireStates.ext_parent_telegram)
     await callback.answer()
 
 
 # ── 9b. Telegram родителей ──
-async def _ask_parent_tg(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
+def _candidate_tg_text(lang: str) -> str:
     if lang == "uz":
-        text = "📱 Ota-onalar Telegram (@username)\n(ixtiyoriy):"
-    else:
-        text = "📱 Telegram родителей (@username)\n(необязательно):"
-
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(text, reply_markup=skip_kb(lang))
-    else:
-        await m_or_cb.answer(text, reply_markup=skip_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_parent_telegram)
+        return (
+            "💬 Nomzod Telegram:\n"
+            "(@username)\n\n"
+            f"{_CONTACT_NOTICE_SHORT_UZ}"
+        )
+    return (
+        "💬 Telegram кандидата:\n"
+        "(@username)\n\n"
+        f"{_CONTACT_NOTICE_SHORT_RU}"
+    )
 
 
 @router.message(QuestionnaireStates.ext_parent_telegram)
@@ -564,37 +635,41 @@ async def ext_parent_tg(message: Message, state: FSMContext):
     if not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(parent_telegram=tg)
-    await _ask_candidate_tg(message, state)
+    lang = await _lang(state)
+
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    text = _candidate_tg_text(lang)
+    await message.answer(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_telegram)
 async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_telegram=None)
-    await _ask_candidate_tg(callback, state)
+    lang = await _lang(state)
+    text = _candidate_tg_text(lang)
+    await callback.message.edit_text(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
     await callback.answer()
 
 
 # ── 9c. Telegram кандидата ──
-async def _ask_candidate_tg(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
-    if lang == "uz":
-        text = "💬 Nomzod Telegram (@username)\n(ixtiyoriy):"
-    else:
-        text = "💬 Telegram кандидата (@username)\n(необязательно):"
-
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(text, reply_markup=skip_kb(lang))
-    else:
-        await m_or_cb.answer(text, reply_markup=skip_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
-
-
 @router.message(QuestionnaireStates.ext_candidate_telegram)
 async def ext_candidate_tg(message: Message, state: FSMContext):
     tg = message.text.strip()
     if not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(candidate_telegram=tg)
+
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
     await _ask_address(message, state)
 
 
@@ -609,7 +684,10 @@ async def ext_candidate_tg_skip(callback: CallbackQuery, state: FSMContext):
 async def _ask_address(m_or_cb, state: FSMContext):
     lang = await _lang(state)
     if lang == "uz":
-        text = "🏠 Manzil yoki joylashuv:"
+        text = (
+            "🏠 Manzil yoki joylashuv:\n\n"
+            f"{_CONTACT_NOTICE_SHORT_UZ}"
+        )
         opts = [
             ("🏠 Manzil yozish", "addr:text"),
             ("📍 Geolokatsiya yuborish", "addr:geo"),
@@ -617,7 +695,10 @@ async def _ask_address(m_or_cb, state: FSMContext):
             ("⏭ O'tkazib yuborish", "addr:skip"),
         ]
     else:
-        text = "🏠 Адрес или геолокация:"
+        text = (
+            "🏠 Адрес или геолокация:\n\n"
+            f"{_CONTACT_NOTICE_SHORT_RU}"
+        )
         opts = [
             ("🏠 Написать адрес", "addr:text"),
             ("📍 Отправить геолокацию", "addr:geo"),
@@ -629,9 +710,9 @@ async def _ask_address(m_or_cb, state: FSMContext):
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
     if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(text, reply_markup=kb)
+        await m_or_cb.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     else:
-        await m_or_cb.answer(text, reply_markup=kb)
+        await m_or_cb.answer(text, reply_markup=kb, parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_address)
 
 
@@ -666,6 +747,11 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
 @router.message(QuestionnaireStates.ext_address_text)
 async def ext_address_text(message: Message, state: FSMContext):
     await state.update_data(address=message.text.strip())
+    # Удаляем сообщение пользователя, чтобы экран был чистым
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _show_ext_complete(message, state)
 
 
@@ -696,6 +782,10 @@ async def ext_location(message: Message, state: FSMContext):
 @router.message(QuestionnaireStates.ext_address_link)
 async def ext_address_link(message: Message, state: FSMContext):
     await state.update_data(location_link=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _show_ext_complete(message, state)
 
 
