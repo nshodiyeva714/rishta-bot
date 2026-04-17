@@ -795,9 +795,9 @@ async def _ask_address(m_or_cb, state: FSMContext):
     card = build_ext_card(data, lang)
 
     if lang == "uz":
-        body = "🏠 Manzil yoki joylashuv:"
+        body = "🏠 Manzil yoki geolokasiya:"
         opts = [
-            ("🏠 Manzil yozish", "addr:text"),
+            ("🏠 Manzilni yozish", "addr:text"),
             ("📍 Geolokatsiya yuborish", "addr:geo"),
             ("🗺 Xarita havolasi", "addr:link"),
             ("⏭ O'tkazib yuborish", "addr:skip"),
