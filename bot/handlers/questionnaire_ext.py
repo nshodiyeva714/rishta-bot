@@ -158,26 +158,29 @@ async def _show_question(m_or_cb, state: FSMContext, text: str,
                          reply_markup=None, parse_mode: str = None):
     """Показать вопрос: редактируем последнее сообщение бота.
 
-    - Если m_or_cb — CallbackQuery: редактируем текущее callback.message.
-    - Если m_or_cb — Message: ищем last_bot_msg_id в state и редактируем его;
-      при неудаче — отправляем новое сообщение.
-    В обоих случаях last_bot_msg_id сохраняется.
+    Если edit не удаётся — сначала УДАЛЯЕМ старое сообщение, потом
+    отправляем новое. На экране всегда только одно актуальное окно.
     """
     if hasattr(m_or_cb, "message"):
-        # CallbackQuery
+        # CallbackQuery — редактируем текущее сообщение
         try:
             await m_or_cb.message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
             await state.update_data(last_bot_msg_id=m_or_cb.message.message_id)
             return
         except Exception:
-            pass
+            # Редактирование не удалось — удаляем старое сообщение бота
+            try:
+                await m_or_cb.message.delete()
+            except Exception:
+                pass
         sent = await m_or_cb.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
         await state.update_data(last_bot_msg_id=sent.message_id)
         return
 
-    # Message
+    # Message — ищем last_bot_msg_id и редактируем
     data = await state.get_data()
     last_id = data.get("last_bot_msg_id")
+
     if last_id:
         try:
             await m_or_cb.bot.edit_message_text(
@@ -189,7 +192,16 @@ async def _show_question(m_or_cb, state: FSMContext, text: str,
             )
             return
         except Exception:
-            pass
+            # Редактирование не удалось — удаляем старое сообщение бота
+            try:
+                await m_or_cb.bot.delete_message(
+                    chat_id=m_or_cb.chat.id,
+                    message_id=last_id,
+                )
+            except Exception:
+                pass
+
+    # Отправляем новое сообщение
     sent = await m_or_cb.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
     await state.update_data(last_bot_msg_id=sent.message_id)
 
