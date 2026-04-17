@@ -30,13 +30,13 @@ router = Router()
 
 # ── Уведомления владельцу анкеты ──
 
-NOTIFY_AT_VIEWS = {1, 5, 10, 25, 50, 100, 200, 500}
+NOTIFY_AT_VIEWS = {5, 10, 25, 50, 100, 200, 500}
 
 
 async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, viewer_id: int):
-    """Уведомляет владельца о просмотре при 1, 5, 10, 25, 50, 100..."""
+    """Уведомляет владельца на милстоунах просмотров 5/10/25/50/100/200/500 и каждые 100."""
     views = profile.views_count or 0
-    if views not in NOTIFY_AT_VIEWS and views % 100 != 0:
+    if views not in NOTIFY_AT_VIEWS and (views < 500 or views % 100 != 0):
         return
     if not profile.user_id or profile.user_id == viewer_id:
         return
@@ -48,20 +48,20 @@ async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, 
     display_id = profile.display_id or "—"
     if lang == "uz":
         text = (
-            f"👀 <b>Anketangizga qiziqish bor!</b>\n\n"
+            f"👁 <b>Anketangiz mashhur bo'lmoqda!</b>\n\n"
             f"🔖 {display_id}\n"
             f"Ko'rishlar soni: <b>{views}</b>\n\n"
             f"Anketangiz ishlayapti! 🤲"
         )
     else:
         text = (
-            f"👀 <b>Вашу анкету просматривают!</b>\n\n"
+            f"👁 <b>Ваша анкета набирает популярность!</b>\n\n"
             f"🔖 {display_id}\n"
-            f"Просмотров уже: <b>{views}</b>\n\n"
+            f"Просмотров: <b>{views}</b>\n\n"
             f"Ваша анкета работает! 🤲"
         )
     try:
-        await bot.send_message(profile.user_id, text)
+        await bot.send_message(profile.user_id, text, parse_mode="HTML")
     except Exception as e:
         logger.error(f"Ошибка уведомления о просмотре: {e}")
 
@@ -1684,7 +1684,7 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
     display_id = profile.display_id or "—"
     await state.update_data(contact_profile_id=profile_id, contact_display_id=display_id)
 
-    # Регистрируем запрос и уведомляем владельца (как в interest: handler)
+    # Регистрируем запрос и уведомляем владельца
     try:
         cr = ContactRequest(
             requester_user_id=callback.from_user.id,
@@ -1696,6 +1696,33 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
         await session.commit()
     except Exception:
         pass
+
+    # Уведомление владельцу анкеты о запросе контакта
+    if profile.user_id and profile.user_id != callback.from_user.id:
+        try:
+            owner = await session.get(User, profile.user_id)
+            owner_lang = owner.language.value if owner and owner.language else "ru"
+            if owner_lang == "uz":
+                msg = (
+                    f"💌 <b>Anketangizga qiziqish bor!</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Kimdir siz bilan bog'lanishni xohlaydi.\n"
+                    f"Moderator tez orada siz bilan\n"
+                    f"bog'lanadi. 🤝"
+                )
+            else:
+                msg = (
+                    f"💌 <b>Вашей анкетой заинтересовались!</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Кто-то хочет узнать ваш контакт.\n"
+                    f"Модератор скоро свяжется\n"
+                    f"с вами. 🤝"
+                )
+            await callback.bot.send_message(
+                profile.user_id, msg, parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка уведомления владельца о запросе контакта: {e}")
 
     if lang == "uz":
         text = (

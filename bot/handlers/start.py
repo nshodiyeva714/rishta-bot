@@ -1,5 +1,8 @@
 """Шаг 0-1 — /start → Язык → Согласие → Главное меню."""
 
+import asyncio
+import logging
+
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
@@ -18,7 +21,39 @@ from bot.keyboards.inline import (
 )
 from bot.config import config, is_moderator
 
+logger = logging.getLogger(__name__)
 router = Router()
+
+
+# In-memory дедуп 24ч-напоминаний (сбрасывается при рестарте)
+_REMINDER_SCHEDULED: set[int] = set()
+
+
+async def send_24h_reminder(bot: Bot, user_id: int, lang: str) -> None:
+    """Отправить напоминание через 24 часа после регистрации."""
+    try:
+        await asyncio.sleep(86400)  # 24 часа
+        if lang == "uz":
+            msg = (
+                "👀 <b>Sizni kutishyapti!</b>\n\n"
+                "Rishta'da yangi anketalar bor.\n"
+                "Ko'rib chiqing — ehtimol\n"
+                "munosib nomzod topiladi! 💍"
+            )
+        else:
+            msg = (
+                "👀 <b>Вас ждут!</b>\n\n"
+                "В Rishta появились новые анкеты.\n"
+                "Загляните — возможно найдёте\n"
+                "достойного кандидата! 💍"
+            )
+        await bot.send_message(user_id, msg, parse_mode="HTML")
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка 24h-напоминания для {user_id}: {e}")
+    finally:
+        _REMINDER_SCHEDULED.discard(user_id)
 
 
 @router.message(CommandStart())
@@ -86,6 +121,7 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
     result = await session.execute(select(User).where(User.id == callback.from_user.id))
     user = result.scalar_one_or_none()
 
+    is_new_user = user is None
     if not user:
         user = User(
             id=callback.from_user.id,
@@ -96,6 +132,12 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
         user.language = Language(lang)
 
     await session.commit()
+
+    # 24-часовое напоминание — только для новых пользователей
+    uid = callback.from_user.id
+    if is_new_user and uid not in _REMINDER_SCHEDULED:
+        _REMINDER_SCHEDULED.add(uid)
+        asyncio.create_task(send_24h_reminder(callback.bot, uid, lang))
 
     # Сразу в главное меню (без экранов согласия)
     await callback.message.edit_text(
