@@ -335,12 +335,12 @@ def body_type_kb(lang: str = "ru", gender: str = "son") -> InlineKeyboardMarkup:
     if gender == "son":
         labels = {
             "ru": ["Стройный", "Среднее", "Спортивный", "Плотный"],
-            "uz": ["Ozg'in", "O'rtacha", "Sportcha", "To'liq"],
+            "uz": ["Ozg'in", "O'rtacha", "Sportchilarga xos", "To'ladan kelgan"],
         }
     else:
         labels = {
             "ru": ["Стройная", "Среднее", "Спортивная", "Плотная"],
-            "uz": ["Ozg'in", "O'rtacha", "Sportcha", "To'liq"],
+            "uz": ["Ozg'in", "O'rtacha", "Sportchilarga xos", "To'ladan kelgan"],
         }
     values = ["slim", "average", "athletic", "full"]
     return InlineKeyboardMarkup(inline_keyboard=[

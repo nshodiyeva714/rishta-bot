@@ -244,7 +244,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     # Телосложение
     body_type_map = {
         "ru": {"slim": "Стройный", "average": "Среднее", "athletic": "Спортивный", "full": "Плотный"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
     }
     bt = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
 
@@ -382,7 +382,7 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     # Значения-мапы
     body_type_map = {
         "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
     }
     housing_card_map = {
         "ru": {"own_house": "Свой дом", "own_apartment": "Своя квартира",

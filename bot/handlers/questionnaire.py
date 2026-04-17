@@ -70,7 +70,7 @@ def build_card(data: dict, lang: str = "ru") -> str:
     # Телосложение
     body_map = {
         "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportcha", "full": "To'liq"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
     }
     body = data.get("body_type")
     if body:
