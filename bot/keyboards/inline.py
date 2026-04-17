@@ -765,14 +765,27 @@ def confirm_profile_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 # ── Moderator keyboards ──
 
-def mod_review_kb(profile_id: int) -> InlineKeyboardMarkup:
+def mod_review_kb(profile_id: int, is_paused: bool = False) -> InlineKeyboardMarkup:
+    """Клавиатура модератора на экране анкеты (на модерации / после публикации)."""
+    if is_paused:
+        pause_btn = InlineKeyboardButton(
+            text="🟢 Активировать",
+            callback_data=f"mod:activate:{profile_id}",
+        )
+    else:
+        pause_btn = InlineKeyboardButton(
+            text="⏸ Пауза",
+            callback_data=f"mod:pause:{profile_id}",
+        )
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"mod:publish:{profile_id}"),
             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"mod:reject:{profile_id}"),
         ],
         [InlineKeyboardButton(text="📸 Отклонить фото", callback_data=f"mod:reject_photo:{profile_id}")],
+        [pause_btn],
         [InlineKeyboardButton(text="⭐ Опубликовать как VIP", callback_data=f"mod:publish_vip:{profile_id}")],
+        [InlineKeyboardButton(text="💬 Написать пользователю", callback_data=f"modreply:{profile_id}")],
     ])
 
 

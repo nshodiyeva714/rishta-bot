@@ -199,6 +199,107 @@ async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: 
     await callback.answer("📸 Фото отклонено")
 
 
+# ── Пауза / активация анкеты модератором ──
+@router.callback_query(F.data.startswith("mod:pause:"))
+async def mod_pause(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Модератор ставит анкету на паузу."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    profile_id = int(callback.data.split(":")[2])
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+
+    profile.is_active = False
+    profile.status = ProfileStatus.PAUSED
+    await session.commit()
+
+    display_id = profile.display_id or "—"
+
+    # Уведомить владельца
+    if profile.user_id:
+        try:
+            owner = await session.get(User, profile.user_id)
+            owner_lang = owner.language.value if owner and owner.language else "ru"
+            if owner_lang == "uz":
+                msg = (
+                    f"⏸ <b>Anketangiz to'xtatildi</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Moderator bilan bog'laning."
+                )
+            else:
+                msg = (
+                    f"⏸ <b>Ваша анкета приостановлена</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Свяжитесь с модератором."
+                )
+            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
+        except Exception:
+            pass
+
+    try:
+        await callback.message.edit_reply_markup(
+            reply_markup=mod_review_kb(profile_id, is_paused=True)
+        )
+    except Exception:
+        pass
+    await callback.answer("⏸ Приостановлено")
+
+
+@router.callback_query(F.data.startswith("mod:activate:"))
+async def mod_activate(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Модератор активирует ранее приостановленную анкету."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    profile_id = int(callback.data.split(":")[2])
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+
+    profile.is_active = True
+    profile.status = ProfileStatus.PUBLISHED
+    if not profile.published_at:
+        profile.published_at = datetime.now()
+    await session.commit()
+
+    display_id = profile.display_id or "—"
+
+    # Уведомить владельца
+    if profile.user_id:
+        try:
+            owner = await session.get(User, profile.user_id)
+            owner_lang = owner.language.value if owner and owner.language else "ru"
+            if owner_lang == "uz":
+                msg = (
+                    f"✅ <b>Anketangiz faollashtirildi!</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Endi anketangiz qidirishda ko'rinadi. 🤲"
+                )
+            else:
+                msg = (
+                    f"✅ <b>Ваша анкета активирована!</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Теперь анкета снова видна в поиске. 🤲"
+                )
+            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
+        except Exception:
+            pass
+
+    try:
+        await callback.message.edit_reply_markup(
+            reply_markup=mod_review_kb(profile_id, is_paused=False)
+        )
+    except Exception:
+        pass
+    await callback.answer("✅ Активировано")
+
+
 # ── Подтверждение оплаты модератором ──
 @router.callback_query(F.data.startswith("modpay:confirm:"))
 async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
