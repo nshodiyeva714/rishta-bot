@@ -405,13 +405,17 @@ async def search_by_my_requirements(callback: CallbackQuery, session: AsyncSessi
         if req.residence and req.residence != "any":
             filters["residence"] = req.residence
 
-    # Противоположный пол
-    search_type = ProfileType.DAUGHTER if my_profile.profile_type == ProfileType.SON else ProfileType.SON
+    # Если пользователь явно выбрал тип в меню (невестка/жених) — используем его.
+    # Иначе — противоположный пол по умолчанию.
+    data = await state.get_data()
+    search_type = data.get("search_type")
+    if not search_type:
+        search_type = ProfileType.DAUGHTER.value if my_profile.profile_type == ProfileType.SON else ProfileType.SON.value
 
     await state.update_data(
         search_filters=filters,
         search_offset=0,
-        search_type=search_type.value,
+        search_type=search_type,
     )
 
     await _show_search_results(callback, session, state, lang)
