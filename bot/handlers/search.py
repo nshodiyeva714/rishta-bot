@@ -987,6 +987,27 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     except Exception as e:
         logger.warning(f"TOTAL IN DB error: {e}")
 
+    # Расширенная диагностика query
+    logger.warning(
+        f"SEARCH QUERY DEBUG: "
+        f"search_type={search_type} "
+        f"filters={filters} "
+        f"conditions_count={len(conditions)} "
+        f"results={len(profiles)}"
+    )
+
+    # Отдельно — полный снапшот анкеты id=40 (сверка с фильтром)
+    try:
+        from sqlalchemy import text as sa_text
+        check = await session.execute(sa_text(
+            "SELECT id, city, city_code, profile_type, status, is_active "
+            "FROM profiles WHERE id = 40"
+        ))
+        row = check.fetchone()
+        logger.warning(f"PROFILE 40: {row}")
+    except Exception as e:
+        logger.warning(f"PROFILE 40 error: {e}")
+
     return profiles, user_req
 
 
