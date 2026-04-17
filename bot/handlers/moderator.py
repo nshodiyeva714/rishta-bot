@@ -1,5 +1,6 @@
 """Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям, /ankety, /stats."""
 
+import logging
 from datetime import datetime
 
 from aiogram import Router, F, Bot
@@ -16,6 +17,7 @@ from bot.config import config, is_moderator
 from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
 from bot.utils.helpers import format_full_anketa
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 
@@ -95,6 +97,8 @@ async def _mod_ankety_submenu_kb(session: AsyncSession) -> InlineKeyboardMarkup:
 
 
 # ── /ankety — подменю по статусам ──
+
+
 @router.message(Command("ankety"))
 async def cmd_ankety(message: Message, session: AsyncSession, bot: Bot):
     if not is_moderator(message.from_user.id):
@@ -105,6 +109,7 @@ async def cmd_ankety(message: Message, session: AsyncSession, bot: Bot):
 
 
 # ── Подменю /ankety: список по статусу с пагинацией ──
+
 
 @router.callback_query(F.data == "modlist:back")
 async def mod_list_back(callback: CallbackQuery, session: AsyncSession):
@@ -139,8 +144,8 @@ async def mod_list_find(callback: CallbackQuery):
             reply_markup=kb,
             parse_mode="HTML",
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer()
 
 
@@ -196,8 +201,8 @@ async def mod_list_profiles(callback: CallbackQuery, session: AsyncSession):
         ])
         try:
             await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         await callback.answer()
         return
 
@@ -279,6 +284,8 @@ async def mod_list_open_profile(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── /stats — детальная статистика платформы ──
+
+
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, session: AsyncSession):
     if not is_moderator(message.from_user.id):
@@ -420,9 +427,8 @@ async def mod_publish(callback: CallbackQuery, session: AsyncSession, bot: Bot):
             profile.user_id,
             t("mod_profile_published", lang, display_id=profile.display_id),
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.message.edit_text(
         callback.message.text + "\n\n✅ ОПУБЛИКОВАНО",
     )
@@ -458,9 +464,8 @@ async def mod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
             profile.user_id,
             t("mod_profile_rejected", lang, display_id=profile.display_id),
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.message.edit_text(
         callback.message.text + "\n\n❌ ОТКЛОНЕНО",
     )
@@ -491,9 +496,8 @@ async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: 
             "📸 Модератор отклонил фото в анкете " + (profile.display_id or "") +
             ". Пожалуйста, загрузите другое фото через «Редактировать анкету».",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.message.edit_text(
         callback.message.text + "\n\n📸 ФОТО ОТКЛОНЕНО",
     )
@@ -501,6 +505,8 @@ async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: 
 
 
 # ── Пауза / активация анкеты модератором ──
+
+
 @router.callback_query(F.data.startswith("mod:pause:"))
 async def mod_pause(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     """Модератор ставит анкету на паузу."""
@@ -538,15 +544,14 @@ async def mod_pause(callback: CallbackQuery, session: AsyncSession, bot: Bot):
                     f"Свяжитесь с модератором."
                 )
             await bot.send_message(profile.user_id, msg, parse_mode="HTML")
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     try:
         await callback.message.edit_reply_markup(
             reply_markup=mod_review_kb(profile_id, is_paused=True)
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("⏸ Приостановлено")
 
 
@@ -589,19 +594,20 @@ async def mod_activate(callback: CallbackQuery, session: AsyncSession, bot: Bot)
                     f"Теперь анкета снова видна в поиске. 🤲"
                 )
             await bot.send_message(profile.user_id, msg, parse_mode="HTML")
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     try:
         await callback.message.edit_reply_markup(
             reply_markup=mod_review_kb(profile_id, is_paused=False)
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("✅ Активировано")
 
 
 # ── Редактирование анкеты модератором ──
+
+
 @router.callback_query(F.data.startswith("mod:edit:"))
 async def mod_edit_start(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Начать редактирование — показать список полей."""
@@ -664,8 +670,8 @@ async def mod_edit_cancel(callback: CallbackQuery, session: AsyncSession, state:
             reply_markup=mod_review_kb(profile_id, is_paused=is_paused),
             parse_mode="HTML",
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("Отменено")
 
 
@@ -696,8 +702,8 @@ async def mod_edit_field(callback: CallbackQuery, session: AsyncSession, state: 
             f"{field['ru']}{current_txt}\n\nВведите новое значение:",
             parse_mode="HTML",
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await state.set_state(ModeratorEditStates.editing_value)
     await callback.answer()
 
@@ -760,11 +766,13 @@ async def mod_edit_save(message: Message, session: AsyncSession, state: FSMConte
                     f"в вашей анкете. 🤝"
                 )
             await bot.send_message(profile.user_id, msg, parse_mode="HTML")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
 
 
 # ── Подтверждение оплаты модератором ──
+
+
 @router.callback_query(F.data.startswith("modpay:confirm:"))
 async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     if not is_moderator(callback.from_user.id):
@@ -813,9 +821,8 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
             payment.user_id,
             "❌ Оплата отклонена модератором. Свяжитесь с модератором для уточнения.",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.message.edit_text(
         callback.message.text + "\n\n❌ ОПЛАТА ОТКЛОНЕНА",
     )
@@ -823,6 +830,8 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
 
 
 # ── Ответ пользователю от модератора ──
+
+
 @router.callback_query(F.data.startswith("modreply:"))
 async def mod_reply_start(callback: CallbackQuery, state: FSMContext):
     """Модератор нажал «Ответить» — ожидаем текст."""
@@ -869,6 +878,7 @@ async def mod_reply_send(message: Message, state: FSMContext, bot: Bot):
 # ══════════════════════════════════════════════════════════
 #  /find — Поиск анкеты по номеру для модератора
 # ══════════════════════════════════════════════════════════
+
 
 @router.message(Command("find"))
 async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
@@ -983,6 +993,7 @@ async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
 
 # ── Действия модератора с найденной анкетой ──
 
+
 @router.callback_query(F.data.startswith("modfind:"))
 async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     """modfind:pause:123 / modfind:activate:123 / modfind:block:123"""
@@ -1026,9 +1037,8 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
                     f"⏸ Ваша анкета <b>{display_id}</b> поставлена на паузу модератором."
                 )
                 await bot.send_message(owner_id, msg)
-            except Exception:
-                pass
-
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
     elif action == "activate":
         profile.status = ProfileStatus.PUBLISHED
         profile.is_active = True
@@ -1047,9 +1057,8 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
                     f"🟢 Ваша анкета <b>{display_id}</b> снова активна!"
                 )
                 await bot.send_message(owner_id, msg)
-            except Exception:
-                pass
-
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
     elif action == "block":
         profile.status = ProfileStatus.REJECTED
         profile.is_active = False
@@ -1066,9 +1075,8 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
                     f"❌ Ваша анкета <b>{display_id}</b> заблокирована модератором."
                 )
                 await bot.send_message(owner_id, msg)
-            except Exception:
-                pass
-
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
     elif action == "vip_add":
         # Показать выбор срока VIP
         await callback.message.edit_text(
@@ -1094,13 +1102,13 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
                     f"ℹ️ VIP статус анкеты <b>{display_id}</b> снят."
                 )
                 await bot.send_message(owner_id, msg)
-            except Exception:
-                pass
-
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
     await callback.answer()
 
 
 # ── Модератор выбрал срок VIP ──
+
 
 @router.callback_query(F.data.startswith("modvip:"))
 async def mod_vip_set_duration(callback: CallbackQuery, session: AsyncSession, bot: Bot):
@@ -1174,13 +1182,13 @@ async def mod_vip_set_duration(callback: CallbackQuery, session: AsyncSession, b
             )
         try:
             await bot.send_message(profile.user_id, msg)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     await callback.answer()
 
 
 # ── Опубликовать как VIP при модерации ──
+
 
 @router.callback_query(F.data.startswith("mod:publish_vip:"))
 async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: Bot):
@@ -1207,9 +1215,8 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
         user = result.scalar_one_or_none()
         lang = user.language.value if user and user.language else "ru"
         await bot.send_message(profile.user_id, t("mod_profile_published", lang, display_id=profile.display_id))
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     # Показываем выбор срока VIP
     await callback.message.edit_text(
         f"✅ Анкета <b>{profile.display_id}</b> опубликована!\n\n"
@@ -1222,6 +1229,7 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
 # ══════════════════════════════════════════════════════
 # /dbcheck — диагностика состояния таблицы profiles (только для модераторов)
 # ══════════════════════════════════════════════════════
+
 
 @router.message(Command("dbcheck"))
 async def db_check(message: Message, session: AsyncSession):

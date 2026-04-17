@@ -330,6 +330,7 @@ def format_filters_summary(filters: dict, lang: str = "ru") -> str:
 #  ИЗМЕНЕНИЕ 2 — Стартовый экран поиска (menu:search)
 # ══════════════════════════════════════════════════════════
 
+
 @router.callback_query(F.data == "menu:search")
 async def search_start(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Начало поиска — выбор режима."""
@@ -383,6 +384,7 @@ async def search_guest(callback: CallbackQuery, session: AsyncSession, state: FS
 # ══════════════════════════════════════════════════════════
 #  ИЗМЕНЕНИЕ 3 — Поиск по требованиям из анкеты
 # ══════════════════════════════════════════════════════════
+
 
 @router.callback_query(F.data == "search:my_req")
 async def search_by_my_requirements(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -458,8 +460,8 @@ async def show_search_filters(callback: CallbackQuery, session: AsyncSession, st
             logger.error(f"show_search_filters error: {e}")
     try:
         await callback.answer()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
 
 
 @router.callback_query(F.data == "search:manual")
@@ -481,6 +483,8 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
 
 
 # ── Возврат на экран фильтров без сброса (back-кнопка из сабменю фильтра) ──
+
+
 @router.callback_query(F.data == "filter:back")
 async def filter_back(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Вернуться на экран фильтров без очистки выбранных фильтров."""
@@ -488,6 +492,8 @@ async def filter_back(callback: CallbackQuery, session: AsyncSession, state: FSM
 
 
 # ── Фильтр: возраст ──
+
+
 @router.callback_query(F.data == "filter:age")
 async def filter_age(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -507,6 +513,8 @@ async def filter_age(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Свой диапазон возраста ──
+
+
 @router.callback_query(F.data == "filter_age:custom")
 async def filter_age_custom(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -536,8 +544,8 @@ async def filter_age_from(message: Message, state: FSMContext):
         err = "⚠️ Raqam kiriting" if lang == "uz" else "⚠️ Введите число"
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         tmp = await message.answer(err)
         # не ломаем state — юзер может попробовать ещё раз
         return
@@ -545,25 +553,23 @@ async def filter_age_from(message: Message, state: FSMContext):
         err = "⚠️ Yosh 18 dan 60 gacha bo'lishi kerak" if lang == "uz" else "⚠️ От 18 до 60 лет"
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         await message.answer(err)
         return
 
     await state.update_data(custom_age_from=age_from)
     try:
         await message.delete()
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     # Удаляем старое сообщение бота
     last_id = data.get("last_bot_msg_id")
     if last_id:
         try:
             await message.bot.delete_message(message.chat.id, last_id)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     text = "🎂 Gacha (yosh) kiriting:\n(masalan: 35)" if lang == "uz" else "🎂 Введите ДО (лет):\n(например: 35)"
     kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
@@ -589,8 +595,8 @@ async def filter_age_to(message: Message, state: FSMContext, session: AsyncSessi
         err = "⚠️ Raqam kiriting" if lang == "uz" else "⚠️ Введите число"
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         await message.answer(err)
         return
 
@@ -600,16 +606,16 @@ async def filter_age_to(message: Message, state: FSMContext, session: AsyncSessi
                f"⚠️ Должно быть больше {age_from}")
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         await message.answer(err)
         return
     if age_to > 60:
         err = "⚠️ 60 dan oshmasin" if lang == "uz" else "⚠️ Не более 60 лет"
         try:
             await message.delete()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
         await message.answer(err)
         return
 
@@ -622,15 +628,14 @@ async def filter_age_to(message: Message, state: FSMContext, session: AsyncSessi
 
     try:
         await message.delete()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     last_id = data.get("last_bot_msg_id")
     if last_id:
         try:
             await message.bot.delete_message(message.chat.id, last_id)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     # Показываем экран фильтров с сохранённым диапазоном
     text = t("search_filters_title", lang)
     selected = build_selected_filters_text(filters, lang)
@@ -642,6 +647,8 @@ async def filter_age_to(message: Message, state: FSMContext, session: AsyncSessi
 
 
 # ── Фильтр: религиозность ──
+
+
 @router.callback_query(F.data == "filter:religion")
 async def filter_religion(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -657,6 +664,8 @@ async def filter_religion(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Фильтр: образование ──
+
+
 @router.callback_query(F.data == "filter:education")
 async def filter_education(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -673,6 +682,8 @@ async def filter_education(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Фильтр: семейное положение ──
+
+
 @router.callback_query(F.data == "filter:marital")
 async def filter_marital(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -688,6 +699,8 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Фильтр: проживание ──
+
+
 @router.callback_query(F.data == "filter:residence")
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -724,6 +737,8 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Узбекистан → выбор региона ──
+
+
 @router.callback_query(F.data == "filter:residence:uzb")
 async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -768,6 +783,8 @@ async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Фильтр: национальность ──
+
+
 @router.callback_query(F.data == "filter:nationality")
 async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -786,6 +803,8 @@ async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Фильтр: наличие детей ──
+
+
 @router.callback_query(F.data == "filter:children")
 async def filter_children(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
@@ -810,6 +829,8 @@ async def filter_children(callback: CallbackQuery, session: AsyncSession):
 
 
 # ── Универсальный обработчик значений фильтров ──
+
+
 @router.callback_query(F.data.startswith("fval:"))
 async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Callback: fval:<field>:<value>"""
@@ -850,6 +871,8 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
 
 
 # ── Сбросить фильтры ──
+
+
 @router.callback_query(F.data == "filter:clear")
 async def filter_clear(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     await state.update_data(search_filters={}, search_offset=0,
@@ -860,6 +883,8 @@ async def filter_clear(callback: CallbackQuery, session: AsyncSession, state: FS
 
 
 # ── Запустить поиск из фильтров ──
+
+
 @router.callback_query(F.data == "filter:go")
 async def filter_go(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     lang = await get_lang(session, callback.from_user.id)
@@ -880,6 +905,7 @@ async def filter_go(callback: CallbackQuery, session: AsyncSession, state: FSMCo
 #  Показать все анкеты без фильтров
 # ══════════════════════════════════════════════════════════
 
+
 @router.callback_query(F.data == "search:all")
 async def search_all(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     lang = await get_lang(session, callback.from_user.id)
@@ -897,6 +923,7 @@ async def search_all(callback: CallbackQuery, session: AsyncSession, state: FSMC
 # ══════════════════════════════════════════════════════════
 #  Старый вход через menu:son (search:browse) — совместимость
 # ══════════════════════════════════════════════════════════
+
 
 @router.callback_query(F.data == "search:browse")
 async def search_browse_compat(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -927,9 +954,9 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         _or_active(Profile.is_active.is_(True), Profile.is_active.is_(None)),
         Profile.profile_type == target_type,
     ]
-    # Исключение собственных анкет временно отключено — на этапе тестирования
-    # модератор создаёт все анкеты со своего аккаунта и должен их видеть.
-    # (Раньше: conditions.append(Profile.user_id != user_id) в не-гостевом режиме)
+    # Исключать свои анкеты из поиска (в гостевом режиме у user_id нет анкет)
+    if not is_guest:
+        conditions.append(Profile.user_id != user_id)
 
     # Фильтр: возраст — поддержка кнопок-диапазонов И старого формата age_from/age_to
     import datetime
@@ -1134,12 +1161,12 @@ async def _safe_show_card(callback: CallbackQuery, text: str, kb: InlineKeyboard
     try:
         await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
         return
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     try:
         await callback.message.delete()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     try:
         await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
     except Exception as e:
@@ -1272,9 +1299,8 @@ async def _show_search_results(
         try:
             await callback.message.edit_text(loading)
             await asyncio.sleep(0.8)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     counter = (
         f"🔍 Anketa {idx + 1} / {total}"
         if lang == "uz" else
@@ -1312,24 +1338,23 @@ async def _show_search_results(
         try:
             await callback.message.answer(random.choice(phrases))
             await asyncio.sleep(0.5)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     # Счётчик просмотров + уведомление владельцу
     profile.views_count = (profile.views_count or 0) + 1
     try:
         await _notify_owner_view(callback.bot, session, profile, user_id)
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await session.commit()
     try:
         await callback.answer()
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
 
 
 # ── Навигация: вперёд / назад / рестарт ──
+
 
 @router.callback_query(F.data.startswith("search_nav:"))
 async def search_nav(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -1380,9 +1405,8 @@ async def search_nav(callback: CallbackQuery, session: AsyncSession, state: FSMC
             ]
         try:
             await callback.answer(random.choice(phrases), show_alert=False)
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     await state.update_data(current_index=idx, search_offset=idx)
     await _show_search_results(callback, session, state, lang)
 
@@ -1397,6 +1421,8 @@ async def search_restart(callback: CallbackQuery, session: AsyncSession, state: 
 
 
 # Back-compat: старый callback «Следующая ➡️»
+
+
 @router.callback_query(F.data == "search:next_one")
 async def search_next_one_legacy(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     import random
@@ -1426,8 +1452,8 @@ async def search_next_one_legacy(callback: CallbackQuery, session: AsyncSession,
         ]
     try:
         await callback.answer(random.choice(phrases), show_alert=False)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await state.update_data(current_index=idx + 1, search_offset=idx + 1)
     await _show_search_results(callback, session, state, lang)
 
@@ -1439,6 +1465,8 @@ async def noop_handler(callback: CallbackQuery):
 
 
 # Совместимость со старой пагинацией search_page:N
+
+
 @router.callback_query(F.data.startswith("search_page:"))
 async def search_page_compat(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     page = int(callback.data.split(":")[1])
@@ -1451,6 +1479,7 @@ async def search_page_compat(callback: CallbackQuery, session: AsyncSession, sta
 # ══════════════════════════════════════════════════════════
 #  Избранное, интерес, контакт, пропуск — без изменений
 # ══════════════════════════════════════════════════════════
+
 
 @router.callback_query(F.data.startswith("fav:"))
 async def add_favorite(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
@@ -1476,9 +1505,8 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession, state: FS
         if profile:
             try:
                 await _notify_owner_favorite(callback.bot, session, profile, user_id)
-            except Exception:
-                pass
-
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
     # Микро-реакция — случайная фраза
     import random
     if existing:
@@ -1560,9 +1588,8 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
     # Уведомление владельца о запросе контакта
     try:
         await _notify_owner_contact_request(bot, session, target_profile)
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     result = await session.execute(
         select(Profile).where(Profile.user_id == user_id).limit(1)
     )
@@ -1606,9 +1633,8 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
                     residence=res_str,
                 ),
             )
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     region = "🇺🇿 Узбекистан"
     moderator = config.moderator_tashkent
     hours = "08:00–00:00 (UZT)"
@@ -1688,6 +1714,7 @@ async def skip_profile(callback: CallbackQuery, session: AsyncSession):
 #  Узнать контакт — выбор между модератором или оплатой картой
 # ══════════════════════════════════════════════════════════
 
+
 @router.callback_query(F.data.startswith("get_contact:"))
 async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Пользователь хочет получить контакт — показать выбор способа."""
@@ -1712,9 +1739,8 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
         session.add(cr)
         profile.requests_count = (profile.requests_count or 0) + 1
         await session.commit()
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     # Уведомление владельцу анкеты о запросе контакта
     if profile.user_id and profile.user_id != callback.from_user.id:
         try:
@@ -1916,9 +1942,8 @@ async def contact_payment_screenshot(message, state: FSMContext, session: AsyncS
                 reply_markup=mod_kb,
                 parse_mode="HTML",
             )
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     if lang == "uz":
         reply = (
             "✅ Skrinshot qabul qilindi!\n\n"
@@ -1975,9 +2000,8 @@ async def pay_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bot):
             f"началом счастья! 🤲",
             parse_mode="HTML",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     # Уведомляем владельца анкеты
     if profile.user_id:
         try:
@@ -1989,9 +2013,8 @@ async def pay_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bot):
                 f"для организации знакомства. 🤝",
                 parse_mode="HTML",
             )
-        except Exception:
-            pass
-
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
     # Обновляем подпись у модератора
     try:
         old_caption = callback.message.caption or ""
@@ -1999,9 +2022,8 @@ async def pay_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bot):
             caption=old_caption + "\n\n✅ <b>Подтверждено — контакт передан</b>",
             parse_mode="HTML",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("✅ Контакт передан!")
 
 
@@ -2026,16 +2048,14 @@ async def pay_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
             f"@{mod_username}",
             parse_mode="HTML",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     try:
         old_caption = callback.message.caption or ""
         await callback.message.edit_caption(
             caption=old_caption + "\n\n❌ <b>Отклонено</b>",
             parse_mode="HTML",
         )
-    except Exception:
-        pass
-
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("❌ Отклонено")

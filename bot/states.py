@@ -34,7 +34,6 @@ class QuestionnaireStates(StatesGroup):
     ext_housing_parent = State()
     ext_car = State()
     ext_address = State()
-    ext_family_region = State()
     ext_father = State()
     ext_mother = State()
     ext_brothers = State()
@@ -43,8 +42,6 @@ class QuestionnaireStates(StatesGroup):
     ext_health = State()
     ext_character = State()
     ext_ideal_family = State()
-    ext_qualities = State()
-    ext_plans = State()
     ext_parent_phone = State()
     ext_parent_telegram = State()
     ext_candidate_telegram = State()
@@ -63,7 +60,6 @@ class RequirementStates(StatesGroup):
     education = State()
     residence = State()
     residence_city = State()
-    residence_district = State()
     nationality = State()
     religiosity = State()
     marital_status = State()
@@ -77,8 +73,6 @@ class RequirementStates(StatesGroup):
 
 
 class SearchStates(StatesGroup):
-    browsing = State()
-    filter_age = State()  # ожидаем ввод возраста "20-30" (legacy)
     age_from = State()    # ввод нижней границы кастомного диапазона
     age_to = State()      # ввод верхней границы кастомного диапазона
 
@@ -95,13 +89,7 @@ class MeetingStates(StatesGroup):
 
 
 class FeedbackStates(StatesGroup):
-    result = State()
     story = State()
-
-
-class ComplaintStates(StatesGroup):
-    reason = State()
-    details = State()
 
 
 class FeedbackSuggestionStates(StatesGroup):
