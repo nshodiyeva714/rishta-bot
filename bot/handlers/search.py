@@ -801,6 +801,42 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     if my_profile:
         user_req = await _get_user_requirement(session, my_profile.id)
 
+    # ── DEBUG: диагностика гостевого поиска ──
+    try:
+        from sqlalchemy import func as sa_sum
+        total_q = await session.execute(
+            select(sa_sum.count()).select_from(Profile).where(Profile.profile_type == target_type)
+        )
+        total_count = total_q.scalar() or 0
+
+        published_q = await session.execute(
+            select(sa_sum.count()).select_from(Profile).where(
+                Profile.profile_type == target_type,
+                Profile.status == ProfileStatus.PUBLISHED,
+            )
+        )
+        published_count = published_q.scalar() or 0
+
+        active_published_q = await session.execute(
+            select(sa_sum.count()).select_from(Profile).where(
+                Profile.profile_type == target_type,
+                Profile.status == ProfileStatus.PUBLISHED,
+                Profile.is_active == True,
+            )
+        )
+        active_count = active_published_q.scalar() or 0
+
+        logger.info(
+            f"DEBUG SEARCH: type={search_type} "
+            f"total_of_type={total_count} "
+            f"published={published_count} "
+            f"published_and_active={active_count} "
+            f"found={len(profiles)} "
+            f"filters={filters}"
+        )
+    except Exception as e:
+        logger.error(f"DEBUG SEARCH error: {e}")
+
     return profiles, user_req
 
 
