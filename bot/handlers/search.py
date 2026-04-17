@@ -1318,7 +1318,7 @@ async def contact_via_pay(callback: CallbackQuery, session: AsyncSession, state:
 
     if lang == "uz":
         text = (
-            f"💳 <b>To'lov</b>\n\n"
+            f"💳 <b>Ma'lumotlar uchun to'lov</b>\n\n"
             f"🔖 {display_id}\n"
             f"💰 Summa: <b>30 000 so'm</b>\n\n"
             f"Rekvizitlar:\n"
@@ -1406,7 +1406,7 @@ async def contact_payment_screenshot(message, state: FSMContext, session: AsyncS
         reply = (
             "✅ Skrinshot qabul qilindi!\n\n"
             "Moderator to'lovni tekshirib,\n"
-            "kontaktni yaqin orada yuboradi. 🤝\n\n"
+            "ma'lumotlarni yaqin orada yuboradi. 🤝\n\n"
             "Odatda 1-2 soat ichida."
         )
     else:

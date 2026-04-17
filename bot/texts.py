@@ -770,7 +770,7 @@ T = {
         "uz": (
             "✅ Skrinshot qabul qilindi!\n\n"
             "Moderator to'lovni tekshirib,\n"
-            "kontaktni yaqin orada yuboradi. 🤝\n\n"
+            "ma'lumotlarni yaqin orada yuboradi. 🤝\n\n"
             "Odatda 1-2 soat ichida."
         ),
     },
