@@ -1766,6 +1766,17 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
 @router.message(Command("requests"))
 async def cmd_requests(message: Message, session: AsyncSession):
     """Список активных запросов контакта."""
+    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
+    logger.warning(
+        f"CMD_REQUESTS: from {message.from_user.id} "
+        f"is_mod={is_moderator(message.from_user.id)}"
+    )
+    await message.answer(
+        f"DEBUG: id={message.from_user.id} "
+        f"is_mod={is_moderator(message.from_user.id)}"
+    )
+    # ── КОНЕЦ DEBUG ────────────────────────────────────────
+
     if not is_moderator(message.from_user.id):
         return
     await _render_requests_list(message, session, edit=False)
