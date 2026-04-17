@@ -688,6 +688,29 @@ async def db_check(message: Message, session: AsyncSession):
                 f"• {row[0]} | {row[1]} | "
                 f"active={row[2]} | cnt={row[3]}"
             )
+
+        # Дополнительный запрос — анкеты, относящиеся к Самарканду
+        result2 = await session.execute(text("""
+            SELECT id, city, city_code, status, is_active
+            FROM profiles
+            WHERE city ILIKE '%samar%'
+               OR city ILIKE '%самар%'
+               OR city_code = 'samarkand'
+            ORDER BY id
+        """))
+        rows2 = result2.fetchall()
+
+        lines.append("\n🏙 <b>Самарканд в БД:</b>")
+        if not rows2:
+            lines.append("• (нет записей)")
+        else:
+            for row in rows2:
+                lines.append(
+                    f"• id={row[0]} city={row[1]} "
+                    f"code={row[2]} status={row[3]} "
+                    f"active={row[4]}"
+                )
+
         await message.answer(
             "\n".join(lines), parse_mode="HTML"
         )
