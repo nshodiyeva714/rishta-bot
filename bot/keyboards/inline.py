@@ -743,7 +743,7 @@ def profile_card_kb(profile_id: int, lang: str = "ru", display_id: str = "") -> 
         next_btn = "➡️ Следующая"
 
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=interest, callback_data=f"interest:{profile_id}")],
+        [InlineKeyboardButton(text=interest, callback_data=f"get_contact:{profile_id}")],
         [
             InlineKeyboardButton(text=fav, callback_data=f"fav:{profile_id}"),
             InlineKeyboardButton(text=next_btn, callback_data=f"skip_profile:{profile_id}"),

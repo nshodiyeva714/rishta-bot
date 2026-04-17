@@ -83,6 +83,7 @@ class SearchStates(StatesGroup):
 class PaymentStates(StatesGroup):
     choose_method = State()
     awaiting_screenshot = State()
+    awaiting_contact_screenshot = State()  # Скриншот оплаты за контакт
 
 
 class MeetingStates(StatesGroup):
