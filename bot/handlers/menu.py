@@ -205,21 +205,21 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
 
     if lang == "uz":
         stats = (
+            f"🗂 <b>Mening anketam</b>\n\n"
             f"🔖 #{display_id}\n"
-            f"📊 Holat: {status_label}\n"
-            f"{vip_label}\n"
-            f"👁 Ko'rishlar: {views}\n"
-            f"❤️ Tanlanganlar: {fav_count}\n"
-            f"💬 Kontakt so'rovlari: {req_count}"
+            f"Holat: {status_label}  {vip_label}\n\n"
+            f"👁 Ko'rishlar: <b>{views}</b>\n"
+            f"❤️ Tanlanganlar: <b>{fav_count}</b>\n"
+            f"💬 Kontakt so'rovlari: <b>{req_count}</b>"
         )
     else:
         stats = (
+            f"🗂 <b>Моя анкета</b>\n\n"
             f"🔖 #{display_id}\n"
-            f"📊 Статус: {status_label}\n"
-            f"{vip_label}\n"
-            f"👁 Просмотров: {views}\n"
-            f"❤️ В избранном: {fav_count}\n"
-            f"💬 Запросов контакта: {req_count}"
+            f"Статус: {status_label}  {vip_label}\n\n"
+            f"👁 Просмотров: <b>{views}</b>\n"
+            f"❤️ В избранном: <b>{fav_count}</b>\n"
+            f"💬 Запросов контакта: <b>{req_count}</b>"
         )
 
     # ── Полная анкета ──

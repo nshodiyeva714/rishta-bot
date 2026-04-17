@@ -64,11 +64,11 @@ T = {
     "btn_search_groom": {"ru": "👧 Ищем жениха", "uz": "👧 Kuyov qidiramiz"},
     "btn_post_daughter": {"ru": "👧 Разместить анкету дочери", "uz": "👧 Qiz anketasini joylashtirish"},
     "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
-    "btn_create_profile": {"ru": "📝 Создать анкету", "uz": "📝 Anketa yaratish"},
+    "btn_create_profile": {"ru": "💌 Создать анкету", "uz": "💌 Anketa yaratish"},
     "btn_profile_son": {"ru": "👦 Анкета сына", "uz": "👦 O'g'il anketasi"},
     "btn_profile_daughter": {"ru": "👧 Анкета дочери", "uz": "👧 Qiz anketasi"},
-    "btn_my_applications": {"ru": "📋 Мои заявки", "uz": "📋 Mening arizalarim"},
-    "btn_contact_moderator": {"ru": "💬 Модератор", "uz": "💬 Moderator"},
+    "btn_my_applications": {"ru": "🗂 Мои заявки", "uz": "🗂 Mening arizalarim"},
+    "btn_contact_moderator": {"ru": "💁‍♀️ Модератор", "uz": "💁‍♀️ Moderator"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
     "submenu_search": {
         "ru": "🔍 <b>Найти кандидата</b>\n\nКого ищете?",
@@ -203,56 +203,56 @@ T = {
 
     # ── Questions (Stage 1 — 10 questions with progress bar) ──
     "q1": {
-        "ru": "Вопрос 1/10\n{bar}\n\nИмя {child} (можно вымышленное):",
-        "uz": "1/10-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
+        "ru": "🪪 Вопрос 1/10\n{bar}\n\nИмя {child} (можно вымышленное):",
+        "uz": "🪪 1/10-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
     },
     "q2": {
-        "ru": "Вопрос 2/10\n{bar}\n\nГод рождения (например: 1998):",
-        "uz": "2/10-savol\n{bar}\n\nTug'ilgan yil (masalan: 1998):",
+        "ru": "🎂📏 Вопрос 2/10\n{bar}\n\nГод рождения (например: 1998):",
+        "uz": "🎂📏 2/10-savol\n{bar}\n\nTug'ilgan yil (masalan: 1998):",
     },
     "q2_confirm": {
         "ru": "Вопрос 2/10\n{bar}\n\nВозраст: {age} — верно?",
         "uz": "2/10-savol\n{bar}\n\nYoshi: {age} — to'g'rimi?",
     },
     "q2_height": {
-        "ru": "Вопрос 2/10\n{bar}\n\nРост в см (например: 175):",
-        "uz": "2/10-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
+        "ru": "🎂📏 Вопрос 2/10\n{bar}\n\nРост в см (например: 175):",
+        "uz": "🎂📏 2/10-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
     },
     "q3_photo": {
         "ru": (
-            "Вопрос 3/10\n{bar}\n\n"
-            "📸 Фото\n\n"
+            "🖼 Вопрос 3/10\n{bar}\n\n"
+            "Фото\n\n"
             "💡 Анкеты с фото получают\n"
             "в 3 раза больше просмотров!\n\n"
             "Как хотите разместить фото?"
         ),
         "uz": (
-            "3/10-savol\n{bar}\n\n"
-            "📸 Fotosurat\n\n"
+            "🖼 3/10-savol\n{bar}\n\n"
+            "Fotosurat\n\n"
             "💡 Fotoli anketalar 3 marta\n"
             "ko'proq e'tibor tortadi!\n\n"
             "Qanday joylashtirasiz?"
         ),
     },
     "q4_body_type": {
-        "ru": "Вопрос 4/10\n{bar}\n\nТелосложение:",
-        "uz": "4/10-savol\n{bar}\n\nTana tuzilishi:",
+        "ru": "⚡ Вопрос 4/10\n{bar}\n\nТелосложение:",
+        "uz": "⚡ 4/10-savol\n{bar}\n\nTana tuzilishi:",
     },
     "q5_nationality": {
-        "ru": "Вопрос 5/10\n{bar}\n\nНациональность:",
-        "uz": "5/10-savol\n{bar}\n\nMillati:",
+        "ru": "🌍 Вопрос 5/10\n{bar}\n\nНациональность:",
+        "uz": "🌍 5/10-savol\n{bar}\n\nMillati:",
     },
     "q6_city": {
-        "ru": "Вопрос 6/10\n{bar}\n\nГород проживания:",
-        "uz": "6/10-savol\n{bar}\n\nYashash shahri:",
+        "ru": "🏡 Вопрос 6/10\n{bar}\n\nГород проживания:",
+        "uz": "🏡 6/10-savol\n{bar}\n\nYashash shahri:",
     },
     "q7_education": {
         "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
         "uz": "7/10-savol\n{bar}\n\nMa'lumoti:",
     },
     "q8_occupation": {
-        "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
-        "uz": "8/10-savol\n{bar}\n\nBandligi:",
+        "ru": "💼 Вопрос 8/10\n{bar}\n\nЗанятость:",
+        "uz": "💼 8/10-savol\n{bar}\n\nBandligi:",
     },
     "q8_occupation_detail": {
         "ru": "Вопрос 8/10\n{bar}\n\nГде и кем работает:",
@@ -288,8 +288,8 @@ T = {
         "uz": "4/10-savol\n{bar}\n\nTana tuzilishi:",
     },
     "q5": {
-        "ru": "Вопрос 7/10\n{bar}\n\nОбразование:",
-        "uz": "7/10-savol\n{bar}\n\nMa'lumoti:",
+        "ru": "🎓 Вопрос 7/10\n{bar}\n\nОбразование:",
+        "uz": "🎓 7/10-savol\n{bar}\n\nMa'lumoti:",
     },
     "q5_university": {
         "ru": "Укажите название вуза и курс:",
@@ -348,8 +348,8 @@ T = {
         "uz": "🗺 <b>12-savol</b>\n\nOila kelib chiqqan hudud:",
     },
     "q12": {
-        "ru": "Вопрос 5/10\n{bar}\n\nНациональность:",
-        "uz": "5/10-savol\n{bar}\n\nMillati:",
+        "ru": "🌍 Вопрос 5/10\n{bar}\n\nНациональность:",
+        "uz": "🌍 5/10-savol\n{bar}\n\nMillati:",
     },
     "q13": {
         "ru": "👨 <b>Вопрос 14</b>\n\nОтец — чем занимается:",
@@ -372,12 +372,12 @@ T = {
         "uz": "Oiladagi o'rni:",
     },
     "q16": {
-        "ru": "Вопрос 9/10\n{bar}\n\nРелигиозность:",
-        "uz": "9/10-savol\n{bar}\n\nDindorligi:",
+        "ru": "🕌 Вопрос 9/10\n{bar}\n\nРелигиозность:",
+        "uz": "🕌 9/10-savol\n{bar}\n\nDindorligi:",
     },
     "q_marital_status": {
-        "ru": "Вопрос 10/10\n{bar}\n\nСемейное положение:",
-        "uz": "10/10-savol\n{bar}\n\nOilaviy holati:",
+        "ru": "💍 Вопрос 10/10\n{bar}\n\nСемейное положение:",
+        "uz": "💍 10/10-savol\n{bar}\n\nOilaviy holati:",
     },
     "q_children": {
         "ru": "Есть ли дети?",
@@ -675,7 +675,7 @@ T = {
     # ── Step 9: Moderator ──
     "mod_new_profile": {
         "ru": (
-            "🆕 <b>НОВАЯ АНКЕТА НА ПРОВЕРКУ</b>\n\n"
+            "💁‍♀️ <b>НОВАЯ АНКЕТА НА ПРОВЕРКУ</b>\n\n"
             "🔖 {display_id}\n"
             "{icon} {name} · {age}\n"
             "📍 {city}, {district}\n"
@@ -684,7 +684,7 @@ T = {
             "📸 Фото: {photo}"
         ),
         "uz": (
-            "🆕 <b>YANGI ANKETA TEKSHIRUVGA</b>\n\n"
+            "💁‍♀️ <b>YANGI ANKETA TEKSHIRUVGA</b>\n\n"
             "🔖 {display_id}\n"
             "{icon} {name} · {age}\n"
             "📍 {city}, {district}\n"
@@ -1030,7 +1030,7 @@ T = {
     },
 
     # ── Common buttons ──
-    "btn_back": {"ru": "← Назад", "uz": "← Orqaga"},
+    "btn_back": {"ru": "🔙 Назад", "uz": "🔙 Orqaga"},
     "btn_skip": {"ru": "⏭ Пропустить", "uz": "⏭ O'tkazib yuborish"},
     "btn_yes": {"ru": "✅ Да, верно", "uz": "✅ Ha, to'g'ri"},
     "btn_fix": {"ru": "✏️ Исправить", "uz": "✏️ Tuzatish"},

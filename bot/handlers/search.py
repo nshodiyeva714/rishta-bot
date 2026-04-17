@@ -1239,13 +1239,13 @@ async def contact_via_mod(callback: CallbackQuery, session: AsyncSession):
     if lang == "uz":
         text = (
             f"📋 Anketa: <b>{display_id}</b>\n\n"
-            f"💬 Moderatorni tanlang:"
+            f"💁‍♀️ Moderatorni tanlang:"
         )
         start_text = f"Anketa {display_id} bo'yicha bog'lanmoqchiman"
     else:
         text = (
             f"📋 Анкета: <b>{display_id}</b>\n\n"
-            f"💬 Выберите модератора:"
+            f"💁‍♀️ Выберите модератора:"
         )
         start_text = f"Хочу узнать контакт анкеты {display_id}"
 
@@ -1288,22 +1288,22 @@ async def contact_via_pay(callback: CallbackQuery, session: AsyncSession, state:
     if lang == "uz":
         text = (
             f"💳 <b>To'lov</b>\n\n"
-            f"Anketa: <b>{display_id}</b>\n"
-            f"Summa: <b>30 000 so'm</b>\n\n"
-            f"Kartaga o'tkazing:\n"
-            f"<code>5614 6887 0899 8959</code>\n"
-            f"SHODIYEVA NASIBA\n\n"
-            f"To'lovdan so'ng skrinshot yuboring 👇"
+            f"🔖 {display_id}\n"
+            f"💰 Summa: <b>30 000 so'm</b>\n\n"
+            f"Rekvizitlar:\n"
+            f"💳 <code>5614 6887 0899 8959</code>\n"
+            f"👤 SHODIYEVA NASIBA\n\n"
+            f"📸 To'lovdan so'ng skrinshot yuboring"
         )
     else:
         text = (
             f"💳 <b>Оплата контакта</b>\n\n"
-            f"Анкета: <b>{display_id}</b>\n"
-            f"Сумма: <b>30 000 сум</b>\n\n"
-            f"Переведите на карту:\n"
-            f"<code>5614 6887 0899 8959</code>\n"
-            f"SHODIYEVA NASIBA\n\n"
-            f"После оплаты отправьте скриншот сюда 👇"
+            f"🔖 {display_id}\n"
+            f"💰 Сумма: <b>30 000 сум</b>\n\n"
+            f"Реквизиты для перевода:\n"
+            f"💳 <code>5614 6887 0899 8959</code>\n"
+            f"👤 SHODIYEVA NASIBA\n\n"
+            f"📸 Отправьте скриншот после оплаты"
         )
 
     buttons = [

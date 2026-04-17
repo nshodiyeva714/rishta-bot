@@ -374,10 +374,10 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
             "✨ <b>Anketani boyiting</b>\n\n"
             "Qo'shimcha ma'lumotlar qo'shing —\n"
             "va anketangiz boshqalardan ajralib turadi:\n\n"
-            "🏠 Turar joy va avtomobil\n"
-            "👨‍👩‍👧 Oila haqida (ota, ona, aka-ukalar)\n"
-            "✨ Xarakter va qiziqishlar\n"
-            "🔮 Kelajak rejalari\n\n"
+            "👨‍👩‍👧 Oila haqida\n"
+            "🌸 Xarakter va qiziqishlar\n"
+            "🏡 Turar joy va avtomobil\n"
+            "📞 Kontaktlar\n\n"
             "Taxminan 2 daqiqa vaqt oladi 🕐"
         )
     else:
@@ -385,10 +385,10 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
             "✨ <b>Сделайте анкету ярче</b>\n\n"
             "Добавьте детали — и ваша анкета\n"
             "будет выделяться среди остальных:\n\n"
-            "🏠 Жильё и автомобиль\n"
-            "👨‍👩‍👧 О семье (отец, мать, братья)\n"
-            "✨ Характер и увлечения\n"
-            "🔮 Планы на будущее\n\n"
+            "👨‍👩‍👧 О семье\n"
+            "🌸 Характер и увлечения\n"
+            "🏡 Жильё и автомобиль\n"
+            "📞 Контакты\n\n"
             "Займёт около 2 минут 🕐"
         )
 

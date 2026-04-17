@@ -248,9 +248,9 @@ async def ext_start(callback: CallbackQuery, state: FSMContext):
     bar = ext_progress_bar(1)
 
     if lang == "uz":
-        q_text = f"1/9\n{bar}\n\n👨 Otasi — nima bilan shug'ullanadi:"
+        q_text = f"👨‍💼 1/9-savol\n{bar}\n\nOtasi — nima bilan shug'ullanadi:"
     else:
-        q_text = f"Вопрос 1/9\n{bar}\n\n👨 Отец — чем занимается:"
+        q_text = f"👨‍💼 Вопрос 1/9\n{bar}\n\nОтец — чем занимается:"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(callback, state, full_text, reply_markup=back_kb(lang))
@@ -275,9 +275,9 @@ async def ext_father(message: Message, state: FSMContext):
     bar = ext_progress_bar(2)
 
     if lang == "uz":
-        q_text = f"2/9\n{bar}\n\n👩 Onasi — nima bilan shug'ullanadi:"
+        q_text = f"👩‍💼 2/9-savol\n{bar}\n\nOnasi — nima bilan shug'ullanadi:"
     else:
-        q_text = f"Вопрос 2/9\n{bar}\n\n👩 Мать — чем занимается:"
+        q_text = f"👩‍💼 Вопрос 2/9\n{bar}\n\nМать — чем занимается:"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(message, state, full_text, reply_markup=back_kb(lang))
@@ -341,9 +341,9 @@ async def ext_mother(message: Message, state: FSMContext):
     bar = ext_progress_bar(3)
 
     if lang == "uz":
-        q_text = f"3/9\n{bar}\n\n👨‍👩‍👧 Aka-uka va opa-singillar:"
+        q_text = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
     else:
-        q_text = f"Вопрос 3/9\n{bar}\n\n👨‍👩‍👧 Братья и сёстры:"
+        q_text = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(message, state, full_text, reply_markup=_brothers_kb(lang))
@@ -372,9 +372,9 @@ async def ext_sisters(callback: CallbackQuery, state: FSMContext):
     bar = ext_progress_bar(3)
 
     if lang == "uz":
-        q_text = f"3/9\n{bar}\n\nOiladagi o'rni:"
+        q_text = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nOiladagi o'rni:"
     else:
-        q_text = f"Вопрос 3/9\n{bar}\n\nМесто в семье:"
+        q_text = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nМесто в семье:"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(callback, state, full_text, reply_markup=_position_kb(lang))
@@ -392,9 +392,9 @@ async def ext_position(callback: CallbackQuery, state: FSMContext):
     bar = ext_progress_bar(4)
 
     if lang == "uz":
-        q_text = f"4/9\n{bar}\n\n✨ Xarakter va qiziqishlar\n(ixtiyoriy):"
+        q_text = f"🌸 4/9-savol\n{bar}\n\nXarakter va qiziqishlar\n(ixtiyoriy):"
     else:
-        q_text = f"Вопрос 4/9\n{bar}\n\n✨ Характер и увлечения\n(необязательно):"
+        q_text = f"🌸 Вопрос 4/9\n{bar}\n\nХарактер и увлечения\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(callback, state, full_text, reply_markup=skip_kb(lang))
@@ -413,9 +413,9 @@ async def _ask_health(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(5)
 
     if lang == "uz":
-        q_text = f"5/9\n{bar}\n\n❤️ Sog'lig'ining xususiyatlari\n(ixtiyoriy):"
+        q_text = f"🌿 5/9-savol\n{bar}\n\nSog'lig'ining xususiyatlari\n(ixtiyoriy):"
     else:
-        q_text = f"Вопрос 5/9\n{bar}\n\n❤️ Особенности здоровья\n(необязательно):"
+        q_text = f"🌿 Вопрос 5/9\n{bar}\n\nОсобенности здоровья\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
@@ -446,9 +446,9 @@ async def _ask_about(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(6)
 
     if lang == "uz":
-        q_text = f"6/9\n{bar}\n\n💬 O'zingiz va kutganlaringiz haqida\n(ixtiyoriy):"
+        q_text = f"💭 6/9-savol\n{bar}\n\nO'zingiz va kutganlaringiz haqida\n(ixtiyoriy):"
     else:
-        q_text = f"Вопрос 6/9\n{bar}\n\n💬 О себе и ожиданиях\n(необязательно):"
+        q_text = f"💭 Вопрос 6/9\n{bar}\n\nО себе и ожиданиях\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
@@ -479,7 +479,7 @@ async def _ask_housing(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(7)
 
     if lang == "uz":
-        q_text = f"7/9\n{bar}\n\n🏠 Turar joy:"
+        q_text = f"🏡 7/9-savol\n{bar}\n\nTurar joy:"
         opts = [
             ("O'z uyi", "housing:own_house"),
             ("O'z kvartirasi", "housing:own_apt"),
@@ -487,7 +487,7 @@ async def _ask_housing(m_or_cb, state: FSMContext):
             ("Ijara", "housing:rent"),
         ]
     else:
-        q_text = f"Вопрос 7/9\n{bar}\n\n🏠 Жильё:"
+        q_text = f"🏡 Вопрос 7/9\n{bar}\n\nЖильё:"
         opts = [
             ("Свой дом", "housing:own_house"),
             ("Своя квартира", "housing:own_apt"),
@@ -562,14 +562,14 @@ async def _ask_car(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(8)
 
     if lang == "uz":
-        q_text = f"8/9\n{bar}\n\n🚗 Avtomobil:"
+        q_text = f"🚘 8/9-savol\n{bar}\n\nAvtomobil:"
         opts = [
             ("Shaxsiy", "car:own"),
             ("Oilaviy", "car:family"),
             ("Yo'q", "car:no"),
         ]
     else:
-        q_text = f"Вопрос 8/9\n{bar}\n\n🚗 Автомобиль:"
+        q_text = f"🚘 Вопрос 8/9\n{bar}\n\nАвтомобиль:"
         opts = [
             ("Личный", "car:own"),
             ("Семейный", "car:family"),
@@ -631,8 +631,8 @@ async def _ask_parent_phone(m_or_cb, state: FSMContext):
 
     if lang == "uz":
         body = (
-            f"9/9\n{bar}\n\n"
-            f"📞 <b>Kontaktlar</b>\n\n"
+            f"📞 9/9-savol\n{bar}\n\n"
+            f"<b>Kontaktlar</b>\n\n"
             f"{_CONTACT_NOTICE_UZ}\n\n"
             f"Ota-onalar telefoni:\n"
             f"Prefiks bilan yoki usiz kiriting:\n"
@@ -641,8 +641,8 @@ async def _ask_parent_phone(m_or_cb, state: FSMContext):
         )
     else:
         body = (
-            f"Вопрос 9/9\n{bar}\n\n"
-            f"📞 <b>Контактные данные</b>\n\n"
+            f"📞 Вопрос 9/9\n{bar}\n\n"
+            f"<b>Контактные данные</b>\n\n"
             f"{_CONTACT_NOTICE_RU}\n\n"
             f"Телефон родителей:\n"
             f"Можно с префиксом или без:\n"

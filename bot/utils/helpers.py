@@ -306,7 +306,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
             compat += f"3️⃣ {profile.five_year_plans}\n"
 
     lang_badge = "🇺🇿 UZ" if L == "uz" else "🇷🇺 RU"
-    header = "Yangi anketa tekshiruvga" if L == "uz" else "Новая анкета на проверку"
+    header = "💁‍♀️ Yangi anketa tekshiruvga" if L == "uz" else "💁‍♀️ Новая анкета на проверку"
     not_specified = "ko'rsatilmagan" if L == "uz" else "не указано"
     addr_empty = "ko'rsatilmagan" if L == "uz" else "не указан"
 

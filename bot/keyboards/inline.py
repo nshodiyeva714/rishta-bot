@@ -865,13 +865,13 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
     is_uz = lang == "uz"
 
     all_filters = [
-        ("age",         "Yosh" if is_uz else "Возраст",              "filter:age"),
-        ("religion",    "Dindorlik" if is_uz else "Религиозность",   "filter:religion"),
-        ("education",   "Ma'lumot" if is_uz else "Образование",      "filter:education"),
-        ("residence",   "Yashash joyi" if is_uz else "Где проживает","filter:residence"),
-        ("nationality", "Millat" if is_uz else "Национальность",     "filter:nationality"),
-        ("marital",     "Oilaviy holat" if is_uz else "Семейное положение", "filter:marital"),
-        ("children",    "Farzandlar" if is_uz else "Наличие детей",  "filter:children"),
+        ("age",         "🎂 " + ("Yosh" if is_uz else "Возраст"),              "filter:age"),
+        ("religion",    "🕌 " + ("Dindorlik" if is_uz else "Религиозность"),   "filter:religion"),
+        ("education",   "🎓 " + ("Ma'lumot" if is_uz else "Образование"),      "filter:education"),
+        ("residence",   "🏡 " + ("Yashash joyi" if is_uz else "Где проживает"),"filter:residence"),
+        ("nationality", "🌍 " + ("Millat" if is_uz else "Национальность"),     "filter:nationality"),
+        ("marital",     "💍 " + ("Oilaviy holat" if is_uz else "Семейное положение"), "filter:marital"),
+        ("children",    "👶 " + ("Farzandlar" if is_uz else "Наличие детей"),  "filter:children"),
     ]
 
     age_selected = "age" in filters or "age_from" in filters or "age_to" in filters
