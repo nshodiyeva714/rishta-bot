@@ -1731,18 +1731,25 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
 
     display_id = profile.display_id or "—"
 
+    # Уникальный номер запроса
+    req_number = f"ЗАП-{datetime.datetime.now().strftime('%d%m%H%M%S')}"
+
     # Регистрируем запрос в БД
     try:
         cr = ContactRequest(
             requester_user_id=callback.from_user.id,
             target_profile_id=profile_id,
             status=RequestStatus.PENDING,
+            display_id=req_number,
         )
         session.add(cr)
         profile.requests_count = (profile.requests_count or 0) + 1
         await session.commit()
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+
+    # Сохраняем номер в state для возможного последующего доступа
+    await state.update_data(contact_req_number=req_number)
 
     # Полная карточка для модератора
     age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
@@ -1753,7 +1760,7 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
 
     username = callback.from_user.username or "—"
     mod_text = (
-        f"💌 <b>НОВЫЙ ЗАПРОС КОНТАКТА</b>\n\n"
+        f"💌 <b>ЗАПРОС #{req_number}</b>\n\n"
         f"КТО ИЩЕТ:\n"
         f"👤 @{username}\n"
         f"ID: <code>{callback.from_user.id}</code>\n\n"
@@ -1766,11 +1773,11 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
     mod_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="💬 Написать пользователю",
-            callback_data=f"mod_write:{callback.from_user.id}:{profile_id}",
+            callback_data=f"mod_write:{callback.from_user.id}:{profile_id}:{req_number}",
         )],
         [InlineKeyboardButton(
             text="❌ Отклонить запрос",
-            callback_data=f"mod_reject_req:{callback.from_user.id}:{profile_id}",
+            callback_data=f"mod_reject_req:{callback.from_user.id}:{profile_id}:{req_number}",
         )],
     ])
 
@@ -1785,7 +1792,8 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
     # Ответ пользователю
     if lang == "uz":
         text = (
-            f"🔖 <b>{display_id}</b>\n\n"
+            f"🔖 <b>{display_id}</b>\n"
+            f"📋 So'rov: <b>#{req_number}</b>\n\n"
             f"✅ So'rovingiz qabul qilindi!\n\n"
             f"Operatorimiz tez orada\n"
             f"siz bilan bog'lanadi. 🤝\n\n"
@@ -1793,7 +1801,8 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
         )
     else:
         text = (
-            f"🔖 <b>{display_id}</b>\n\n"
+            f"🔖 <b>{display_id}</b>\n"
+            f"📋 Запрос: <b>#{req_number}</b>\n\n"
             f"✅ Запрос принят!\n\n"
             f"Оператор свяжется с вами\n"
             f"в ближайшее время. 🤝\n\n"
@@ -1814,11 +1823,19 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
 @router.callback_query(F.data.startswith("send_screenshot:"))
 async def send_screenshot_start(callback: CallbackQuery, state: FSMContext):
     """Пользователь жмёт «📸 Отправить скриншот» — ждём фото."""
-    profile_id = int(callback.data.split(":")[1])
-    await state.update_data(screenshot_profile_id=profile_id)
+    parts = callback.data.split(":")
+    profile_id = int(parts[1])
+    req_number = parts[2] if len(parts) > 2 else "—"
+    await state.update_data(
+        screenshot_profile_id=profile_id,
+        screenshot_req_number=req_number,
+    )
     await state.set_state(ContactStates.waiting_screenshot)
     try:
-        await callback.message.edit_text("📸 Отправьте скриншот оплаты:")
+        await callback.message.edit_text(
+            f"📸 Отправьте скриншот оплаты\n📋 Запрос: <b>#{req_number}</b>",
+            parse_mode="HTML",
+        )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     await callback.answer()
@@ -1830,6 +1847,7 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
     from bot.config import get_all_moderator_ids
     data = await state.get_data()
     profile_id = data.get("screenshot_profile_id")
+    req_number = data.get("screenshot_req_number") or "—"
     profile = await session.get(Profile, profile_id) if profile_id else None
     display_id = (profile.display_id if profile else "—") or "—"
 
@@ -1839,6 +1857,7 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
 
     mod_caption = (
         f"📸 <b>СКРИНШОТ ОПЛАТЫ</b>\n\n"
+        f"📋 Запрос: <b>#{req_number}</b>\n"
         f"От: @{username}\n"
         f"ID: <code>{user_id}</code>\n"
         f"Анкета: <b>{display_id}</b>"
@@ -1846,11 +1865,11 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
     mod_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="✅ Оплата получена — передать контакт",
-            callback_data=f"confirm_payment:{user_id}:{profile_id}",
+            callback_data=f"confirm_payment:{user_id}:{profile_id}:{req_number}",
         )],
         [InlineKeyboardButton(
             text="❌ Оплата не подтверждена",
-            callback_data=f"reject_payment:{user_id}:{profile_id}",
+            callback_data=f"reject_payment:{user_id}:{profile_id}:{req_number}",
         )],
     ])
 
@@ -1863,10 +1882,12 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
             logger.debug("ignored: %s", _e)
 
     await message.answer(
-        "✅ Скриншот получен!\n\n"
-        "Оператор проверит оплату\n"
-        "и передаст контакт. 🤝\n\n"
-        "Обычно в течение 1-2 часов."
+        f"✅ Скриншот получен!\n"
+        f"📋 Запрос: <b>#{req_number}</b>\n\n"
+        f"Оператор проверит оплату\n"
+        f"и передаст контакт. 🤝\n\n"
+        f"Обычно в течение 1-2 часов.",
+        parse_mode="HTML",
     )
     await state.set_state(None)
 
@@ -1874,11 +1895,19 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
 @router.callback_query(F.data.startswith("ask_operator:"))
 async def ask_operator_start(callback: CallbackQuery, state: FSMContext):
     """Пользователь жмёт «💬 Задать вопрос» — ждём текст."""
-    profile_id = int(callback.data.split(":")[1])
-    await state.update_data(question_profile_id=profile_id)
+    parts = callback.data.split(":")
+    profile_id = int(parts[1])
+    req_number = parts[2] if len(parts) > 2 else "—"
+    await state.update_data(
+        question_profile_id=profile_id,
+        question_req_number=req_number,
+    )
     await state.set_state(ContactStates.waiting_question)
     try:
-        await callback.message.edit_text("💬 Напишите ваш вопрос оператору:")
+        await callback.message.edit_text(
+            f"💬 Напишите ваш вопрос оператору\n📋 Запрос: <b>#{req_number}</b>",
+            parse_mode="HTML",
+        )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     await callback.answer()
@@ -1890,6 +1919,7 @@ async def send_question_to_operator(message: Message, session: AsyncSession, sta
     from bot.config import get_all_moderator_ids
     data = await state.get_data()
     profile_id = data.get("question_profile_id")
+    req_number = data.get("question_req_number") or "—"
     profile = await session.get(Profile, profile_id) if profile_id else None
     display_id = (profile.display_id if profile else "—") or "—"
 
@@ -1898,6 +1928,7 @@ async def send_question_to_operator(message: Message, session: AsyncSession, sta
 
     q_text = (
         f"💬 <b>Вопрос от пользователя</b>\n\n"
+        f"📋 Запрос: <b>#{req_number}</b>\n"
         f"От: @{username} (ID: <code>{user_id}</code>)\n"
         f"Анкета: {display_id}\n\n"
         f"❓ {message.text}"

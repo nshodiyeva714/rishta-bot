@@ -53,6 +53,12 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
+        try:
+            await conn.execute(text(
+                "ALTER TABLE contact_requests ADD COLUMN IF NOT EXISTS display_id VARCHAR(20)"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей

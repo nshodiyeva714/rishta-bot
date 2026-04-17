@@ -1408,6 +1408,7 @@ async def mod_write_user(callback: CallbackQuery, session: AsyncSession, bot: Bo
     except (ValueError, IndexError):
         await callback.answer("❌")
         return
+    req_number = parts[3] if len(parts) > 3 else "—"
 
     profile = await session.get(Profile, profile_id)
     display_id = (profile.display_id if profile else "—") or "—"
@@ -1415,18 +1416,19 @@ async def mod_write_user(callback: CallbackQuery, session: AsyncSession, bot: Bo
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="📸 Отправить скриншот",
-            callback_data=f"send_screenshot:{profile_id}",
+            callback_data=f"send_screenshot:{profile_id}:{req_number}",
         )],
         [InlineKeyboardButton(
             text="💬 Задать вопрос оператору",
-            callback_data=f"ask_operator:{profile_id}",
+            callback_data=f"ask_operator:{profile_id}:{req_number}",
         )],
     ])
 
     payment_text = (
         f"💁‍♀️ <b>Сообщение от оператора:</b>\n\n"
-        f"Здравствуйте! Для получения\n"
-        f"контакта анкеты <b>{display_id}</b>\n"
+        f"📋 Запрос: <b>#{req_number}</b>\n"
+        f"🔖 Анкета: <b>{display_id}</b>\n\n"
+        f"Для получения контакта\n"
         f"переведите <b>{CONTACT_PRICE:,} сум</b>:\n\n"
         f"💳 <code>{CARD_NUMBER_TXT}</code>\n"
         f"👤 {CARD_OWNER_TXT}\n\n"
@@ -1469,14 +1471,16 @@ async def mod_reject_request(callback: CallbackQuery, session: AsyncSession, bot
     except (ValueError, IndexError):
         await callback.answer("❌")
         return
+    req_number = parts[3] if len(parts) > 3 else "—"
 
     try:
         await bot.send_message(
             user_id,
-            "❌ К сожалению, ваш запрос\n"
-            "отклонён оператором.\n\n"
-            "Попробуйте найти другого\n"
-            "кандидата. 🤲",
+            f"❌ К сожалению, ваш запрос\n"
+            f"📋 <b>#{req_number}</b> отклонён оператором.\n\n"
+            f"Попробуйте найти другого\n"
+            f"кандидата. 🤲",
+            parse_mode="HTML",
         )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
@@ -1499,7 +1503,7 @@ async def mod_reject_request(callback: CallbackQuery, session: AsyncSession, bot
         logger.debug("ignored: %s", _e)
     try:
         await callback.message.edit_text(
-            (callback.message.text or "") + "\n\n❌ Запрос отклонён",
+            (callback.message.text or "") + f"\n\n❌ Запрос #{req_number} отклонён",
             parse_mode="HTML",
         )
     except Exception as _e:
@@ -1521,6 +1525,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     except (ValueError, IndexError):
         await callback.answer("❌")
         return
+    req_number = parts[3] if len(parts) > 3 else "—"
 
     profile = await session.get(Profile, profile_id)
     if not profile:
@@ -1554,6 +1559,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     if req_lang == "uz":
         user_msg = (
             f"✅ <b>Kontakt yuborildi!</b>\n\n"
+            f"📋 So'rov: <b>#{req_number}</b>\n"
             f"🔖 {display_id}\n"
             f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
             f"<b>Oila kontaktlari:</b>\n"
@@ -1563,6 +1569,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     else:
         user_msg = (
             f"✅ <b>Контакт получен!</b>\n\n"
+            f"📋 Запрос: <b>#{req_number}</b>\n"
             f"🔖 {display_id}\n"
             f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
             f"<b>Контакты семьи:</b>\n"
@@ -1599,15 +1606,14 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         except Exception as _e:
             logger.debug("ignored: %s", _e)
 
-    # Обновить статус запроса
+    # Обновить статус запроса — только этот конкретный по display_id
     try:
         from sqlalchemy import update
         from bot.db.models import ContactRequest, RequestStatus
         await session.execute(
             update(ContactRequest)
             .where(
-                ContactRequest.requester_user_id == user_id,
-                ContactRequest.target_profile_id == profile_id,
+                ContactRequest.display_id == req_number,
                 ContactRequest.status == RequestStatus.PENDING,
             )
             .values(status=RequestStatus.CONTACT_GIVEN)
@@ -1618,7 +1624,12 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
 
     # Пометить карточку модератора
     try:
-        mark = "\n\n✅ КОНТАКТ ПЕРЕДАН"
+        mark = (
+            f"\n\n✅ <b>КОНТАКТ ПЕРЕДАН</b>\n"
+            f"📋 Запрос: #{req_number}\n"
+            f"👤 ID: <code>{user_id}</code>\n"
+            f"🔖 {display_id}"
+        )
         if callback.message.caption is not None:
             await callback.message.edit_caption(
                 caption=(callback.message.caption or "") + mark,
@@ -1647,25 +1658,45 @@ async def reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bo
     except (ValueError, IndexError):
         await callback.answer("❌")
         return
+    req_number = parts[3] if len(parts) > 3 else "—"
 
     try:
         await bot.send_message(
             user_id,
-            "❌ Оплата не подтверждена.\n\n"
-            "Свяжитесь с оператором для уточнения\n"
-            "или попробуйте ещё раз. 🤲",
+            f"❌ Оплата по запросу <b>#{req_number}</b>\nне подтверждена.\n\n"
+            f"Свяжитесь с оператором для уточнения\n"
+            f"или попробуйте ещё раз. 🤲",
+            parse_mode="HTML",
         )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+
+    # Обновить статус запроса
     try:
+        from sqlalchemy import update
+        from bot.db.models import ContactRequest, RequestStatus
+        if req_number != "—":
+            await session.execute(
+                update(ContactRequest)
+                .where(
+                    ContactRequest.display_id == req_number,
+                    ContactRequest.status == RequestStatus.PENDING,
+                )
+                .values(status=RequestStatus.REJECTED)
+            )
+            await session.commit()
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    try:
+        mark = f"\n\n❌ Оплата #{req_number} не подтверждена"
         if callback.message.caption is not None:
             await callback.message.edit_caption(
-                caption=(callback.message.caption or "") + "\n\n❌ Оплата не подтверждена",
+                caption=(callback.message.caption or "") + mark,
                 parse_mode="HTML",
             )
         else:
             await callback.message.edit_text(
-                (callback.message.text or "") + "\n\n❌ Оплата не подтверждена",
+                (callback.message.text or "") + mark,
             )
     except Exception as _e:
         logger.debug("ignored: %s", _e)

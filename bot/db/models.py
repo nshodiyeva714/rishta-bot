@@ -331,6 +331,7 @@ class ContactRequest(Base):
     requester_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     target_profile_id = Column(Integer, ForeignKey("profiles.id"), nullable=False)
     status = Column(Enum(RequestStatus), default=RequestStatus.PENDING)
+    display_id = Column(String(20), nullable=True)  # ЗАП-DDMMHHMMSS
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
