@@ -862,16 +862,43 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
         except Exception:
             await callback.message.answer(header)
 
+    # Навигационные кнопки (собираем заранее — будут прикреплены к последней карточке)
+    nav_buttons = []
+    if offset + PROFILES_PER_PAGE < total:
+        remaining = total - offset - PROFILES_PER_PAGE
+        nav_buttons.append([InlineKeyboardButton(
+            text=f"➡️ {'Keyingi 3' if lang == 'uz' else 'Следующие 3'} "
+                 f"({'qoldi' if lang == 'uz' else 'осталось'}: {remaining})",
+            callback_data="search:next",
+        )])
+    if offset > 0:
+        nav_buttons.append([InlineKeyboardButton(
+            text=f"⬅️ {'Oldingi' if lang == 'uz' else 'Предыдущие'}",
+            callback_data="search:prev",
+        )])
+    nav_buttons.append([InlineKeyboardButton(
+        text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
+        callback_data="search:manual",
+    )])
+    nav_buttons.extend(nav_kb(lang, "back:menu"))
+
     # Показываем карточки + уведомляем владельцев
     bot = callback.bot
-    for p, score in page_profiles:
+    last_idx = len(page_profiles) - 1
+    for i, (p, score) in enumerate(page_profiles):
         p.views_count = (p.views_count or 0) + 1
         card_text = format_anketa_public(p, score, lang)
+
+        # На последней карточке — прикрепляем навигацию сразу под кнопками карточки
+        if i == last_idx:
+            card_kb = profile_card_kb(p.id, lang, p.display_id or "")
+            combined_rows = list(card_kb.inline_keyboard) + nav_buttons
+            kb = InlineKeyboardMarkup(inline_keyboard=combined_rows)
+        else:
+            kb = profile_card_kb(p.id, lang, p.display_id or "")
+
         try:
-            await callback.message.answer(
-                card_text,
-                reply_markup=profile_card_kb(p.id, lang, p.display_id or ""),
-            )
+            await callback.message.answer(card_text, reply_markup=kb)
         except Exception as e:
             logger.error(f"Ошибка отправки карточки {p.id}: {e}")
         # Уведомление владельца о просмотре
@@ -881,34 +908,6 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
             pass
 
     await session.commit()
-
-    # Навигация
-    nav_buttons = []
-
-    if offset + PROFILES_PER_PAGE < total:
-        remaining = total - offset - PROFILES_PER_PAGE
-        nav_buttons.append([InlineKeyboardButton(
-            text=f"➡️ {'Keyingi 3' if lang == 'uz' else 'Следующие 3'} "
-                 f"({'qoldi' if lang == 'uz' else 'осталось'}: {remaining})",
-            callback_data="search:next",
-        )])
-
-    if offset > 0:
-        nav_buttons.append([InlineKeyboardButton(
-            text=f"⬅️ {'Oldingi' if lang == 'uz' else 'Предыдущие'}",
-            callback_data="search:prev",
-        )])
-
-    nav_buttons.append([InlineKeyboardButton(
-        text="🔧 " + ("Filtrlarni o'zgartirish" if lang == "uz" else "Изменить фильтры"),
-        callback_data="search:manual",
-    )])
-    nav_buttons.extend(nav_kb(lang, "back:menu"))
-
-    await callback.message.answer(
-        "─────────────────",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_buttons),
-    )
     await callback.answer()
 
 
