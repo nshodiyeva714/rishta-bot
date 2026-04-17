@@ -812,18 +812,10 @@ async def filter_go(callback: CallbackQuery, session: AsyncSession, state: FSMCo
     lang = await get_lang(session, callback.from_user.id)
     data = await state.get_data()
 
-    # Проверяем search_type через falsy-check (ловит None, "", отсутствие ключа)
-    search_type = data.get("search_type")
-    if not search_type:
+    # Убедимся что search_type установлен
+    if "search_type" not in data:
         my_profile = await _get_user_profile(session, callback.from_user.id)
-        if my_profile:
-            search_type = (
-                ProfileType.DAUGHTER.value
-                if my_profile.profile_type == ProfileType.SON
-                else ProfileType.SON.value
-            )
-        else:
-            search_type = "daughter"
+        search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
         await state.update_data(search_type=search_type)
 
     await state.update_data(search_offset=0)
