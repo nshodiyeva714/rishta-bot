@@ -1297,6 +1297,27 @@ async def _show_search_results(
 
     await _safe_show_card(callback, full_text, kb)
 
+    # Ритм: каждые 5 анкет — мотивирующая фраза
+    if idx > 0 and idx % 5 == 0:
+        import random
+        if lang == "uz":
+            phrases = [
+                "🔥 Hozir qiziqarliroqlari keladi!",
+                "💎 Maxsus siz uchun tanlab oldik",
+                "✨ Yanada yaxshilari oldinda!",
+            ]
+        else:
+            phrases = [
+                "🔥 Сейчас пойдут интереснее!",
+                "💎 Специально подобрали для вас",
+                "✨ Впереди ещё лучше!",
+            ]
+        try:
+            await callback.message.answer(random.choice(phrases))
+            await asyncio.sleep(0.5)
+        except Exception:
+            pass
+
     # Счётчик просмотров + уведомление владельцу
     profile.views_count = (profile.views_count or 0) + 1
     try:
