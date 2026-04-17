@@ -208,7 +208,7 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
             f"🗂 <b>Mening anketam</b>\n\n"
             f"🔖 #{display_id}\n"
             f"Holat: {status_label}  {vip_label}\n\n"
-            f"👁 Ko'rishlar: <b>{views}</b>\n"
+            f"👁 Ko'rishlar soni: <b>{views}</b>\n"
             f"❤️ Tanlanganlar: <b>{fav_count}</b>\n"
             f"💬 Kontakt so'rovlari: <b>{req_count}</b>"
         )
