@@ -840,7 +840,7 @@ async def search_browse_compat(callback: CallbackQuery, session: AsyncSession, s
 #  ИЗМЕНЕНИЕ 5 — Показ результатов с пагинацией
 # ══════════════════════════════════════════════════════════
 
-async def _build_search_query(session: AsyncSession, user_id: int, search_type: str, filters: dict):
+async def _build_search_query(session: AsyncSession, user_id: int, search_type: str, filters: dict, is_guest: bool = False):
     """Построить query с фильтрами, вернуть (profiles, user_req)."""
     target_type = ProfileType.SON if search_type == "son" else ProfileType.DAUGHTER
 
@@ -853,8 +853,11 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         # is_active: True или NULL (старые записи) — исключаем только явное False
         _or_active(Profile.is_active.is_(True), Profile.is_active.is_(None)),
         Profile.profile_type == target_type,
-        Profile.user_id != user_id,
     ]
+    # Исключаем собственные анкеты только если пользователь НЕ гость
+    # (в гостевом режиме модератор/тестер может иметь свои анкеты — не прячем их)
+    if not is_guest:
+        conditions.append(Profile.user_id != user_id)
 
     # Фильтр: возраст — поддержка кнопок-диапазонов И старого формата age_from/age_to
     import datetime
@@ -981,9 +984,10 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     filters = data.get("search_filters", {})
     offset = data.get("search_offset", 0)
     search_type = data.get("search_type", "daughter")
+    is_guest = data.get("is_guest", False)
     user_id = callback.from_user.id
 
-    profiles, user_req = await _build_search_query(session, user_id, search_type, filters)
+    profiles, user_req = await _build_search_query(session, user_id, search_type, filters, is_guest=is_guest)
 
     total = len(profiles)
 
