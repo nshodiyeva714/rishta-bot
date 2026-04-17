@@ -155,6 +155,15 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     if phone:
         lines.append(f"📞 {phone}")
 
+    # Telegram родителей и кандидата
+    parent_tg = data.get("parent_telegram")
+    if parent_tg:
+        lines.append(f"📱 {parent_tg}")
+
+    candidate_tg = data.get("candidate_telegram")
+    if candidate_tg:
+        lines.append(f"💬 {candidate_tg}")
+
     if not lines:
         return ""
 
@@ -806,9 +815,23 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
     choice = callback.data.replace("addr:", "")
     lang = await _lang(state)
 
+    # skip → сразу финальный экран (там своё редактирование)
+    if choice == "skip":
+        await _show_ext_complete(callback, state)
+        await callback.answer()
+        return
+
+    # Удаляем текущее окно с выбором адреса
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await state.update_data(last_bot_msg_id=None)
+
     if choice == "text":
         text = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
-        await _show_question(callback, state, text, reply_markup=skip_kb(lang))
+        sent = await callback.message.answer(text, reply_markup=skip_kb(lang))
+        await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_address_text)
     elif choice == "geo":
         geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
@@ -817,16 +840,14 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
             keyboard=[[KeyboardButton(text=geo_label, request_location=True)]],
             resize_keyboard=True, one_time_keyboard=True,
         )
-        # Reply-клавиатура требует нового сообщения (edit_text не поддерживает reply-кб)
         sent = await callback.message.answer(title, reply_markup=kb)
         await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_location)
     elif choice == "link":
         text = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
-        await _show_question(callback, state, text, reply_markup=skip_kb(lang))
+        sent = await callback.message.answer(text, reply_markup=skip_kb(lang))
+        await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_address_link)
-    elif choice == "skip":
-        await _show_ext_complete(callback, state)
 
     await callback.answer()
 
