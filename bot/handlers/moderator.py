@@ -727,6 +727,14 @@ async def db_check(message: Message, session: AsyncSession):
         LIMIT 30
     """)
 
+    # Шаг 5 — Samarkand debug (в т.ч. проверка поля country)
+    await run_step("🔍 Samarkand debug (id|city|code|country|status|active):", """
+        SELECT id, city, city_code, country, status, is_active
+        FROM profiles
+        WHERE city_code = 'samarkand'
+           OR country = 'samarkand'
+    """)
+
     await message.answer("✅ /dbcheck завершён")
 
 

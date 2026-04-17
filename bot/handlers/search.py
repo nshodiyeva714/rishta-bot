@@ -970,6 +970,11 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     # Фильтр: регион / страна — по city_code/country или ILIKE по city/family_region
     if filters.get("region"):
         region_val = filters["region"]
+        # DEBUG (временно): логируем region-фильтр
+        logger.warning(
+            f"REGION FILTER: value={region_val} "
+            f"residence={filters.get('residence')}"
+        )
         from sqlalchemy import or_
 
         # Коды зарубежных стран и «Европа», «Другая»
