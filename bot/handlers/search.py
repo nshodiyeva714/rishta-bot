@@ -804,6 +804,23 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     if my_profile:
         user_req = await _get_user_requirement(session, my_profile.id)
 
+    # ── DEBUG (временно) ──
+    logger.warning(
+        f"SEARCH DEBUG: "
+        f"search_type={search_type} "
+        f"target_type={target_type} "
+        f"total_found={len(profiles)} "
+        f"filters={filters} "
+        f"user_id={user_id}"
+    )
+    try:
+        all_q = await session.execute(
+            select(sa_func.count()).select_from(Profile).where(Profile.profile_type == target_type)
+        )
+        logger.warning(f"TOTAL IN DB for {target_type}: {all_q.scalar()}")
+    except Exception as e:
+        logger.warning(f"TOTAL IN DB error: {e}")
+
     return profiles, user_req
 
 
