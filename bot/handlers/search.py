@@ -1305,7 +1305,10 @@ async def _show_search_results(
         pass
 
     await session.commit()
-    await callback.answer()
+    try:
+        await callback.answer()
+    except Exception:
+        pass
 
 
 # ── Навигация: вперёд / назад / рестарт ──
@@ -1313,6 +1316,7 @@ async def _show_search_results(
 @router.callback_query(F.data.startswith("search_nav:"))
 async def search_nav(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Двусторонняя навигация по снимку search_results."""
+    import random
     lang = await get_lang(session, callback.from_user.id)
     direction = callback.data.split(":", 1)[1]  # "prev" | "next"
 
@@ -1341,6 +1345,25 @@ async def search_nav(callback: CallbackQuery, session: AsyncSession, state: FSMC
             )
             return
         idx += 1
+        # Микро-реакция «Следующая»
+        if lang == "uz":
+            phrases = [
+                "Qidiramiz... 🔍",
+                "Keyingisi! 👉",
+                "Mos kelmadi — bo'ladi 😊",
+                "Qidirishda davom etamiz 🚀",
+            ]
+        else:
+            phrases = [
+                "Ищем дальше... 🔍",
+                "Следующая! 👉",
+                "Не подошло — бывает 😊",
+                "Продолжаем поиск 🚀",
+            ]
+        try:
+            await callback.answer(random.choice(phrases), show_alert=False)
+        except Exception:
+            pass
 
     await state.update_data(current_index=idx, search_offset=idx)
     await _show_search_results(callback, session, state, lang)
@@ -1358,6 +1381,7 @@ async def search_restart(callback: CallbackQuery, session: AsyncSession, state: 
 # Back-compat: старый callback «Следующая ➡️»
 @router.callback_query(F.data == "search:next_one")
 async def search_next_one_legacy(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    import random
     lang = await get_lang(session, callback.from_user.id)
     data = await state.get_data()
     ids: list[int] = data.get("search_results") or []
@@ -1368,6 +1392,24 @@ async def search_next_one_legacy(callback: CallbackQuery, session: AsyncSession,
             show_alert=False,
         )
         return
+    if lang == "uz":
+        phrases = [
+            "Qidiramiz... 🔍",
+            "Keyingisi! 👉",
+            "Mos kelmadi — bo'ladi 😊",
+            "Qidirishda davom etamiz 🚀",
+        ]
+    else:
+        phrases = [
+            "Ищем дальше... 🔍",
+            "Следующая! 👉",
+            "Не подошло — бывает 😊",
+            "Продолжаем поиск 🚀",
+        ]
+    try:
+        await callback.answer(random.choice(phrases), show_alert=False)
+    except Exception:
+        pass
     await state.update_data(current_index=idx + 1, search_offset=idx + 1)
     await _show_search_results(callback, session, state, lang)
 
@@ -1426,15 +1468,17 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession, state: FS
     else:
         if lang == "uz":
             phrases = [
-                "❤️ Saqlandi! Yaxshi tanlov 😊",
+                "❤️ Yaxshi tanlov! 😉",
                 "❤️ Ajoyib! Saqlandi 👌",
-                "❤️ Zo'r tanlov!",
+                "❤️ Saqlandi! Ko'ramiz 😊",
+                "❤️ Did bor! 🌟",
             ]
         else:
             phrases = [
-                "❤️ Сохранено! Хороший выбор 😊",
-                "❤️ Отлично! Сохранено 👌",
-                "❤️ Хороший выбор!",
+                "❤️ Хороший вкус! 😉",
+                "❤️ Отличный выбор 👌",
+                "❤️ Сохранено! Посмотрим 😊",
+                "❤️ Есть вкус! 🌟",
             ]
         toast = random.choice(phrases)
     await callback.answer(toast, show_alert=False)
@@ -1468,7 +1512,8 @@ async def remove_favorite(callback: CallbackQuery, session: AsyncSession):
     if fav:
         await session.delete(fav)
         await session.commit()
-        await callback.answer("💔 " + ("Tanlanganlardan o'chirildi" if lang == "uz" else "Удалено из избранного"))
+        text = "💔 Tanlanganlardan o'chirildi" if lang == "uz" else "💔 Удалено из избранного"
+        await callback.answer(text, show_alert=False)
     else:
         await callback.answer("—")
 
