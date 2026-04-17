@@ -184,6 +184,10 @@ async def ext_start(callback: CallbackQuery, state: FSMContext):
 @router.message(QuestionnaireStates.ext_father)
 async def ext_father(message: Message, state: FSMContext):
     await state.update_data(father_occupation=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     lang = await _lang(state)
     data = await state.get_data()
     bar = ext_progress_bar(2)
@@ -246,6 +250,10 @@ def _position_kb(lang: str) -> InlineKeyboardMarkup:
 @router.message(QuestionnaireStates.ext_mother)
 async def ext_mother(message: Message, state: FSMContext):
     await state.update_data(mother_occupation=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     lang = await _lang(state)
     data = await state.get_data()
     bar = ext_progress_bar(3)
@@ -338,6 +346,10 @@ async def _ask_health(m_or_cb, state: FSMContext):
 @router.message(QuestionnaireStates.ext_character)
 async def ext_character(message: Message, state: FSMContext):
     await state.update_data(character_hobbies=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _ask_health(message, state)
 
 
@@ -370,6 +382,10 @@ async def _ask_about(m_or_cb, state: FSMContext):
 @router.message(QuestionnaireStates.ext_health)
 async def ext_health(message: Message, state: FSMContext):
     await state.update_data(health_notes=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _ask_about(message, state)
 
 
@@ -417,6 +433,10 @@ async def _ask_housing(m_or_cb, state: FSMContext):
 @router.message(QuestionnaireStates.ext_ideal_family)
 async def ext_about(message: Message, state: FSMContext):
     await state.update_data(ideal_family_life=message.text.strip())
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _ask_housing(message, state)
 
 
