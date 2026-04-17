@@ -10,7 +10,10 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus, Favorite, ProfileType
+from bot.db.models import (
+    Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus,
+    Favorite, ProfileType, ContactRequest, RequestStatus,
+)
 from bot.states import ModeratorReplyStates, ModeratorEditStates
 from bot.texts import t
 from bot.config import config, is_moderator
@@ -1702,3 +1705,205 @@ async def reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bo
         logger.debug("ignored: %s", _e)
     await callback.answer("❌ Отклонено")
 
+
+
+# ══════════════════════════════════════════════════════════
+#  /requests — активные запросы контакта с навигацией
+# ══════════════════════════════════════════════════════════
+
+async def _active_requests(session: AsyncSession) -> list:
+    """Все запросы в статусе PENDING, новые сверху."""
+    res = await session.execute(
+        select(ContactRequest)
+        .where(ContactRequest.status == RequestStatus.PENDING)
+        .order_by(ContactRequest.created_at.desc())
+    )
+    return res.scalars().all()
+
+
+async def _render_requests_list(target_message: Message, session: AsyncSession, *, edit: bool = False):
+    """Отрисовать список активных запросов — в новое сообщение или edit_text."""
+    requests = await _active_requests(session)
+    if not requests:
+        text = "📋 Активных запросов нет."
+        try:
+            if edit:
+                await target_message.edit_text(text)
+            else:
+                await target_message.answer(text)
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+        return
+
+    text = f"📋 <b>Активные запросы ({len(requests)}):</b>"
+    buttons: list[list[InlineKeyboardButton]] = []
+    for req in requests:
+        profile = await session.get(Profile, req.target_profile_id)
+        user = await session.get(User, req.requester_user_id)
+        p_name = profile.name if profile else "—"
+        username = (
+            f"@{user.username}" if user and user.username
+            else f"ID:{req.requester_user_id}"
+        )
+        req_id = req.display_id or f"ЗАП-{req.id}"
+        # Кнопка чуть меньше 64 байт UTF-8: имя коротко обрезаем если надо
+        label = f"📋 #{req_id} · {username} · {p_name}"
+        if len(label.encode("utf-8")) > 60:
+            label = label[:55] + "…"
+        buttons.append([InlineKeyboardButton(
+            text=label, callback_data=f"view_req:{req.id}:0",
+        )])
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+    try:
+        if edit:
+            await target_message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        else:
+            await target_message.answer(text, reply_markup=kb, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+
+
+@router.message(Command("requests"))
+async def cmd_requests(message: Message, session: AsyncSession):
+    """Список активных запросов контакта."""
+    if not is_moderator(message.from_user.id):
+        return
+    await _render_requests_list(message, session, edit=False)
+
+
+@router.callback_query(F.data == "requests:list")
+async def requests_list_back(callback: CallbackQuery, session: AsyncSession):
+    """Вернуться к списку из детального вида."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    await _render_requests_list(callback.message, session, edit=True)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("view_req:"))
+async def view_request(callback: CallbackQuery, session: AsyncSession):
+    """Детальный вид запроса + навигация prev/next."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+
+    parts = callback.data.split(":")
+    try:
+        req_id = int(parts[1])
+        index = int(parts[2]) if len(parts) > 2 else 0
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    requests = await _active_requests(session)
+    total = len(requests)
+    if total == 0:
+        try:
+            await callback.message.edit_text("📋 Активных запросов нет.")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+        await callback.answer()
+        return
+
+    # Ищем запрос по id — индекс в актуальном списке
+    current_index = None
+    req = None
+    for i, r in enumerate(requests):
+        if r.id == req_id:
+            req = r
+            current_index = i
+            break
+    # fallback: если запрос уже обработан и исчез из PENDING — берём по индексу
+    if req is None:
+        current_index = max(0, min(index, total - 1))
+        req = requests[current_index]
+
+    profile = await session.get(Profile, req.target_profile_id)
+    user = await session.get(User, req.requester_user_id)
+    username = (
+        f"@{user.username}" if user and user.username
+        else f"ID:{req.requester_user_id}"
+    )
+    req_number = req.display_id or f"ЗАП-{req.id}"
+
+    # Статус
+    status_raw = req.status.value if hasattr(req.status, "value") else req.status
+    status_map = {
+        "pending": "⏳ Ожидает обработки",
+        "talking": "💬 В диалоге",
+        "contact_given": "✅ Контакт передан",
+        "rejected": "❌ Отклонён",
+    }
+    status = status_map.get(status_raw, status_raw or "—")
+
+    # Профиль: аккуратно извлекаем значения
+    import datetime
+    if profile:
+        age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
+        p_display = profile.display_id or "—"
+        p_name = profile.name or "—"
+        p_city = profile.city or "—"
+        p_edu = profile.education.value if profile.education else "—"
+        p_rel = profile.religiosity.value if profile.religiosity else "—"
+        p_mar = profile.marital_status.value if profile.marital_status else "—"
+        p_occ = profile.occupation or "—"
+    else:
+        age, p_display, p_name, p_city, p_edu, p_rel, p_mar, p_occ = ("?",) + ("—",) * 7
+
+    text = (
+        f"📋 <b>ЗАПРОС #{req_number}</b>\n"
+        f"{current_index + 1} из {total}\n\n"
+        f"КТО ИЩЕТ:\n"
+        f"👤 {username}\n"
+        f"ID: <code>{req.requester_user_id}</code>\n\n"
+        f"НА КОГО:\n"
+        f"🔖 {p_display}\n"
+        f"🪪 {p_name} · {age} · {p_city}\n"
+        f"🎓 {p_edu} · 💼 {p_occ}\n"
+        f"🕌 {p_rel} · 💍 {p_mar}\n\n"
+        f"Статус: {status}"
+    )
+
+    buttons: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(
+            text="💬 Написать пользователю",
+            callback_data=f"mod_write:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
+        )],
+        [InlineKeyboardButton(
+            text="❌ Отклонить",
+            callback_data=f"mod_reject_req:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
+        )],
+    ]
+
+    # Навигация
+    nav: list[InlineKeyboardButton] = []
+    if current_index > 0:
+        prev_req = requests[current_index - 1]
+        nav.append(InlineKeyboardButton(
+            text="⬅️ Предыдущий",
+            callback_data=f"view_req:{prev_req.id}:{current_index - 1}",
+        ))
+    if current_index < total - 1:
+        next_req = requests[current_index + 1]
+        nav.append(InlineKeyboardButton(
+            text="➡️ Следующий",
+            callback_data=f"view_req:{next_req.id}:{current_index + 1}",
+        ))
+    if nav:
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton(
+        text="🔙 К списку",
+        callback_data="requests:list",
+    )])
+
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            parse_mode="HTML",
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()

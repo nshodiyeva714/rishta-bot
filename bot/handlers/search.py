@@ -1795,9 +1795,8 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
             f"🔖 <b>{display_id}</b>\n"
             f"📋 So'rov: <b>#{req_number}</b>\n\n"
             f"✅ So'rovingiz qabul qilindi!\n\n"
-            f"Operatorimiz tez orada\n"
-            f"siz bilan bog'lanadi. 🤝\n\n"
-            f"Odatda 1-2 soat ichida."
+            f"Operator tez orada\n"
+            f"siz bilan bog'lanadi. 🤝"
         )
     else:
         text = (
@@ -1805,8 +1804,7 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
             f"📋 Запрос: <b>#{req_number}</b>\n\n"
             f"✅ Запрос принят!\n\n"
             f"Оператор свяжется с вами\n"
-            f"в ближайшее время. 🤝\n\n"
-            f"Обычно в течение 1-2 часов."
+            f"в ближайшее время. 🤝"
         )
 
     try:
@@ -1885,8 +1883,7 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
         f"✅ Скриншот получен!\n"
         f"📋 Запрос: <b>#{req_number}</b>\n\n"
         f"Оператор проверит оплату\n"
-        f"и передаст контакт. 🤝\n\n"
-        f"Обычно в течение 1-2 часов.",
+        f"и передаст контакт. 🤝",
         parse_mode="HTML",
     )
     await state.set_state(None)

@@ -69,10 +69,11 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
 
     # Команды для модераторов (расширенные)
     mod_commands = [
-        BotCommand(command="start",  description="Главное меню"),
-        BotCommand(command="ankety", description="Анкеты на проверке"),
-        BotCommand(command="find",   description="Найти анкету по номеру"),
-        BotCommand(command="stats",  description="Статистика"),
+        BotCommand(command="start",    description="Главное меню"),
+        BotCommand(command="ankety",   description="Анкеты на проверке"),
+        BotCommand(command="requests", description="Активные запросы контакта"),
+        BotCommand(command="find",     description="Найти анкету по номеру"),
+        BotCommand(command="stats",    description="Статистика"),
     ]
     from bot.config import get_all_moderator_ids
     for mod_id in get_all_moderator_ids():
