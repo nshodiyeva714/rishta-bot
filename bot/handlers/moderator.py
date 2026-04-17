@@ -711,6 +711,33 @@ async def db_check(message: Message, session: AsyncSession):
                     f"active={row[4]}"
                 )
 
+        # Симуляция поиска «невеста в Самарканде»
+        result3 = await session.execute(text("""
+            SELECT id, city, city_code,
+                   profile_type, status, is_active
+            FROM profiles
+            WHERE status = 'published'
+              AND is_active != false
+              AND profile_type = 'daughter'
+              AND (
+                  city_code = 'samarkand'
+                  OR city ILIKE '%samar%'
+                  OR city ILIKE '%самар%'
+              )
+        """))
+        rows3 = result3.fetchall()
+
+        lines.append("\n🔍 <b>Поиск невесты в Самарканде:</b>")
+        if not rows3:
+            lines.append("• (нет результатов)")
+        else:
+            for row in rows3:
+                lines.append(
+                    f"• id={row[0]} city={row[1]} "
+                    f"code={row[2]} type={row[3]} "
+                    f"status={row[4]} active={row[5]}"
+                )
+
         await message.answer(
             "\n".join(lines), parse_mode="HTML"
         )
