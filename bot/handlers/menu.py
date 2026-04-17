@@ -3,7 +3,7 @@
 import logging
 import re
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from bot.db.models import (
     User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite,
     ProfileType, MaritalStatus, ChildrenStatus, PhotoType,
 )
-from bot.utils.helpers import format_full_anketa
+from bot.utils.helpers import format_full_anketa, format_anketa_public
 from bot.states import ModeratorContactStates, FeedbackSuggestionStates, EditProfileStates
 from bot.texts import t
 from bot.keyboards.inline import (
@@ -134,9 +134,32 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
     await callback.answer()
 
 
-@router.callback_query(F.data == "menu:my")
+@router.callback_query(F.data.in_({"menu:my", "my:main"}))
+async def my_main(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Хаб «Мои заявки»: выбор между анкетой и избранным."""
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    if lang == "uz":
+        text = "🗂 <b>Mening arizalarim:</b>"
+        buttons = [
+            [InlineKeyboardButton(text="📋 Mening anketam", callback_data="my:profile")],
+            [InlineKeyboardButton(text="❤️ Sevimli anketalar", callback_data="my:favorites")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="menu:main")],
+        ]
+    else:
+        text = "🗂 <b>Мои заявки:</b>"
+        buttons = [
+            [InlineKeyboardButton(text="📋 Моя анкета", callback_data="my:profile")],
+            [InlineKeyboardButton(text="❤️ Избранные анкеты", callback_data="my:favorites")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="menu:main")],
+        ]
+    await _safe_edit(callback, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "my:profile")
 async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 4 — Мои заявки: статистика + полная анкета + управление."""
+    """Шаг 4 — Моя анкета: статистика + полная анкета + управление."""
     await state.clear()
     lang = await get_lang(session, callback.from_user.id)
     user_id = callback.from_user.id
@@ -233,6 +256,72 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
 
     is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
     await _safe_edit(callback, full_text, reply_markup=my_profile_kb(profile.id, lang, is_active))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "my:favorites")
+async def my_favorites(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Показать список анкет, добавленных в избранное."""
+    user_id = callback.from_user.id
+    lang = await get_lang(session, user_id)
+
+    result = await session.execute(
+        select(Profile)
+        .join(Favorite, Favorite.profile_id == Profile.id)
+        .where(Favorite.user_id == user_id)
+        .order_by(Favorite.created_at.desc())
+    )
+    favorites = list(result.scalars().all())
+
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="🔙 Orqaga" if lang == "uz" else "🔙 Назад",
+            callback_data="my:main",
+        )
+    ]])
+
+    if not favorites:
+        if lang == "uz":
+            text = "❤️ Sevimli anketalar yo'q.\n\nQidirishda ❤️ bosing!"
+        else:
+            text = "❤️ Избранных анкет нет.\n\nПри поиске нажмите ❤️!"
+        await _safe_edit(callback, text, reply_markup=back_kb)
+        await callback.answer()
+        return
+
+    if lang == "uz":
+        header = f"❤️ <b>Sevimli anketalar ({len(favorites)}):</b>"
+    else:
+        header = f"❤️ <b>Избранные анкеты ({len(favorites)}):</b>"
+    await _safe_edit(callback, header)
+
+    for p in favorites:
+        try:
+            card_text = format_anketa_public(p, 0, lang)
+        except Exception as e:
+            logger.error(f"favorites: format error for profile {p.id}: {e}")
+            continue
+        if lang == "uz":
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💌 Kontaktni olish", callback_data=f"get_contact:{p.id}")],
+                [InlineKeyboardButton(text="🗑 Sevimlilardan o'chirish", callback_data=f"unfav:{p.id}")],
+            ])
+        else:
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💌 Узнать контакт", callback_data=f"get_contact:{p.id}")],
+                [InlineKeyboardButton(text="🗑 Удалить из избранного", callback_data=f"unfav:{p.id}")],
+            ])
+        try:
+            await callback.message.answer(card_text, reply_markup=kb)
+        except Exception as e:
+            logger.error(f"favorites: send error for profile {p.id}: {e}")
+
+    # Кнопка «Назад» в конце списка
+    if lang == "uz":
+        tail = "─" * 20
+    else:
+        tail = "─" * 20
+    await callback.message.answer(tail, reply_markup=back_kb)
     await callback.answer()
 
 
