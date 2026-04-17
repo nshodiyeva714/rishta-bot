@@ -16,3 +16,4 @@ build/
 *.sqlite3
 alembic/versions/__pycache__/
 .venv/
+.claude/
