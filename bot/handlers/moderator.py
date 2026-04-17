@@ -652,3 +652,44 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
         reply_markup=mod_vip_duration_kb(profile.id),
     )
     await callback.answer()
+
+
+# ══════════════════════════════════════════════════════
+# /dbcheck — диагностика состояния таблицы profiles (только для модераторов)
+# ══════════════════════════════════════════════════════
+
+@router.message(Command("dbcheck"))
+async def db_check(message: Message, session: AsyncSession):
+    from bot.config import get_all_moderator_ids
+    if message.from_user.id not in get_all_moderator_ids():
+        return
+
+    from sqlalchemy import text
+    try:
+        result = await session.execute(text("""
+            SELECT
+                profile_type,
+                status,
+                is_active,
+                COUNT(*) as cnt
+            FROM profiles
+            GROUP BY profile_type, status, is_active
+            ORDER BY cnt DESC
+        """))
+        rows = result.fetchall()
+
+        if not rows:
+            await message.answer("❌ Таблица profiles пустая!")
+            return
+
+        lines = ["📊 <b>Состояние БД:</b>\n"]
+        for row in rows:
+            lines.append(
+                f"• {row[0]} | {row[1]} | "
+                f"active={row[2]} | cnt={row[3]}"
+            )
+        await message.answer(
+            "\n".join(lines), parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
