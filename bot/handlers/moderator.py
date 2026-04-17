@@ -1754,24 +1754,51 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
             logger.debug("ignored: %s", _e)
         return
 
+    # ── DEBUG: построение кнопок ───────────────────────────
+    logger.warning(f"RENDER: building buttons for {len(requests)} requests")
+
     text = f"📋 <b>Активные запросы ({len(requests)}):</b>"
     buttons: list[list[InlineKeyboardButton]] = []
-    for req in requests:
-        profile = await session.get(Profile, req.target_profile_id)
-        user = await session.get(User, req.requester_user_id)
-        p_name = profile.name if profile else "—"
-        username = (
-            f"@{user.username}" if user and user.username
-            else f"ID:{req.requester_user_id}"
-        )
-        req_id = req.display_id or f"ЗАП-{req.id}"
-        # Кнопка чуть меньше 64 байт UTF-8: имя коротко обрезаем если надо
-        label = f"📋 #{req_id} · {username} · {p_name}"
-        if len(label.encode("utf-8")) > 60:
-            label = label[:55] + "…"
-        buttons.append([InlineKeyboardButton(
-            text=label, callback_data=f"view_req:{req.id}:0",
-        )])
+    for i, req in enumerate(requests):
+        try:
+            profile = await session.get(Profile, req.target_profile_id)
+            user = await session.get(User, req.requester_user_id)
+            p_name = profile.name if profile else "—"
+            username = (
+                f"@{user.username}" if user and user.username
+                else f"ID:{req.requester_user_id}"
+            )
+            req_id = req.display_id or f"ЗАП-{req.id}"
+            logger.warning(f"RENDER: req {i} → {req_id} from {username} → {p_name}")
+            label = f"📋 #{req_id} · {username} · {p_name}"
+            if len(label.encode("utf-8")) > 60:
+                label = label[:55] + "…"
+            buttons.append([InlineKeyboardButton(
+                text=label, callback_data=f"view_req:{req.id}:0",
+            )])
+        except Exception as e:
+            logger.error(f"RENDER: req {i} error: {e}", exc_info=True)
+            continue
+
+    logger.warning(f"RENDER: buttons built: {len(buttons)}")
+
+    # Отправить debug-счётчик пользователю
+    if hasattr(target_message, "answer"):
+        try:
+            await target_message.answer(f"DEBUG: buttons={len(buttons)}")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+
+    if not buttons:
+        try:
+            if edit:
+                await target_message.edit_text("📋 Активных запросов нет.")
+            else:
+                await target_message.answer("📋 Активных запросов нет.")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+        return
+
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
     try:
         if edit:
