@@ -660,114 +660,71 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
 
 @router.message(Command("dbcheck"))
 async def db_check(message: Message, session: AsyncSession):
-    # Временно: открыт всем для диагностики
+    """Пошаговая диагностика БД — каждый блок отправляется отдельно,
+    чтобы было видно на каком запросе происходит падение."""
     await message.answer(f"🛠 /dbcheck запущен от id={message.from_user.id}")
 
     from sqlalchemy import text
-    try:
-        result = await session.execute(text("""
-            SELECT
-                profile_type,
-                status,
-                is_active,
-                COUNT(*) as cnt
-            FROM profiles
-            GROUP BY profile_type, status, is_active
-            ORDER BY cnt DESC
-        """))
-        rows = result.fetchall()
+    import traceback
 
-        if not rows:
-            await message.answer("❌ Таблица profiles пустая!")
-            return
-
-        lines = ["📊 <b>Состояние БД:</b>\n"]
-        for row in rows:
-            lines.append(
-                f"• {row[0]} | {row[1]} | "
-                f"active={row[2]} | cnt={row[3]}"
-            )
-
-        # Дополнительный запрос — анкеты, относящиеся к Самарканду
-        result2 = await session.execute(text("""
-            SELECT id, city, city_code, status, is_active
-            FROM profiles
-            WHERE city ILIKE '%samar%'
-               OR city ILIKE '%самар%'
-               OR city_code = 'samarkand'
-            ORDER BY id
-        """))
-        rows2 = result2.fetchall()
-
-        lines.append("\n🏙 <b>Самарканд в БД:</b>")
-        if not rows2:
-            lines.append("• (нет записей)")
-        else:
-            for row in rows2:
-                lines.append(
-                    f"• id={row[0]} city={row[1]} "
-                    f"code={row[2]} status={row[3]} "
-                    f"active={row[4]}"
-                )
-
-        # Симуляция поиска «невеста в Самарканде»
-        result3 = await session.execute(text("""
-            SELECT id, city, city_code,
-                   profile_type, status, is_active
-            FROM profiles
-            WHERE status = 'published'
-              AND is_active != false
-              AND profile_type = 'daughter'
-              AND (
-                  city_code = 'samarkand'
-                  OR city ILIKE '%samar%'
-                  OR city ILIKE '%самар%'
-              )
-        """))
-        rows3 = result3.fetchall()
-
-        lines.append("\n🔍 <b>Поиск невесты в Самарканде:</b>")
-        if not rows3:
-            lines.append("• (нет результатов)")
-        else:
-            for row in rows3:
-                lines.append(
-                    f"• id={row[0]} city={row[1]} "
-                    f"code={row[2]} type={row[3]} "
-                    f"status={row[4]} active={row[5]}"
-                )
-
-        # Дамп всех профилей — основные поля
-        result4 = await session.execute(text("""
-            SELECT id, user_id, profile_type, status, is_active,
-                   city, city_code, display_id
-            FROM profiles
-            ORDER BY id DESC
-            LIMIT 30
-        """))
-        rows4 = result4.fetchall()
-        lines.append("\n📋 <b>Все анкеты (последние 30):</b>")
-        if not rows4:
-            lines.append("• (пусто)")
-        else:
-            for row in rows4:
-                lines.append(
-                    f"• id={row[0]} user={row[1]} type={row[2]} "
-                    f"status={row[3]} active={row[4]} "
-                    f"city={row[5]} code={row[6]} disp={row[7]}"
-                )
-
-        # Telegram ограничение 4096 символов — режем если слишком длинно
-        full_text = "\n".join(lines)
-        if len(full_text) > 4000:
-            full_text = full_text[:4000] + "\n…(обрезано)"
-        await message.answer(full_text, parse_mode="HTML")
-    except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        err_msg = f"❌ Ошибка: {e}\n\n<pre>{tb[:3500]}</pre>"
+    async def run_step(step_name: str, sql: str):
+        """Выполняет SQL и шлёт результат как обычный текст (без HTML)."""
         try:
-            await message.answer(err_msg, parse_mode="HTML")
-        except Exception:
-            # если даже ошибка не проходит — шлём без HTML
-            await message.answer(f"❌ {type(e).__name__}: {e}")
+            result = await session.execute(text(sql))
+            rows = result.fetchall()
+            if not rows:
+                await message.answer(f"{step_name}: (нет данных)")
+                return
+            lines = [step_name]
+            for r in rows:
+                lines.append("• " + " | ".join(str(v) for v in r))
+            full = "\n".join(lines)
+            if len(full) > 4000:
+                full = full[:4000] + "\n…(обрезано)"
+            await message.answer(full)
+        except Exception as e:
+            tb = traceback.format_exc()[:3500]
+            await message.answer(f"❌ {step_name} упал:\n{type(e).__name__}: {e}\n\n{tb}")
+
+    # Шаг 1 — общая сводка
+    await run_step("📊 Состояние БД (type|status|active|cnt):", """
+        SELECT profile_type, status, is_active, COUNT(*) as cnt
+        FROM profiles
+        GROUP BY profile_type, status, is_active
+        ORDER BY cnt DESC
+    """)
+
+    # Шаг 2 — анкеты про Самарканд
+    await run_step("🏙 Самарканд в БД (id|city|code|status|active):", """
+        SELECT id, city, city_code, status, is_active
+        FROM profiles
+        WHERE city ILIKE '%samar%'
+           OR city ILIKE '%самар%'
+           OR city_code = 'samarkand'
+        ORDER BY id
+    """)
+
+    # Шаг 3 — симуляция поиска
+    await run_step("🔍 Симуляция поиска невесты в Самарканде:", """
+        SELECT id, city, city_code, profile_type, status, is_active
+        FROM profiles
+        WHERE status = 'published'
+          AND (is_active IS TRUE OR is_active IS NULL)
+          AND profile_type = 'daughter'
+          AND (
+              city_code = 'samarkand'
+              OR city ILIKE '%samar%'
+              OR city ILIKE '%самар%'
+          )
+    """)
+
+    # Шаг 4 — все анкеты (дамп)
+    await run_step("📋 Все анкеты (последние 30, id|user|type|status|active|city|code|disp):", """
+        SELECT id, user_id, profile_type, status, is_active,
+               city, city_code, display_id
+        FROM profiles
+        ORDER BY id DESC
+        LIMIT 30
+    """)
+
+    await message.answer("✅ /dbcheck завершён")
