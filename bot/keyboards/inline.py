@@ -636,14 +636,20 @@ def req_marital_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def req_children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["👶 Без детей обязательно", "✅ Не важно"],
-        "uz": ["👶 Farzandsiz majburiy", "✅ Muhim emas"],
-    }
-    values = ["no_children", "any"]
+    if lang == "uz":
+        opts = [
+            ("👶 Farzandsiz", "reqchild:no"),
+            ("👶 Farzand bor", "reqchild:yes"),
+            ("✅ Muhim emas", "reqchild:any"),
+        ]
+    else:
+        opts = [
+            ("👶 Без детей", "reqchild:no"),
+            ("👶 Есть дети", "reqchild:yes"),
+            ("✅ Не важно", "reqchild:any"),
+        ]
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"reqchild:{values[i]}")]
-        for i in range(2)
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
 
 
