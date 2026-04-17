@@ -720,18 +720,42 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data == "filter:residence:uzb")
 async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    options = [
-        ("Ташкент" if lang == "ru" else "Toshkent",       "fval:region:tashkent"),
-        ("Самарканд" if lang == "ru" else "Samarqand",     "fval:region:samarkand"),
-        ("Фергана" if lang == "ru" else "Farg'ona",        "fval:region:fergana"),
-        ("Бухара" if lang == "ru" else "Buxoro",           "fval:region:bukhara"),
-        ("Наманган" if lang == "ru" else "Namangan",       "fval:region:namangan"),
-        ("Андижан" if lang == "ru" else "Andijon",         "fval:region:andijan"),
-        ("Нукус" if lang == "ru" else "Nukus",             "fval:region:nukus"),
-        ("Другой город" if lang == "ru" else "Boshqa shahar", "fval:region:other"),
-        ("Не важно" if lang == "ru" else "Muhim emas",     "fval:region:any"),
-    ]
-    title = "Выберите регион:" if lang == "ru" else "Hududni tanlang:"
+    if lang == "uz":
+        options = [
+            ("🏙 Toshkent (shahar)",  "fval:region:tashkent"),
+            ("🌆 Toshkent viloyati",  "fval:region:tashkent_region"),
+            ("🏛 Samarqand",          "fval:region:samarkand"),
+            ("🌸 Farg'ona",           "fval:region:fergana"),
+            ("🌿 Andijon",            "fval:region:andijan"),
+            ("🏔 Namangan",           "fval:region:namangan"),
+            ("🏜 Buxoro",            "fval:region:bukhara"),
+            ("🌾 Qashqadaryo",        "fval:region:kashkadarya"),
+            ("🏕 Surxondaryo",        "fval:region:surkhandarya"),
+            ("🌊 Xorazm",            "fval:region:khorezm"),
+            ("🏝 Qoraqalpog'iston",  "fval:region:karakalpakstan"),
+            ("🌄 Jizzax",            "fval:region:jizzakh"),
+            ("🌻 Sirdaryo",          "fval:region:sirdarya"),
+            ("✅ Muhim emas",        "fval:region:any"),
+        ]
+        title = "🇺🇿 Viloyatni tanlang:"
+    else:
+        options = [
+            ("🏙 Ташкент (город)",     "fval:region:tashkent"),
+            ("🌆 Ташкентская область", "fval:region:tashkent_region"),
+            ("🏛 Самарканд",           "fval:region:samarkand"),
+            ("🌸 Фергана",            "fval:region:fergana"),
+            ("🌿 Андижан",            "fval:region:andijan"),
+            ("🏔 Наманган",           "fval:region:namangan"),
+            ("🏜 Бухара",             "fval:region:bukhara"),
+            ("🌾 Кашкадарья",         "fval:region:kashkadarya"),
+            ("🏕 Сурхандарья",        "fval:region:surkhandarya"),
+            ("🌊 Хорезм",             "fval:region:khorezm"),
+            ("🏝 Каракалпакстан",     "fval:region:karakalpakstan"),
+            ("🌄 Джизак",             "fval:region:jizzakh"),
+            ("🌻 Сырдарья",           "fval:region:sirdarya"),
+            ("✅ Не важно",           "fval:region:any"),
+        ]
+        title = "🇺🇿 Выберите область:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
     await callback.answer()
 
@@ -800,6 +824,13 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
     # Не автовыставляем residence — сам фильтр region уже покрывает UZ-анкеты
     # через city_code/country/NULL. Иначе старые анкеты с residence_status=NULL
     # не пройдут условие Profile.residence_status == UZBEKISTAN.
+    _UZ_REGION_CODES = {
+        "tashkent", "tashkent_region", "samarkand",
+        "fergana", "andijan", "namangan", "bukhara",
+        "kashkadarya", "surkhandarya", "khorezm",
+        "karakalpakstan", "jizzakh", "sirdarya",
+        "nukus", "uz_other", "uzbekistan",
+    }
     if field == "region":
         filters.pop("residence", None)
 
@@ -974,17 +1005,20 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             "usa", "russia", "kazakhstan", "kyrgyzstan",
             "tajikistan", "turkmenistan", "europe",
         }
-        # Коды регионов Узбекистана
+        # Коды 13 областей Узбекистана
         _uz_region_codes = {
-            "tashkent", "samarkand", "fergana", "bukhara",
-            "namangan", "andijan", "nukus",
+            "tashkent", "tashkent_region", "samarkand",
+            "fergana", "andijan", "namangan", "bukhara",
+            "kashkadarya", "surkhandarya", "khorezm",
+            "karakalpakstan", "jizzakh", "sirdarya",
+            "nukus",  # legacy
         }
 
         if region_val == "any":
             pass  # фильтр не применяется
         elif region_val == "uzbekistan":
             # Все узбекистанские анкеты — любой регион Узбекистана или страна UZ
-            uz_codes = list(_uz_region_codes) + ["uz_other", "uzbekistan", "other"]
+            uz_codes = list(_uz_region_codes) + ["uz_other", "uzbekistan"]
             conditions.append(or_(
                 Profile.country == "uzbekistan",
                 Profile.city_code.in_(uz_codes),
@@ -1006,19 +1040,52 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         else:
             # Конкретный регион Узбекистана — ILIKE всеми вариантами написания
             region_map_ru = {
-                "tashkent": "%ташкент%", "samarkand": "%самарканд%",
-                "fergana": "%ферган%", "bukhara": "%бухар%",
-                "namangan": "%наманган%", "andijan": "%андижан%", "nukus": "%нукус%",
+                "tashkent":        "%ташкент%",
+                "tashkent_region": "%ташкентск%",
+                "samarkand":       "%самарканд%",
+                "fergana":         "%ферган%",
+                "andijan":         "%андижан%",
+                "namangan":        "%наманган%",
+                "bukhara":         "%бухар%",
+                "kashkadarya":     "%кашкадарь%",
+                "surkhandarya":    "%сурхандарь%",
+                "khorezm":         "%хорезм%",
+                "karakalpakstan":  "%каракалпак%",
+                "jizzakh":         "%джизак%",
+                "sirdarya":        "%сырдарь%",
+                "nukus":           "%нукус%",
             }
             region_map_uz = {
-                "tashkent": "%toshkent%", "samarkand": "%samarqand%",
-                "fergana": "%farg'ona%", "bukhara": "%buxoro%",
-                "namangan": "%namangan%", "andijan": "%andijon%", "nukus": "%nukus%",
+                "tashkent":        "%toshkent%",
+                "tashkent_region": "%toshkent viloyat%",
+                "samarkand":       "%samarqand%",
+                "fergana":         "%farg'ona%",
+                "andijan":         "%andijon%",
+                "namangan":        "%namangan%",
+                "bukhara":         "%buxoro%",
+                "kashkadarya":     "%qashqadaryo%",
+                "surkhandarya":    "%surxondaryo%",
+                "khorezm":         "%xorazm%",
+                "karakalpakstan":  "%qoraqalpog'%",
+                "jizzakh":         "%jizzax%",
+                "sirdarya":        "%sirdaryo%",
+                "nukus":           "%nukus%",
             }
             region_map_en = {
-                "tashkent": "%tashkent%", "samarkand": "%samarkand%",
-                "fergana": "%fergana%", "bukhara": "%bukhara%",
-                "namangan": "%namangan%", "andijan": "%andijan%", "nukus": "%nukus%",
+                "tashkent":        "%tashkent%",
+                "tashkent_region": "%tashkent region%",
+                "samarkand":       "%samarkand%",
+                "fergana":         "%fergana%",
+                "andijan":         "%andijan%",
+                "namangan":        "%namangan%",
+                "bukhara":         "%bukhara%",
+                "kashkadarya":     "%kashkadarya%",
+                "surkhandarya":    "%surkhandarya%",
+                "khorezm":         "%khorezm%",
+                "karakalpakstan":  "%karakalpak%",
+                "jizzakh":         "%jizzakh%",
+                "sirdarya":        "%sirdarya%",
+                "nukus":           "%nukus%",
             }
             pat_ru = region_map_ru.get(region_val, f"%{region_val}%")
             pat_uz = region_map_uz.get(region_val, f"%{region_val}%")
