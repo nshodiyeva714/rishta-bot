@@ -725,6 +725,55 @@ T = {
         "ru": "🔍 <b>Найти кандидата</b>\n\n⚠️ Для поиска сначала разместите свою анкету.",
         "uz": "🔍 <b>Nomzod qidirish</b>\n\n⚠️ Qidirish uchun avval o'z anketangizni joylashtiring.",
     },
+    "profile_published": {
+        "ru": (
+            "🎉 <b>Анкета опубликована!</b>\n\n"
+            "🔖 #{display_id}\n\n"
+            "Теперь тысячи семей могут\n"
+            "увидеть вашу анкету.\n\n"
+            "Пусть поиск будет успешным! 🤲"
+        ),
+        "uz": (
+            "🎉 <b>Anketa nashr etildi!</b>\n\n"
+            "🔖 #{display_id}\n\n"
+            "Endi minglab oilalar\n"
+            "anketangizni ko'rishi mumkin.\n\n"
+            "Qidiruv muvaffaqiyatli bo'lsin! 🤲"
+        ),
+    },
+    "payment_confirmed": {
+        "ru": (
+            "✅ <b>Оплата подтверждена!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Контакты семьи:\n"
+            "{contacts}\n\n"
+            "Пусть эта встреча станет\n"
+            "началом счастья! 🤲"
+        ),
+        "uz": (
+            "✅ <b>To'lov tasdiqlandi!</b>\n\n"
+            "🔖 {display_id}\n\n"
+            "Oila kontaktlari:\n"
+            "{contacts}\n\n"
+            "Bu uchrashuv baxtning\n"
+            "boshlanishi bo'lsin! 🤲"
+        ),
+    },
+    "screenshot_received": {
+        "ru": (
+            "✅ Скриншот получен!\n\n"
+            "Модератор проверит оплату\n"
+            "и передаст контакт в\n"
+            "ближайшее время. 🤝\n\n"
+            "Обычно в течение 1-2 часов."
+        ),
+        "uz": (
+            "✅ Skrinshot qabul qilindi!\n\n"
+            "Moderator to'lovni tekshirib,\n"
+            "kontaktni yaqin orada yuboradi. 🤝\n\n"
+            "Odatda 1-2 soat ichida."
+        ),
+    },
     "search_found": {
         "ru": "🔍 <b>Найдено анкет: {total}</b>\nПоказаны: {from_}–{to}",
         "uz": "🔍 <b>Jami: {total} ta anketa topildi</b>\nKo'rsatilmoqda: {from_}–{to}",

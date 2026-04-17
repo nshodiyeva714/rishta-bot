@@ -968,8 +968,21 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession):
     session.add(fav)
     await session.commit()
 
-    # Микро-реакция
-    await callback.answer("❤️ " + ("Saqlandi! Yaxshi tanlov 😊" if lang == "uz" else "Сохранено! Хороший выбор 😊"))
+    # Микро-реакция — случайная фраза
+    import random
+    if lang == "uz":
+        phrases = [
+            "❤️ Saqlandi! Yaxshi tanlov 😊",
+            "❤️ Ajoyib! Saqlandi 👌",
+            "❤️ Zo'r tanlov!",
+        ]
+    else:
+        phrases = [
+            "❤️ Сохранено! Хороший выбор 😊",
+            "❤️ Отлично! Сохранено 👌",
+            "❤️ Хороший выбор!",
+        ]
+    await callback.answer(random.choice(phrases))
 
     # Уведомление владельцу
     profile = await session.get(Profile, profile_id)
@@ -978,6 +991,28 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession):
             await _notify_owner_favorite(callback.bot, session, profile, user_id)
         except Exception:
             pass
+
+
+@router.callback_query(F.data.startswith("unfav:"))
+async def remove_favorite(callback: CallbackQuery, session: AsyncSession):
+    """Удалить из избранного."""
+    profile_id = int(callback.data.split(":")[1])
+    user_id = callback.from_user.id
+    lang = await get_lang(session, user_id)
+
+    result = await session.execute(
+        select(Favorite).where(
+            Favorite.user_id == user_id,
+            Favorite.profile_id == profile_id,
+        )
+    )
+    fav = result.scalar_one_or_none()
+    if fav:
+        await session.delete(fav)
+        await session.commit()
+        await callback.answer("💔 " + ("Tanlanganlardan o'chirildi" if lang == "uz" else "Удалено из избранного"))
+    else:
+        await callback.answer("—")
 
 
 @router.callback_query(F.data.startswith("interest:"))
