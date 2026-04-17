@@ -1778,6 +1778,14 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
             )])
         except Exception as e:
             logger.error(f"RENDER: req {i} error: {e}", exc_info=True)
+            # Показать первую ошибку пользователю
+            if i == 0 and hasattr(target_message, "answer"):
+                try:
+                    await target_message.answer(
+                        f"ERROR req {i}: {type(e).__name__}: {e}"
+                    )
+                except Exception as _e:
+                    logger.debug("ignored: %s", _e)
             continue
 
     logger.warning(f"RENDER: buttons built: {len(buttons)}")
