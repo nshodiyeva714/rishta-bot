@@ -728,3 +728,71 @@ async def db_check(message: Message, session: AsyncSession):
     """)
 
     await message.answer("✅ /dbcheck завершён")
+
+
+@router.message(Command("testsearch"))
+async def test_search(message: Message, session: AsyncSession):
+    """Прямой тест: запускает SQLAlchemy-запрос поиска как в _build_search_query."""
+    from sqlalchemy import select, or_
+    from bot.db.models import Profile, ProfileType, ProfileStatus
+    import traceback
+
+    await message.answer(f"🧪 /testsearch от id={message.from_user.id}")
+
+    # Шаг А: без фильтров — все DAUGHTER анкеты
+    try:
+        q1 = select(Profile).where(
+            Profile.status.in_([ProfileStatus.PUBLISHED, ProfileStatus.PENDING]),
+            or_(Profile.is_active.is_(True), Profile.is_active.is_(None)),
+            Profile.profile_type == ProfileType.DAUGHTER,
+        )
+        r1 = await session.execute(q1)
+        profs = r1.scalars().all()
+        lines = [f"📋 DAUGHTER profiles (без фильтра города): {len(profs)}"]
+        for p in profs:
+            lines.append(f"• id={p.id} city={p.city} code={p.city_code} "
+                         f"status={p.status} active={p.is_active}")
+        await message.answer("\n".join(lines))
+    except Exception as e:
+        await message.answer(f"❌ Шаг А упал: {type(e).__name__}: {e}\n\n{traceback.format_exc()[:3000]}")
+
+    # Шаг Б: то же + фильтр samarkand по city_code
+    try:
+        q2 = select(Profile).where(
+            Profile.status.in_([ProfileStatus.PUBLISHED, ProfileStatus.PENDING]),
+            or_(Profile.is_active.is_(True), Profile.is_active.is_(None)),
+            Profile.profile_type == ProfileType.DAUGHTER,
+            Profile.city_code == "samarkand",
+        )
+        r2 = await session.execute(q2)
+        profs2 = r2.scalars().all()
+        lines2 = [f"📋 DAUGHTER + city_code='samarkand': {len(profs2)}"]
+        for p in profs2:
+            lines2.append(f"• id={p.id} city={p.city} code={p.city_code}")
+        await message.answer("\n".join(lines2))
+    except Exception as e:
+        await message.answer(f"❌ Шаг Б упал: {type(e).__name__}: {e}")
+
+    # Шаг В: комбинированный OR как в реальном поиске
+    try:
+        q3 = select(Profile).where(
+            Profile.status.in_([ProfileStatus.PUBLISHED, ProfileStatus.PENDING]),
+            or_(Profile.is_active.is_(True), Profile.is_active.is_(None)),
+            Profile.profile_type == ProfileType.DAUGHTER,
+            or_(
+                Profile.city_code == "samarkand",
+                Profile.city.ilike("%самарканд%"),
+                Profile.city.ilike("%samarqand%"),
+                Profile.city.ilike("%samarkand%"),
+            ),
+        )
+        r3 = await session.execute(q3)
+        profs3 = r3.scalars().all()
+        lines3 = [f"📋 DAUGHTER + комбинированный фильтр Самарканд: {len(profs3)}"]
+        for p in profs3:
+            lines3.append(f"• id={p.id} city={p.city} code={p.city_code}")
+        await message.answer("\n".join(lines3))
+    except Exception as e:
+        await message.answer(f"❌ Шаг В упал: {type(e).__name__}: {e}")
+
+    await message.answer("✅ /testsearch завершён")
