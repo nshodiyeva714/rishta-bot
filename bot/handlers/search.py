@@ -230,11 +230,13 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "higher": "Высшее", "studying": "Студент",
             # Проживание
             "uzbekistan": "Узбекистан", "cis": "СНГ", "usa": "США",
-            "europe": "Европа", "other_country": "Другое", "other": "Другое",
+            "europe": "Европа", "other_country": "Другое",
+            "abroad": "За рубежом",
             # Регионы Узбекистана
             "tashkent": "Ташкент", "samarkand": "Самарканд",
             "fergana": "Фергана", "bukhara": "Бухара",
             "namangan": "Наманган", "andijan": "Андижан", "nukus": "Нукус",
+            "other": "Другой город",
             # Национальность
             "uzbek": "Узбек", "russian": "Русский", "korean": "Кореец",
             "tajik": "Таджик", "kazakh": "Казах",
@@ -246,6 +248,8 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "yes_with_me": "Есть, живут вместе",
             "yes_with_ex": "Есть, живут с бывшим",
             "has_children": "Есть",
+            # Универсальное
+            "any": "Не важно",
         },
         "uz": {
             # Возраст (кнопки)
@@ -258,11 +262,13 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "higher": "Oliy", "studying": "Talaba",
             # Проживание
             "uzbekistan": "O'zbekiston", "cis": "MDH", "usa": "AQSH",
-            "europe": "Yevropa", "other_country": "Boshqa", "other": "Boshqa",
+            "europe": "Yevropa", "other_country": "Boshqa",
+            "abroad": "Chet elda",
             # Регионы Узбекистана
             "tashkent": "Toshkent", "samarkand": "Samarqand",
             "fergana": "Farg'ona", "bukhara": "Buxoro",
             "namangan": "Namangan", "andijan": "Andijon", "nukus": "Nukus",
+            "other": "Boshqa shahar",
             # Национальность
             "uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys",
             "tajik": "Tojik", "kazakh": "Qozoq",
@@ -274,6 +280,8 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             "yes_with_me": "Bor, birga yashaydi",
             "yes_with_ex": "Bor, sobiq bilan",
             "has_children": "Bor",
+            # Универсальное
+            "any": "Muhim emas",
         },
     }
 
@@ -608,21 +616,23 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
     data = await state.get_data()
     filters = data.get("search_filters", {})
 
-    if value == "any":
-        filters.pop(field, None)
-    else:
-        filters[field] = value
+    # Сохраняем значение (в т.ч. "any") — так кнопка исчезнет, а текст покажет "Не важно"
+    filters[field] = value
 
-    # Возраст: при выборе/сбросе через кнопки — убираем старые age_from/age_to
+    # Возраст: при выборе — убираем старые age_from/age_to из требований
     if field == "age":
         filters.pop("age_from", None)
         filters.pop("age_to", None)
 
-    # Если выбран регион — также ставим residence = uzbekistan
+    # Если выбран конкретный регион — также ставим residence = uzbekistan
+    # "any" / "abroad" по региону — НЕ ставим residence и очищаем предыдущий
     if field == "region":
-        filters["residence"] = "uzbekistan"
+        if value in ("any", "abroad"):
+            filters.pop("residence", None)
+        else:
+            filters["residence"] = "uzbekistan"
 
-    # Если выбрано residence (весь Узбекистан или другая страна) — убираем регион
+    # Если выбрано residence — убираем регион
     if field == "residence":
         filters.pop("region", None)
 
