@@ -854,10 +854,9 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         _or_active(Profile.is_active.is_(True), Profile.is_active.is_(None)),
         Profile.profile_type == target_type,
     ]
-    # Исключаем собственные анкеты только если пользователь НЕ гость
-    # (в гостевом режиме модератор/тестер может иметь свои анкеты — не прячем их)
-    if not is_guest:
-        conditions.append(Profile.user_id != user_id)
+    # Исключение собственных анкет временно отключено — на этапе тестирования
+    # модератор создаёт все анкеты со своего аккаунта и должен их видеть.
+    # (Раньше: conditions.append(Profile.user_id != user_id) в не-гостевом режиме)
 
     # Фильтр: возраст — поддержка кнопок-диапазонов И старого формата age_from/age_to
     import datetime

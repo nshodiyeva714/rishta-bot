@@ -738,8 +738,30 @@ async def db_check(message: Message, session: AsyncSession):
                     f"status={row[4]} active={row[5]}"
                 )
 
-        await message.answer(
-            "\n".join(lines), parse_mode="HTML"
-        )
+        # Дамп всех профилей — основные поля
+        result4 = await session.execute(text("""
+            SELECT id, user_id, profile_type, status, is_active,
+                   city, city_code, display_id
+            FROM profiles
+            ORDER BY id DESC
+            LIMIT 30
+        """))
+        rows4 = result4.fetchall()
+        lines.append("\n📋 <b>Все анкеты (последние 30):</b>")
+        if not rows4:
+            lines.append("• (пусто)")
+        else:
+            for row in rows4:
+                lines.append(
+                    f"• id={row[0]} user={row[1]} type={row[2]} "
+                    f"status={row[3]} active={row[4]} "
+                    f"city={row[5]} code={row[6]} disp={row[7]}"
+                )
+
+        # Telegram ограничение 4096 символов — режем если слишком длинно
+        full_text = "\n".join(lines)
+        if len(full_text) > 4000:
+            full_text = full_text[:4000] + "\n…(обрезано)"
+        await message.answer(full_text, parse_mode="HTML")
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
