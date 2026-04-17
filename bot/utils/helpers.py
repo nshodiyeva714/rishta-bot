@@ -398,6 +398,22 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         "ru": {"practicing": "Практикующий/ая", "moderate": "Умеренный/ая", "secular": "Светский/ая"},
         "uz": {"practicing": "Amaliyotchi", "moderate": "Mo'tadil", "secular": "Dunyoviy"},
     }
+    occ_map = {
+        "ru": {
+            "works": "Работает",
+            "student": "Студент/ка",
+            "business": "Свой бизнес",
+            "housewife": "Домохозяйка",
+            "other": "Другое",
+        },
+        "uz": {
+            "works": "Ishlaydi",
+            "student": "Talaba",
+            "business": "O'z biznesi",
+            "housewife": "Uy bekasi",
+            "other": "Boshqa",
+        },
+    }
 
     lines = []
 
@@ -429,10 +445,10 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     if bt_val:
         lines.append(f"⚡ {bt_val}")
 
-    # 3. 🌍 Национальность
+    # 3. Национальность (флаг уже в значении — без доп. иконки)
     if profile.nationality:
         nat = _nat_map(L).get(profile.nationality, profile.nationality)
-        lines.append(f"🌍 {nat}")
+        lines.append(nat)
 
     # 4. 🏡 Город и район
     if profile.city:
@@ -452,9 +468,11 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
             edu_label += f", {uni}"
         lines.append(f"🎓 {edu_label}")
 
-    # 6. 💼 Занятость
-    if profile.occupation:
-        lines.append(f"💼 {profile.occupation}")
+    # 6. 💼 Занятость (переводим ключевые значения; свободный текст показываем как есть)
+    occ_raw = profile.occupation
+    if occ_raw:
+        occ_val = occ_map.get(L, occ_map["ru"]).get(occ_raw, occ_raw)
+        lines.append(f"💼 {occ_val}")
 
     # 7. 🕌 Религиозность
     rel_raw = _ev(profile, "religiosity")
