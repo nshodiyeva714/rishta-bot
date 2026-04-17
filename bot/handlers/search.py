@@ -844,12 +844,14 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     """Построить query с фильтрами, вернуть (profiles, user_req)."""
     target_type = ProfileType.SON if search_type == "son" else ProfileType.DAUGHTER
 
+    from sqlalchemy import or_ as _or_active
     conditions = [
         Profile.status.in_([
             ProfileStatus.PUBLISHED,
             ProfileStatus.PENDING,  # временно показывать анкеты на проверке
         ]),
-        Profile.is_active != False,   # включает True и NULL
+        # is_active: True или NULL (старые записи) — исключаем только явное False
+        _or_active(Profile.is_active.is_(True), Profile.is_active.is_(None)),
         Profile.profile_type == target_type,
         Profile.user_id != user_id,
     ]
@@ -969,44 +971,6 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     user_req = None
     if my_profile:
         user_req = await _get_user_requirement(session, my_profile.id)
-
-    # ── DEBUG (временно) ──
-    logger.warning(
-        f"SEARCH DEBUG: "
-        f"search_type={search_type} "
-        f"target_type={target_type} "
-        f"total_found={len(profiles)} "
-        f"filters={filters} "
-        f"user_id={user_id}"
-    )
-    try:
-        all_q = await session.execute(
-            select(sa_func.count()).select_from(Profile).where(Profile.profile_type == target_type)
-        )
-        logger.warning(f"TOTAL IN DB for {target_type}: {all_q.scalar()}")
-    except Exception as e:
-        logger.warning(f"TOTAL IN DB error: {e}")
-
-    # Расширенная диагностика query
-    logger.warning(
-        f"SEARCH QUERY DEBUG: "
-        f"search_type={search_type} "
-        f"filters={filters} "
-        f"conditions_count={len(conditions)} "
-        f"results={len(profiles)}"
-    )
-
-    # Отдельно — полный снапшот анкеты id=40 (сверка с фильтром)
-    try:
-        from sqlalchemy import text as sa_text
-        check = await session.execute(sa_text(
-            "SELECT id, city, city_code, profile_type, status, is_active "
-            "FROM profiles WHERE id = 40"
-        ))
-        row = check.fetchone()
-        logger.warning(f"PROFILE 40: {row}")
-    except Exception as e:
-        logger.warning(f"PROFILE 40 error: {e}")
 
     return profiles, user_req
 
