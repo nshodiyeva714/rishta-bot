@@ -154,6 +154,46 @@ def _with_card(data: dict, lang: str, question_text: str) -> str:
     return (card + SEP + question_text) if card else question_text
 
 
+async def _show_question(m_or_cb, state: FSMContext, text: str,
+                         reply_markup=None, parse_mode: str = None):
+    """Показать вопрос: редактируем последнее сообщение бота.
+
+    - Если m_or_cb — CallbackQuery: редактируем текущее callback.message.
+    - Если m_or_cb — Message: ищем last_bot_msg_id в state и редактируем его;
+      при неудаче — отправляем новое сообщение.
+    В обоих случаях last_bot_msg_id сохраняется.
+    """
+    if hasattr(m_or_cb, "message"):
+        # CallbackQuery
+        try:
+            await m_or_cb.message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+            await state.update_data(last_bot_msg_id=m_or_cb.message.message_id)
+            return
+        except Exception:
+            pass
+        sent = await m_or_cb.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+        await state.update_data(last_bot_msg_id=sent.message_id)
+        return
+
+    # Message
+    data = await state.get_data()
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await m_or_cb.bot.edit_message_text(
+                chat_id=m_or_cb.chat.id,
+                message_id=last_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+            return
+        except Exception:
+            pass
+    sent = await m_or_cb.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    await state.update_data(last_bot_msg_id=sent.message_id)
+
+
 # ══════════════════════════════════════
 # СТАРТ ЭТАПА 2
 # ══════════════════════════════════════
@@ -171,7 +211,7 @@ async def ext_start(callback: CallbackQuery, state: FSMContext):
         q_text = f"Вопрос 1/9\n{bar}\n\n👨 Отец — чем занимается:"
 
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=back_kb(lang))
+    await _show_question(callback, state, full_text, reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_father)
     await callback.answer()
 
@@ -198,7 +238,7 @@ async def ext_father(message: Message, state: FSMContext):
         q_text = f"Вопрос 2/9\n{bar}\n\n👩 Мать — чем занимается:"
 
     full_text = _with_card(data, lang, q_text)
-    await message.answer(full_text, reply_markup=back_kb(lang))
+    await _show_question(message, state, full_text, reply_markup=back_kb(lang))
     await state.set_state(QuestionnaireStates.ext_mother)
 
 
@@ -264,7 +304,7 @@ async def ext_mother(message: Message, state: FSMContext):
         q_text = f"Вопрос 3/9\n{bar}\n\n👨‍👩‍👧 Братья и сёстры:"
 
     full_text = _with_card(data, lang, q_text)
-    await message.answer(full_text, reply_markup=_brothers_kb(lang))
+    await _show_question(message, state, full_text, reply_markup=_brothers_kb(lang))
     await state.set_state(QuestionnaireStates.ext_brothers)
 
 
@@ -295,7 +335,7 @@ async def ext_sisters(callback: CallbackQuery, state: FSMContext):
         q_text = f"Вопрос 3/9\n{bar}\n\nМесто в семье:"
 
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=_position_kb(lang))
+    await _show_question(callback, state, full_text, reply_markup=_position_kb(lang))
     await state.set_state(QuestionnaireStates.ext_position)
     await callback.answer()
 
@@ -315,7 +355,7 @@ async def ext_position(callback: CallbackQuery, state: FSMContext):
         q_text = f"Вопрос 4/9\n{bar}\n\n✨ Характер и увлечения\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(full_text, reply_markup=skip_kb(lang))
+    await _show_question(callback, state, full_text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_character)
     await callback.answer()
 
@@ -336,10 +376,7 @@ async def _ask_health(m_or_cb, state: FSMContext):
         q_text = f"Вопрос 5/9\n{bar}\n\n❤️ Особенности здоровья\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
-    else:
-        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_health)
 
 
@@ -372,10 +409,7 @@ async def _ask_about(m_or_cb, state: FSMContext):
         q_text = f"Вопрос 6/9\n{bar}\n\n💬 О себе и ожиданиях\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang))
-    else:
-        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang))
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_ideal_family)
 
 
@@ -423,10 +457,7 @@ async def _ask_housing(m_or_cb, state: FSMContext):
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
     full_text = _with_card(data, lang, q_text)
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=kb)
-    else:
-        await m_or_cb.answer(full_text, reply_markup=kb)
+    await _show_question(m_or_cb, state, full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_housing)
 
 
@@ -468,7 +499,7 @@ async def ext_housing(callback: CallbackQuery, state: FSMContext):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
         ])
-        await callback.message.edit_text(title, reply_markup=kb)
+        await _show_question(callback, state, title, reply_markup=kb)
         await state.set_state(QuestionnaireStates.ext_housing_parent)
     else:
         await _ask_car(callback, state)
@@ -507,10 +538,7 @@ async def _ask_car(m_or_cb, state: FSMContext):
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
     full_text = _with_card(data, lang, q_text)
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=kb)
-    else:
-        await m_or_cb.answer(full_text, reply_markup=kb)
+    await _show_question(m_or_cb, state, full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_car)
 
 
@@ -581,10 +609,7 @@ async def _ask_parent_phone(m_or_cb, state: FSMContext):
         )
 
     full_text = (card + SEP + body) if card else body
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
-    else:
-        await m_or_cb.answer(full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_parent_phone)
 
 
@@ -613,14 +638,13 @@ async def ext_parent_phone(message: Message, state: FSMContext):
     await state.update_data(parent_phone=phone)
     lang = await _lang(state)
 
-    # Удаляем сообщение пользователя, чтобы экран был чистым
     try:
         await message.delete()
     except Exception:
         pass
 
     text = _parent_tg_text(lang)
-    await message.answer(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(message, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
 
 
@@ -629,7 +653,7 @@ async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_phone=None)
     lang = await _lang(state)
     text = _parent_tg_text(lang)
-    await callback.message.edit_text(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(callback, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
     await callback.answer()
 
@@ -663,7 +687,7 @@ async def ext_parent_tg(message: Message, state: FSMContext):
         pass
 
     text = _candidate_tg_text(lang)
-    await message.answer(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(message, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
 
 
@@ -672,7 +696,7 @@ async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_telegram=None)
     lang = await _lang(state)
     text = _candidate_tg_text(lang)
-    await callback.message.edit_text(text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(callback, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
     await callback.answer()
 
@@ -729,10 +753,7 @@ async def _ask_address(m_or_cb, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
-    if hasattr(m_or_cb, "message"):
-        await m_or_cb.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
-    else:
-        await m_or_cb.answer(text, reply_markup=kb, parse_mode="HTML")
+    await _show_question(m_or_cb, state, text, reply_markup=kb, parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_address)
 
 
@@ -743,7 +764,7 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
 
     if choice == "text":
         text = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
-        await callback.message.edit_text(text, reply_markup=skip_kb(lang))
+        await _show_question(callback, state, text, reply_markup=skip_kb(lang))
         await state.set_state(QuestionnaireStates.ext_address_text)
     elif choice == "geo":
         geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
@@ -752,11 +773,13 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
             keyboard=[[KeyboardButton(text=geo_label, request_location=True)]],
             resize_keyboard=True, one_time_keyboard=True,
         )
-        await callback.message.answer(title, reply_markup=kb)
+        # Reply-клавиатура требует нового сообщения (edit_text не поддерживает reply-кб)
+        sent = await callback.message.answer(title, reply_markup=kb)
+        await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_location)
     elif choice == "link":
         text = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
-        await callback.message.edit_text(text, reply_markup=skip_kb(lang))
+        await _show_question(callback, state, text, reply_markup=skip_kb(lang))
         await state.set_state(QuestionnaireStates.ext_address_link)
     elif choice == "skip":
         await _show_ext_complete(callback, state)
@@ -791,11 +814,26 @@ async def ext_location(message: Message, state: FSMContext):
             location_lon=lon,
             location_link=f"https://maps.google.com/?q={lat},{lon}",
         )
-    # Убираем reply-клавиатуру
+    # Удаляем сообщение пользователя с геолокацией
     try:
-        await message.answer("✓", reply_markup=ReplyKeyboardRemove())
+        await message.delete()
     except Exception:
         pass
+    # Удаляем reply-клавиатуру одноразовым сообщением, которое тут же убираем
+    try:
+        tmp = await message.answer("✓", reply_markup=ReplyKeyboardRemove())
+        await tmp.delete()
+    except Exception:
+        pass
+    # Удаляем старое сообщение бота (с prompt "📍 Геолокация:")
+    data = await state.get_data()
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(message.chat.id, last_id)
+        except Exception:
+            pass
+        await state.update_data(last_bot_msg_id=None)
     await _show_ext_complete(message, state)
 
 
@@ -855,14 +893,7 @@ async def _show_ext_complete(m_or_cb, state: FSMContext):
 
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    if hasattr(m_or_cb, "message"):
-        try:
-            await m_or_cb.message.edit_text(text, reply_markup=kb)
-        except Exception:
-            await m_or_cb.message.answer(text, reply_markup=kb)
-    else:
-        await m_or_cb.answer(text, reply_markup=kb)
-
+    await _show_question(m_or_cb, state, text, reply_markup=kb, parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_confirm)
 
 
