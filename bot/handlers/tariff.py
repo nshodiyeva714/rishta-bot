@@ -315,7 +315,10 @@ async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False)
     edu_raw = data.get("education", "")
     edu = _EDU_LABELS.get(L, _EDU_LABELS["ru"]).get(edu_raw, "—")
     uni = data.get("university_info")
-    if uni:
+    if edu_raw == "studying" and uni:
+        # Студент + детали → показываем только детали
+        edu = uni
+    elif uni:
         edu += f", {uni}"
 
     work = data.get("occupation") or "—"

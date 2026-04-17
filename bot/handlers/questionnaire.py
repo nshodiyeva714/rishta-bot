@@ -104,7 +104,10 @@ def build_card(data: dict, lang: str = "ru") -> str:
     if edu:
         edu_label = edu_map[L].get(edu, edu)
         uni = data.get("university_info")
-        if uni:
+        if edu == "studying" and uni:
+            # Студент + детали → показываем только "ВУЗ, курс" без слова "Студент/ка"
+            edu_label = uni
+        elif uni:
             edu_label += f", {uni}"
         lines.append(f"🎓 {edu_label}")
 

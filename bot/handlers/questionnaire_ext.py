@@ -164,6 +164,15 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     if candidate_tg:
         lines.append(f"💬 {candidate_tg}")
 
+    # Адрес / геолокация
+    address = data.get("address")
+    if address:
+        lines.append(f"🏠 {address}")
+    else:
+        location_link = data.get("location_link")
+        if location_link:
+            lines.append(f"📍 {'Geolokatsiya' if L == 'uz' else 'Геолокация'}")
+
     if not lines:
         return ""
 
