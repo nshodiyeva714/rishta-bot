@@ -797,18 +797,11 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
         filters.pop("age_from", None)
         filters.pop("age_to", None)
 
-    # residence автоматически выставляется только когда выбран регион Узбекистана
-    # (чтобы не применить residence=uzbekistan при выборе иностранной страны)
-    _UZ_REGION_CODES = {
-        "tashkent", "samarkand", "fergana",
-        "bukhara", "namangan", "andijan",
-        "nukus", "uz_other", "uzbekistan",
-    }
+    # Не автовыставляем residence — сам фильтр region уже покрывает UZ-анкеты
+    # через city_code/country/NULL. Иначе старые анкеты с residence_status=NULL
+    # не пройдут условие Profile.residence_status == UZBEKISTAN.
     if field == "region":
-        if value in _UZ_REGION_CODES:
-            filters["residence"] = "uzbekistan"
-        else:
-            filters.pop("residence", None)
+        filters.pop("residence", None)
 
     # Если выбрано residence — убираем регион
     if field == "residence":
@@ -959,22 +952,21 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             except ValueError:
                 pass
 
-    # Фильтр: проживание
+    # Фильтр: проживание (тollerance для NULL — старые анкеты без заполненного residence_status)
     if filters.get("residence") and filters["residence"] != "any":
         from bot.db.models import ResidenceStatus
+        from sqlalchemy import or_ as _or_res
         try:
-            conditions.append(Profile.residence_status == ResidenceStatus(filters["residence"]))
+            conditions.append(_or_res(
+                Profile.residence_status == ResidenceStatus(filters["residence"]),
+                Profile.residence_status.is_(None),
+            ))
         except ValueError:
             pass
 
     # Фильтр: регион / страна — по city_code/country или ILIKE по city/family_region
     if filters.get("region"):
         region_val = filters["region"]
-        # DEBUG (временно): логируем region-фильтр
-        logger.warning(
-            f"REGION FILTER: value={region_val} "
-            f"residence={filters.get('residence')}"
-        )
         from sqlalchemy import or_
 
         # Коды зарубежных стран и «Европа», «Другая»
@@ -1013,32 +1005,6 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             ))
         else:
             # Конкретный регион Узбекистана — ILIKE всеми вариантами написания
-            # DEBUG (временно): детальный лог
-            logger.warning(
-                f"SAMARKAND DEBUG: "
-                f"region_val={region_val} "
-                f"filters={filters} "
-                f"search_type={search_type} "
-                f"user_id={user_id}"
-            )
-            try:
-                test = await session.execute(
-                    select(Profile).where(Profile.city_code == region_val)
-                )
-                test_results = test.scalars().all()
-                logger.warning(
-                    f"TEST QUERY city_code={region_val}: "
-                    f"found={len(test_results)} profiles"
-                )
-                for p in test_results:
-                    logger.warning(
-                        f"  → id={p.id} city={p.city} code={p.city_code} "
-                        f"status={p.status} active={p.is_active} "
-                        f"type={p.profile_type} user_id={p.user_id}"
-                    )
-            except Exception as e:
-                logger.warning(f"TEST QUERY error: {e}")
-
             region_map_ru = {
                 "tashkent": "%ташкент%", "samarkand": "%самарканд%",
                 "fergana": "%ферган%", "bukhara": "%бухар%",
