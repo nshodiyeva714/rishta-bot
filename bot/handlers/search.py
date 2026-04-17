@@ -228,15 +228,18 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             # Образование
             "secondary": "Среднее", "vocational": "Среднее специальное",
             "higher": "Высшее", "studying": "Студент",
-            # Проживание
-            "uzbekistan": "Узбекистан", "cis": "СНГ", "usa": "США",
-            "europe": "Европа", "other_country": "Другое",
-            "abroad": "За рубежом",
+            # Проживание / страны
+            "uzbekistan": "🇺🇿 Узбекистан", "cis": "СНГ",
+            "usa": "🇺🇸 США", "russia": "🇷🇺 Россия",
+            "kazakhstan": "🇰🇿 Казахстан", "kyrgyzstan": "🇰🇬 Кыргызстан",
+            "tajikistan": "🇹🇯 Таджикистан", "turkmenistan": "🇹🇲 Туркменистан",
+            "europe": "🌍 Европа", "other_country": "Другое",
+            "abroad": "🌏 За рубежом",
             # Регионы Узбекистана
             "tashkent": "Ташкент", "samarkand": "Самарканд",
             "fergana": "Фергана", "bukhara": "Бухара",
             "namangan": "Наманган", "andijan": "Андижан", "nukus": "Нукус",
-            "other": "Другой город",
+            "other": "🌏 Другая страна",
             # Национальность
             "uzbek": "Узбек", "russian": "Русский", "korean": "Кореец",
             "tajik": "Таджик", "kazakh": "Казах",
@@ -260,15 +263,18 @@ def build_selected_filters_text(filters: dict, lang: str = "ru") -> str:
             # Образование
             "secondary": "O'rta", "vocational": "O'rta maxsus",
             "higher": "Oliy", "studying": "Talaba",
-            # Проживание
-            "uzbekistan": "O'zbekiston", "cis": "MDH", "usa": "AQSH",
-            "europe": "Yevropa", "other_country": "Boshqa",
-            "abroad": "Chet elda",
+            # Проживание / страны
+            "uzbekistan": "🇺🇿 O'zbekiston", "cis": "MDH",
+            "usa": "🇺🇸 AQSH", "russia": "🇷🇺 Rossiya",
+            "kazakhstan": "🇰🇿 Qozog'iston", "kyrgyzstan": "🇰🇬 Qirg'iziston",
+            "tajikistan": "🇹🇯 Tojikiston", "turkmenistan": "🇹🇲 Turkmaniston",
+            "europe": "🌍 Yevropa", "other_country": "Boshqa",
+            "abroad": "🌏 Chet elda",
             # Регионы Узбекистана
             "tashkent": "Toshkent", "samarkand": "Samarqand",
             "fergana": "Farg'ona", "bukhara": "Buxoro",
             "namangan": "Namangan", "andijan": "Andijon", "nukus": "Nukus",
-            "other": "Boshqa shahar",
+            "other": "🌏 Boshqa mamlakat",
             # Национальность
             "uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys",
             "tajik": "Tojik", "kazakh": "Qozoq",
@@ -678,11 +684,34 @@ async def filter_marital(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data == "filter:residence")
 async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    options = [
-        ("Узбекистан" if lang == "ru" else "O'zbekiston", "filter:residence:uzb"),
-        ("🌍 За рубежом" if lang == "ru" else "🌍 Chet elda", "fval:region:abroad"),
-    ]
-    title = "Где проживает:" if lang == "ru" else "Yashash joyi:"
+    if lang == "uz":
+        options = [
+            ("🇺🇿 O'zbekiston",   "filter:residence:uzb"),
+            ("🇺🇸 AQSH",          "fval:region:usa"),
+            ("🇷🇺 Rossiya",       "fval:region:russia"),
+            ("🇰🇿 Qozog'iston",   "fval:region:kazakhstan"),
+            ("🇰🇬 Qirg'iziston",  "fval:region:kyrgyzstan"),
+            ("🇹🇯 Tojikiston",    "fval:region:tajikistan"),
+            ("🇹🇲 Turkmaniston",  "fval:region:turkmenistan"),
+            ("🌍 Yevropa",        "fval:region:europe"),
+            ("🌏 Boshqa",         "fval:region:other"),
+            ("✅ Muhim emas",     "fval:region:any"),
+        ]
+        title = "🏡 Yashash joyi:"
+    else:
+        options = [
+            ("🇺🇿 Узбекистан",    "filter:residence:uzb"),
+            ("🇺🇸 США",           "fval:region:usa"),
+            ("🇷🇺 Россия",        "fval:region:russia"),
+            ("🇰🇿 Казахстан",     "fval:region:kazakhstan"),
+            ("🇰🇬 Кыргызстан",    "fval:region:kyrgyzstan"),
+            ("🇹🇯 Таджикистан",   "fval:region:tajikistan"),
+            ("🇹🇲 Туркменистан",  "fval:region:turkmenistan"),
+            ("🌍 Европа",         "fval:region:europe"),
+            ("🌏 Другая страна",  "fval:region:other"),
+            ("✅ Не важно",       "fval:region:any"),
+        ]
+        title = "🏡 Где проживает:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
     await callback.answer()
 
@@ -933,17 +962,47 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
         except ValueError:
             pass
 
-    # Фильтр: регион (город) — по city_code или ILIKE по city/family_region
+    # Фильтр: регион / страна — по city_code/country или ILIKE по city/family_region
     if filters.get("region"):
         region_val = filters["region"]
+        from sqlalchemy import or_
+
+        # Коды зарубежных стран и «Европа», «Другая»
+        _country_codes = {
+            "usa", "russia", "kazakhstan", "kyrgyzstan",
+            "tajikistan", "turkmenistan", "europe",
+        }
+        # Коды регионов Узбекистана
+        _uz_region_codes = {
+            "tashkent", "samarkand", "fergana", "bukhara",
+            "namangan", "andijan", "nukus",
+        }
+
         if region_val == "any":
-            pass  # не фильтровать
+            pass  # фильтр не применяется
+        elif region_val == "uzbekistan":
+            # Все узбекистанские анкеты — любой регион Узбекистана или страна UZ
+            uz_codes = list(_uz_region_codes) + ["uz_other", "uzbekistan", "other"]
+            conditions.append(or_(
+                Profile.country == "uzbekistan",
+                Profile.city_code.in_(uz_codes),
+                # Старые анкеты без country могли быть узбекистанскими
+                Profile.country.is_(None),
+            ))
+        elif region_val in _country_codes:
+            # Иностранная страна — совпадение по country или city_code
+            conditions.append(or_(
+                Profile.country == region_val,
+                Profile.city_code == region_val,
+            ))
         elif region_val == "other":
-            # Анкеты с city_code="other" (пользователь ввёл город свободным текстом)
-            conditions.append(Profile.city_code == "other")
+            # Другая страна — пользователь ввёл свободно
+            conditions.append(or_(
+                Profile.country == "other",
+                Profile.city_code == "other",
+            ))
         else:
-            # Паттерны «содержит где угодно» — ловим разные варианты написания
-            # ("Samarqand", "самарканд", "г. Самарканд", "Samarkand" и т.п.)
+            # Конкретный регион Узбекистана — ILIKE всеми вариантами написания
             region_map_ru = {
                 "tashkent": "%ташкент%", "samarkand": "%самарканд%",
                 "fergana": "%ферган%", "bukhara": "%бухар%",
@@ -954,7 +1013,6 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
                 "fergana": "%farg'ona%", "bukhara": "%buxoro%",
                 "namangan": "%namangan%", "andijan": "%andijon%", "nukus": "%nukus%",
             }
-            # Дополнительно — английская транслитерация
             region_map_en = {
                 "tashkent": "%tashkent%", "samarkand": "%samarkand%",
                 "fergana": "%fergana%", "bukhara": "%bukhara%",
@@ -963,7 +1021,6 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             pat_ru = region_map_ru.get(region_val, f"%{region_val}%")
             pat_uz = region_map_uz.get(region_val, f"%{region_val}%")
             pat_en = region_map_en.get(region_val, f"%{region_val}%")
-            from sqlalchemy import or_
             conditions.append(or_(
                 Profile.city_code == region_val,
                 Profile.family_region.ilike(pat_ru),

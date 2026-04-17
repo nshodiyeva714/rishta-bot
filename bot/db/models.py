@@ -206,6 +206,7 @@ class Profile(Base):
     # Q9: location
     city = Column(String(100))
     city_code = Column(String(50))
+    country = Column(String(50), nullable=True)
     district = Column(String(100))
     address = Column(Text)  # confidential
 
