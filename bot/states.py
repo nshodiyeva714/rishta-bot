@@ -123,3 +123,8 @@ class EditProfileStates(StatesGroup):
 
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()
+
+
+class ModeratorEditStates(StatesGroup):
+    choosing_field = State()
+    editing_value = State()

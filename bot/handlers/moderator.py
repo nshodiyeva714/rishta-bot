@@ -4,19 +4,44 @@ from datetime import datetime
 
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus
-from bot.states import ModeratorReplyStates
+from bot.states import ModeratorReplyStates, ModeratorEditStates
 from bot.texts import t
 from bot.config import config, is_moderator
 from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
 from bot.utils.helpers import format_full_anketa
 
 router = Router()
+
+
+# ── Поля анкеты, которые может редактировать модератор ──
+EDITABLE_FIELDS = {
+    "name": {
+        "ru": "✏️ Имя",
+        "uz": "✏️ Ism",
+        "column": "name",
+    },
+    "character": {
+        "ru": "🌸 Характер и увлечения",
+        "uz": "🌸 Xarakter va qiziqishlar",
+        "column": "character_hobbies",
+    },
+    "about": {
+        "ru": "💭 О себе",
+        "uz": "💭 O'zi haqida",
+        "column": "ideal_family_life",
+    },
+    "health": {
+        "ru": "🌿 Здоровье",
+        "uz": "🌿 Sog'liq",
+        "column": "health_notes",
+    },
+}
 
 
 # ── /ankety — список анкет на модерации ──
@@ -298,6 +323,169 @@ async def mod_activate(callback: CallbackQuery, session: AsyncSession, bot: Bot)
     except Exception:
         pass
     await callback.answer("✅ Активировано")
+
+
+# ── Редактирование анкеты модератором ──
+@router.callback_query(F.data.startswith("mod:edit:"))
+async def mod_edit_start(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Начать редактирование — показать список полей."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    profile_id = int(callback.data.split(":")[2])
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+
+    await state.update_data(editing_profile_id=profile_id)
+
+    buttons = []
+    for key, field in EDITABLE_FIELDS.items():
+        buttons.append([InlineKeyboardButton(
+            text=field["ru"],
+            callback_data=f"modedit:{key}",
+        )])
+    buttons.append([InlineKeyboardButton(
+        text="🔙 Отмена",
+        callback_data=f"modedit:cancel:{profile_id}",
+    )])
+
+    display_id = profile.display_id or "—"
+    try:
+        await callback.message.edit_text(
+            f"✏️ Редактирование анкеты <b>{display_id}</b>\n\nВыберите поле:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            parse_mode="HTML",
+        )
+    except Exception:
+        await callback.message.answer(
+            f"✏️ Редактирование анкеты <b>{display_id}</b>\n\nВыберите поле:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+            parse_mode="HTML",
+        )
+    await state.set_state(ModeratorEditStates.choosing_field)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("modedit:cancel:"), ModeratorEditStates.choosing_field)
+async def mod_edit_cancel(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Отмена редактирования — вернуть стандартную клавиатуру модератора."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    profile_id = int(callback.data.split(":")[2])
+    profile = await session.get(Profile, profile_id)
+    await state.clear()
+    if not profile:
+        await callback.answer("❌ Анкета не найдена")
+        return
+    is_paused = profile.status == ProfileStatus.PAUSED
+    try:
+        await callback.message.edit_text(
+            format_full_anketa(profile, lang="ru"),
+            reply_markup=mod_review_kb(profile_id, is_paused=is_paused),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    await callback.answer("Отменено")
+
+
+@router.callback_query(F.data.startswith("modedit:"), ModeratorEditStates.choosing_field)
+async def mod_edit_field(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Выбрал поле — спросить новое значение."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+
+    field_key = callback.data.split(":", 1)[1]
+    if field_key.startswith("cancel"):
+        return  # обработано выше
+    field = EDITABLE_FIELDS.get(field_key)
+    if not field:
+        await callback.answer("❌ Поле не найдено")
+        return
+
+    data = await state.get_data()
+    profile_id = data.get("editing_profile_id")
+    profile = await session.get(Profile, profile_id) if profile_id else None
+    current = getattr(profile, field["column"], None) if profile else None
+    current_txt = f"\n\nТекущее: <i>{current}</i>" if current else ""
+
+    await state.update_data(editing_field=field_key)
+    try:
+        await callback.message.edit_text(
+            f"{field['ru']}{current_txt}\n\nВведите новое значение:",
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    await state.set_state(ModeratorEditStates.editing_value)
+    await callback.answer()
+
+
+@router.message(ModeratorEditStates.editing_value)
+async def mod_edit_save(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
+    """Получили новое значение — сохранить и уведомить владельца."""
+    if not is_moderator(message.from_user.id):
+        return
+
+    data = await state.get_data()
+    profile_id = data.get("editing_profile_id")
+    field_key = data.get("editing_field")
+    new_value = (message.text or "").strip()
+
+    if not new_value:
+        await message.answer("⚠️ Пустое значение — отправьте текст или /cancel")
+        return
+
+    profile = await session.get(Profile, profile_id)
+    if not profile:
+        await message.answer("❌ Анкета не найдена")
+        await state.clear()
+        return
+
+    field = EDITABLE_FIELDS.get(field_key)
+    if not field:
+        await message.answer("❌ Поле не найдено")
+        await state.clear()
+        return
+
+    setattr(profile, field["column"], new_value)
+    await session.commit()
+
+    await message.answer(
+        f"✅ Сохранено!\n\n"
+        f"Поле: {field['ru']}\n"
+        f"Значение: {new_value}"
+    )
+    await state.clear()
+
+    # Уведомление владельцу
+    if profile.user_id:
+        try:
+            owner = await session.get(User, profile.user_id)
+            owner_lang = owner.language.value if owner and owner.language else "ru"
+            display_id = profile.display_id or "—"
+            if owner_lang == "uz":
+                msg = (
+                    f"✏️ <b>Anketangiz tahrirlandi</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Moderator anketangizni\n"
+                    f"to'g'riladi. 🤝"
+                )
+            else:
+                msg = (
+                    f"✏️ <b>Ваша анкета отредактирована</b>\n\n"
+                    f"🔖 {display_id}\n\n"
+                    f"Модератор исправил данные\n"
+                    f"в вашей анкете. 🤝"
+                )
+            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
+        except Exception:
+            pass
 
 
 # ── Подтверждение оплаты модератором ──

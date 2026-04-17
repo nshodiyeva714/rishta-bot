@@ -784,6 +784,7 @@ def mod_review_kb(profile_id: int, is_paused: bool = False) -> InlineKeyboardMar
         ],
         [InlineKeyboardButton(text="📸 Отклонить фото", callback_data=f"mod:reject_photo:{profile_id}")],
         [pause_btn],
+        [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"mod:edit:{profile_id}")],
         [InlineKeyboardButton(text="⭐ Опубликовать как VIP", callback_data=f"mod:publish_vip:{profile_id}")],
         [InlineKeyboardButton(text="💬 Написать пользователю", callback_data=f"modreply:{profile_id}")],
     ])
