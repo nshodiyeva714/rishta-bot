@@ -467,6 +467,13 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
     await show_search_filters(callback, session, state)
 
 
+# ── Возврат на экран фильтров без сброса (back-кнопка из сабменю фильтра) ──
+@router.callback_query(F.data == "filter:back")
+async def filter_back(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Вернуться на экран фильтров без очистки выбранных фильтров."""
+    await show_search_filters(callback, session, state)
+
+
 # ── Фильтр: возраст ──
 @router.callback_query(F.data == "filter:age")
 async def filter_age(callback: CallbackQuery, session: AsyncSession):

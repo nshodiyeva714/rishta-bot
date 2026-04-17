@@ -911,7 +911,8 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
 def filter_option_kb(options: list[tuple[str, str]], lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура выбора значения фильтра. options = [(label, callback_data), ...]"""
     buttons = [[InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in options]
-    buttons.extend(nav_kb(lang, "search:manual"))
+    # «← Назад» возвращает на экран фильтров БЕЗ сброса выбранных фильтров
+    buttons.extend(nav_kb(lang, "filter:back"))
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
