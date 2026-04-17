@@ -761,7 +761,7 @@ async def search_submenu(callback: CallbackQuery, state: FSMContext, session: As
 
 @router.callback_query(F.data.in_({"menu:search_bride", "menu:search_groom"}))
 async def search_redirect(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Поиск невестки / жениха → единый экран поиска."""
+    """Поиск невестки / жениха → гостевой поиск (или стандартный если есть анкета)."""
     await state.clear()
     lang = await get_lang(session, callback.from_user.id)
 
@@ -776,10 +776,21 @@ async def search_redirect(callback: CallbackQuery, state: FSMContext, session: A
     if my_profile:
         from bot.keyboards.inline import search_mode_kb
         await _safe_edit(callback, t("search_title", lang), reply_markup=search_mode_kb(lang))
-    else:
-        from bot.keyboards.inline import search_no_anketa_kb
-        await _safe_edit(callback, t("search_no_anketa", lang), reply_markup=search_no_anketa_kb(lang))
-    await callback.answer()
+        await callback.answer()
+        return
+
+    # Нет анкеты — запускаем гостевой поиск сразу по выбранному полу
+    # menu:search_bride → ищем невестку (daughter)
+    # menu:search_groom → ищем жениха (son)
+    search_type = ProfileType.DAUGHTER if callback.data == "menu:search_bride" else ProfileType.SON
+    await state.update_data(
+        search_filters={},
+        search_offset=0,
+        search_type=search_type.value,
+        is_guest=True,
+    )
+    from bot.handlers.search import _show_search_results
+    await _show_search_results(callback, session, state, lang)
 
 
 @router.callback_query(F.data == "menu:create_sub")
