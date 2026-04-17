@@ -816,8 +816,12 @@ async def filter_go(callback: CallbackQuery, session: AsyncSession, state: FSMCo
 @router.callback_query(F.data == "search:all")
 async def search_all(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     lang = await get_lang(session, callback.from_user.id)
-    my_profile = await _get_user_profile(session, callback.from_user.id)
-    search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
+    data = await state.get_data()
+    # Если search_type уже выбран (menu:search_bride/groom) — не перезаписываем
+    search_type = data.get("search_type")
+    if not search_type:
+        my_profile = await _get_user_profile(session, callback.from_user.id)
+        search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
     await state.update_data(search_filters={}, search_offset=0, search_type=search_type)
     await _show_search_results(callback, session, state, lang)
 
@@ -830,8 +834,11 @@ async def search_all(callback: CallbackQuery, session: AsyncSession, state: FSMC
 async def search_browse_compat(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     """Совместимость со старым входом через 'Ищем невестку'."""
     lang = await get_lang(session, callback.from_user.id)
-    my_profile = await _get_user_profile(session, callback.from_user.id)
-    search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
+    data = await state.get_data()
+    search_type = data.get("search_type")
+    if not search_type:
+        my_profile = await _get_user_profile(session, callback.from_user.id)
+        search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
     await state.update_data(search_filters={}, search_offset=0, search_type=search_type)
     await _show_search_results(callback, session, state, lang)
 
