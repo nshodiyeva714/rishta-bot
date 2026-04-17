@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus, Favorite
+from bot.db.models import Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus, Favorite, ProfileType
 from bot.states import ModeratorReplyStates, ModeratorEditStates
 from bot.texts import t
 from bot.config import config, is_moderator
@@ -278,42 +278,115 @@ async def mod_list_open_profile(callback: CallbackQuery, session: AsyncSession):
     await callback.answer()
 
 
-# ── /stats — статистика платформы ──
+# ── /stats — детальная статистика платформы ──
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, session: AsyncSession):
     if not is_moderator(message.from_user.id):
         await message.answer("⛔ Только для модераторов")
         return
 
-    total_users = (await session.execute(select(func.count(User.id)))).scalar() or 0
-    total_profiles = (await session.execute(select(func.count(Profile.id)))).scalar() or 0
-    pending = (await session.execute(
-        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PENDING)
+    from sqlalchemy import cast, Date
+    from datetime import date
+    today = date.today()
+
+    # ── Пользователи ──
+    total_users = (await session.execute(
+        select(func.count(User.id))
     )).scalar() or 0
-    published = (await session.execute(
-        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PUBLISHED)
-    )).scalar() or 0
-    rejected = (await session.execute(
-        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.REJECTED)
-    )).scalar() or 0
-    paused = (await session.execute(
-        select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PAUSED)
-    )).scalar() or 0
-    total_payments = (await session.execute(
-        select(func.count(Payment.id)).where(Payment.status == PaymentStatus.CONFIRMED)
+    new_users_today = (await session.execute(
+        select(func.count(User.id)).where(
+            cast(User.created_at, Date) == today
+        )
     )).scalar() or 0
 
-    text = (
-        "📊 <b>Статистика платформы</b>\n\n"
-        f"👥 Пользователей: {total_users}\n"
-        f"📋 Всего анкет: {total_profiles}\n\n"
-        f"⏳ На модерации: {pending}\n"
-        f"✅ Опубликовано: {published}\n"
-        f"❌ Отклонено: {rejected}\n"
-        f"⏸ На паузе: {paused}\n\n"
-        f"💰 Подтверждённых оплат: {total_payments}"
+    # ── Анкеты по статусам ──
+    counts: dict[str, int] = {}
+    for status in (
+        ProfileStatus.PUBLISHED,
+        ProfileStatus.PENDING,
+        ProfileStatus.PAUSED,
+        ProfileStatus.REJECTED,
+    ):
+        r = await session.execute(
+            select(func.count(Profile.id)).where(Profile.status == status)
+        )
+        counts[status.value] = r.scalar() or 0
+    total_profiles = sum(counts.values())
+
+    # ── По типу ──
+    sons = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.profile_type == ProfileType.SON)
+    )).scalar() or 0
+    daughters = (await session.execute(
+        select(func.count(Profile.id)).where(Profile.profile_type == ProfileType.DAUGHTER)
+    )).scalar() or 0
+
+    # ── Оплаты сегодня (Payment.CONFIRMED) ──
+    payments_today_res = await session.execute(
+        select(
+            func.count(Payment.id),
+            func.coalesce(func.sum(Payment.amount), 0),
+        ).where(
+            Payment.status == PaymentStatus.CONFIRMED,
+            cast(Payment.created_at, Date) == today,
+        )
     )
-    await message.answer(text)
+    pay_count, pay_sum_tiyin = payments_today_res.one()
+    payments_today = pay_count or 0
+    # amount хранится в тиинах (копейках): 1 sum = 100 tiyin
+    income_today_sum = int((pay_sum_tiyin or 0) / 100)
+
+    # ── Просмотры (суммарно по платформе) ──
+    views_total = (await session.execute(
+        select(func.coalesce(func.sum(Profile.views_count), 0))
+    )).scalar() or 0
+
+    # ── Топ-5 городов среди опубликованных ──
+    top_cities_res = await session.execute(
+        select(Profile.city, func.count(Profile.id).label("cnt"))
+        .where(
+            Profile.status == ProfileStatus.PUBLISHED,
+            Profile.city.isnot(None),
+            Profile.city != "",
+        )
+        .group_by(Profile.city)
+        .order_by(func.count(Profile.id).desc())
+        .limit(5)
+    )
+    top_cities = top_cities_res.all()
+
+    text = (
+        f"📊 <b>Статистика Rishta</b>\n"
+        f"📅 {today.strftime('%d.%m.%Y')}\n\n"
+
+        f"👥 <b>Пользователи:</b>\n"
+        f"• Всего: <b>{total_users}</b>\n"
+        f"• Сегодня новых: <b>{new_users_today}</b>\n\n"
+
+        f"📋 <b>Анкеты:</b>\n"
+        f"• Всего: <b>{total_profiles}</b>\n"
+        f"• ✅ Активных: <b>{counts.get('published', 0)}</b>\n"
+        f"• 🆕 На проверке: <b>{counts.get('pending', 0)}</b>\n"
+        f"• ⏸ На паузе: <b>{counts.get('paused', 0)}</b>\n"
+        f"• ❌ Отклонённых: <b>{counts.get('rejected', 0)}</b>\n\n"
+
+        f"👦 Сыновья: <b>{sons}</b>\n"
+        f"👧 Дочери: <b>{daughters}</b>\n\n"
+
+        f"💳 <b>Оплаты сегодня:</b>\n"
+        f"• Количество: <b>{payments_today}</b>\n"
+        f"• Доход: <b>{income_today_sum:,} сум</b>\n\n"
+
+        f"👁 Просмотров всего: <b>{views_total}</b>\n"
+    )
+
+    if top_cities:
+        text += "\n🏆 <b>Топ городов:</b>\n"
+        for city, cnt in top_cities:
+            if city:
+                text += f"• {city}: <b>{cnt}</b>\n"
+
+    await message.answer(text, parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("mod:publish:"))
