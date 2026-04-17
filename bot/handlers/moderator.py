@@ -1796,6 +1796,21 @@ async def requests_list_back(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data.startswith("view_req:"))
 async def view_request(callback: CallbackQuery, session: AsyncSession):
     """Детальный вид запроса + навигация prev/next."""
+    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
+    logger.warning(
+        f"VIEW_REQ: from {callback.from_user.id} "
+        f"data={callback.data} "
+        f"is_mod={is_moderator(callback.from_user.id)}"
+    )
+    try:
+        await callback.answer(
+            f"DEBUG view_req: {callback.data[:30]}",
+            show_alert=False,
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    # ── КОНЕЦ DEBUG ────────────────────────────────────────
+
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
