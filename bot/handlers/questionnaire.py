@@ -18,7 +18,7 @@ from bot.keyboards.inline import (
     marital_kb, children_kb, photo_type_kb,
     confirm_age_kb, tariff_kb, skip_kb,
     back_step_kb, add_nav, body_type_kb, occupation_kb,
-    anketa_finish_kb, city_kb,
+    anketa_finish_kb, city_kb, uz_regions_kb,
 )
 
 router = Router()
@@ -395,9 +395,35 @@ async def q5_nationality(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# ── 6. Город/область/страна (кнопки) ──
-# Названия всех опций (13 областей УЗ + 8 стран)
+# ── 6. Страна/Область/Район — двухуровневая навигация ──
+# Страны (первый уровень)
 _CITY_NAMES = {
+    "ru": {
+        "uzbekistan":   "Узбекистан",
+        "usa":          "🇺🇸 США",
+        "russia":       "🇷🇺 Россия",
+        "kazakhstan":   "🇰🇿 Казахстан",
+        "kyrgyzstan":   "🇰🇬 Кыргызстан",
+        "tajikistan":   "🇹🇯 Таджикистан",
+        "turkmenistan": "🇹🇲 Туркменистан",
+        "europe":       "🌍 Европа",
+        "other":        "🌏 Другая страна",
+    },
+    "uz": {
+        "uzbekistan":   "O'zbekiston",
+        "usa":          "🇺🇸 AQSH",
+        "russia":       "🇷🇺 Rossiya",
+        "kazakhstan":   "🇰🇿 Qozog'iston",
+        "kyrgyzstan":   "🇰🇬 Qirg'iziston",
+        "tajikistan":   "🇹🇯 Tojikiston",
+        "turkmenistan": "🇹🇲 Turkmaniston",
+        "europe":       "🌍 Yevropa",
+        "other":        "🌏 Boshqa mamlakat",
+    },
+}
+
+# Области Узбекистана (второй уровень)
+_REGION_NAMES = {
     "ru": {
         "tashkent":        "Ташкент",
         "tashkent_region": "Ташкентская область",
@@ -412,17 +438,6 @@ _CITY_NAMES = {
         "karakalpakstan":  "Каракалпакстан",
         "jizzakh":         "Джизак",
         "sirdarya":        "Сырдарья",
-        # legacy: nukus мог сохраняться раньше
-        "nukus":           "Нукус",
-        "uz_other":        "Другой город",
-        "usa":             "США",
-        "russia":          "Россия",
-        "kazakhstan":      "Казахстан",
-        "kyrgyzstan":      "Кыргызстан",
-        "tajikistan":      "Таджикистан",
-        "turkmenistan":    "Туркменистан",
-        "europe":          "Европа",
-        "other":           "Другая страна",
     },
     "uz": {
         "tashkent":        "Toshkent",
@@ -438,81 +453,97 @@ _CITY_NAMES = {
         "karakalpakstan":  "Qoraqalpog'iston",
         "jizzakh":         "Jizzax",
         "sirdarya":        "Sirdaryo",
-        "nukus":           "Nukus",
-        "uz_other":        "Boshqa shahar",
-        "usa":             "AQSH",
-        "russia":          "Rossiya",
-        "kazakhstan":      "Qozog'iston",
-        "kyrgyzstan":      "Qirg'iziston",
-        "tajikistan":      "Tojikiston",
-        "turkmenistan":    "Turkmaniston",
-        "europe":          "Yevropa",
-        "other":           "Boshqa mamlakat",
     },
 }
 
-# Коды всех 13 областей УЗ (для которых спрашиваем район)
-_UZ_REGION_CODES = {
-    "tashkent", "tashkent_region", "samarkand",
-    "fergana", "andijan", "namangan", "bukhara",
-    "kashkadarya", "surkhandarya", "khorezm",
-    "karakalpakstan", "jizzakh", "sirdarya",
-    "nukus", "uz_other",
-}
+# Коды областей УЗ (для которых спрашиваем район)
+_UZ_REGION_CODES = set(_REGION_NAMES["ru"].keys())
 
 
 @router.callback_query(F.data.startswith("city:"), QuestionnaireStates.q6_city)
 async def q6_city_selected(callback: CallbackQuery, state: FSMContext):
+    """Шаг 1: выбор страны."""
     city_code = callback.data.split(":")[1]
     lang = await _lang(state)
     L = lang if lang in ("ru", "uz") else "ru"
-    city_name = _CITY_NAMES[L].get(city_code, city_code)
 
-    # Страна определяется по коду: UZ-регион → "uzbekistan", иначе — сам код
-    country = "uzbekistan" if city_code in _UZ_REGION_CODES else city_code
+    if city_code == "uzbekistan":
+        # Узбекистан → показать подменю из 13 областей
+        data = await state.get_data()
+        bar = progress_bar(6, 10)
+        if lang == "uz":
+            q_text = f"🏡 6/10-savol\n{bar}\n\n🇺🇿 Viloyatni tanlang:"
+        else:
+            q_text = f"🏡 Вопрос 6/10\n{bar}\n\n🇺🇿 Выберите область:"
+        full_text = _with_card(data, lang, q_text)
+        await callback.message.edit_text(full_text, reply_markup=uz_regions_kb(lang))
+        await state.update_data(last_bot_msg=callback.message.message_id)
+        await state.set_state(QuestionnaireStates.q6_region)
+    else:
+        # Зарубежная страна → сохраняем, район не нужен, сразу к образованию
+        city_name = _CITY_NAMES[L].get(city_code, city_code)
+        await state.update_data(
+            city_code=city_code,
+            city=city_name,
+            district="",
+            country=city_code,
+        )
+        await _goto_education_after_city(callback, state, lang)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "city_back", QuestionnaireStates.q6_region)
+async def q6_city_back(callback: CallbackQuery, state: FSMContext):
+    """Возврат из подменю областей к выбору страны."""
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = progress_bar(6, 10)
+    q_text = t("q6_city", lang, bar=bar)
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+    )
+    await state.update_data(last_bot_msg=callback.message.message_id)
+    await state.set_state(QuestionnaireStates.q6_city)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("region:"), QuestionnaireStates.q6_region)
+async def q6_region_selected(callback: CallbackQuery, state: FSMContext):
+    """Шаг 2: выбор области УЗ → спрашиваем район."""
+    region_code = callback.data.split(":")[1]
+    lang = await _lang(state)
+    L = lang if lang in ("ru", "uz") else "ru"
+    region_name = _REGION_NAMES[L].get(region_code, region_code)
 
     await state.update_data(
-        city_code=city_code,
-        city=city_name,
-        country=country,
+        city_code=region_code,
+        city=region_name,
+        country="uzbekistan",
     )
 
+    data = await state.get_data()
     bar = progress_bar(6, 10)
-
-    if city_code in _UZ_REGION_CODES:
-        # Узбекистан (любая область) → спросить район текстом
-        data = await state.get_data()
-        if city_code == "uz_other":
-            if lang == "uz":
-                q_text = f"🏡 6/10-savol\n{bar}\n\nShahar nomini kiriting:"
-            else:
-                q_text = f"🏡 Вопрос 6/10\n{bar}\n\nВведите название города:"
-            full_text = _with_card(data, lang, q_text)
-            await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
-        else:
-            if lang == "uz":
-                q_text = (f"🏡 6/10-savol\n{bar}\n\n"
-                          f"Tanlandi: {city_name}\n\n"
-                          f"Tuman yoki shahar:\n"
-                          f"(masalan: Yunusobod, Chilonzor)\n"
-                          f"(ixtiyoriy)")
-            else:
-                q_text = (f"🏡 Вопрос 6/10\n{bar}\n\n"
-                          f"Выбрано: {city_name}\n\n"
-                          f"Район или город:\n"
-                          f"(например: Юнусабад, Чиланзар)\n"
-                          f"(необязательно)")
-            full_text = _with_card(data, lang, q_text)
-            await callback.message.edit_text(
-                full_text,
-                reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-            )
-        await state.update_data(last_bot_msg=callback.message.message_id)
-        await state.set_state(QuestionnaireStates.q6_district)
+    if lang == "uz":
+        q_text = (f"🏡 6/10-savol\n{bar}\n\n"
+                  f"Tanlandi: {region_name}\n\n"
+                  f"Tuman yoki shahar:\n"
+                  f"(masalan: Yunusobod, Chilonzor)\n"
+                  f"(ixtiyoriy)")
     else:
-        # Зарубежная страна → сразу к образованию, район не нужен
-        await state.update_data(district="")
-        await _goto_education_after_city(callback, state, lang)
+        q_text = (f"🏡 Вопрос 6/10\n{bar}\n\n"
+                  f"Выбрано: {region_name}\n\n"
+                  f"Район или город:\n"
+                  f"(например: Юнусабад, Чиланзар)\n"
+                  f"(необязательно)")
+    full_text = _with_card(data, lang, q_text)
+    await callback.message.edit_text(
+        full_text,
+        reply_markup=add_nav(skip_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+    )
+    await state.update_data(last_bot_msg=callback.message.message_id)
+    await state.set_state(QuestionnaireStates.q6_district)
     await callback.answer()
 
 
@@ -537,13 +568,7 @@ async def q6_district_entered(message: Message, state: FSMContext):
     await _delete_old(message, state)
     lang = await _lang(state)
     text_input = message.text.strip()
-    data = await state.get_data()
-
-    # «Другой» или «За рубежом» → текст = город, без района
-    if data.get("city_code") in ("other", "abroad"):
-        await state.update_data(city=text_input, district="")
-    else:
-        await state.update_data(district=text_input)
+    await state.update_data(district=text_input)
 
     data = await state.get_data()
     # → 7. Образование
@@ -842,10 +867,20 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
             lambda: add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
             lambda l, c: _with_card(data, l, t("q12", l, bar=progress_bar(5, 10)))
         ),
-        QuestionnaireStates.q6_district.state: (
+        QuestionnaireStates.q6_region.state: (
             "q6_city", QuestionnaireStates.q6_city,
             lambda: add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
             lambda l, c: _with_card(data, l, t("q6_city", l, bar=progress_bar(6, 10)))
+        ),
+        QuestionnaireStates.q6_district.state: (
+            "q6_city", QuestionnaireStates.q6_region,
+            lambda: uz_regions_kb(lang),
+            lambda l, c: _with_card(
+                data, l,
+                (f"🏡 6/10-savol\n{progress_bar(6, 10)}\n\n🇺🇿 Viloyatni tanlang:"
+                 if l == "uz" else
+                 f"🏡 Вопрос 6/10\n{progress_bar(6, 10)}\n\n🇺🇿 Выберите область:"),
+            ),
         ),
         QuestionnaireStates.q5_education.state: (
             "q6_city", QuestionnaireStates.q6_city,

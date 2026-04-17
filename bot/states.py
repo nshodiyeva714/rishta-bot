@@ -14,7 +14,8 @@ class QuestionnaireStates(StatesGroup):
     q3_height = State()            # 2C. Рост (часть вопроса 2)
     q4_body_type = State()         # 4. Телосложение
     q12_nationality = State()      # 5. Национальность
-    q6_city = State()              # 6. Город (кнопки)
+    q6_city = State()              # 6. Страна (кнопки)
+    q6_region = State()            # 6a. Область Узбекистана (кнопки)
     q6_district = State()          # 6b. Район (текст)
     q5_education = State()         # 7. Образование
     q5_university = State()

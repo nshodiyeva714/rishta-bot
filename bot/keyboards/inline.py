@@ -480,67 +480,80 @@ def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 # ── City keyboard (questionnaire step 6) ──
 
 def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Выбор города/области в анкете — 13 областей УЗ + 8 стран."""
+    """Шаг 1: Выбор страны (9 опций, по 1 в ряд)."""
     if lang == "uz":
         opts = [
-            ("🏙 Toshkent (shahar)",  "city:tashkent"),
-            ("🌆 Toshkent viloyati",  "city:tashkent_region"),
-            ("🏛 Samarqand",          "city:samarkand"),
-            ("🌸 Farg'ona",           "city:fergana"),
-            ("🌿 Andijon",            "city:andijan"),
-            ("🏔 Namangan",           "city:namangan"),
-            ("🏜 Buxoro",            "city:bukhara"),
-            ("🌾 Qashqadaryo",        "city:kashkadarya"),
-            ("🏕 Surxondaryo",        "city:surkhandarya"),
-            ("🌊 Xorazm",            "city:khorezm"),
-            ("🏝 Qoraqalpog'iston",  "city:karakalpakstan"),
-            ("🌄 Jizzax",            "city:jizzakh"),
-            ("🌻 Sirdaryo",          "city:sirdarya"),
-            ("🇺🇸 AQSH",              "city:usa"),
-            ("🇷🇺 Rossiya",           "city:russia"),
-            ("🇰🇿 Qozog'iston",       "city:kazakhstan"),
-            ("🇰🇬 Qirg'iziston",      "city:kyrgyzstan"),
-            ("🇹🇯 Tojikiston",        "city:tajikistan"),
-            ("🇹🇲 Turkmaniston",      "city:turkmenistan"),
-            ("🌍 Yevropa",            "city:europe"),
-            ("🌏 Boshqa mamlakat",    "city:other"),
+            ("🇺🇿 O'zbekiston",   "city:uzbekistan"),
+            ("🇺🇸 AQSH",          "city:usa"),
+            ("🇷🇺 Rossiya",       "city:russia"),
+            ("🇰🇿 Qozog'iston",   "city:kazakhstan"),
+            ("🇰🇬 Qirg'iziston",  "city:kyrgyzstan"),
+            ("🇹🇯 Tojikiston",    "city:tajikistan"),
+            ("🇹🇲 Turkmaniston",  "city:turkmenistan"),
+            ("🌍 Yevropa",        "city:europe"),
+            ("🌏 Boshqa mamlakat","city:other"),
         ]
     else:
         opts = [
-            ("🏙 Ташкент (город)",     "city:tashkent"),
-            ("🌆 Ташкентская область", "city:tashkent_region"),
-            ("🏛 Самарканд",           "city:samarkand"),
-            ("🌸 Фергана",            "city:fergana"),
-            ("🌿 Андижан",            "city:andijan"),
-            ("🏔 Наманган",           "city:namangan"),
-            ("🏜 Бухара",             "city:bukhara"),
-            ("🌾 Кашкадарья",         "city:kashkadarya"),
-            ("🏕 Сурхандарья",        "city:surkhandarya"),
-            ("🌊 Хорезм",             "city:khorezm"),
-            ("🏝 Каракалпакстан",     "city:karakalpakstan"),
-            ("🌄 Джизак",             "city:jizzakh"),
-            ("🌻 Сырдарья",           "city:sirdarya"),
-            ("🇺🇸 США",               "city:usa"),
-            ("🇷🇺 Россия",            "city:russia"),
-            ("🇰🇿 Казахстан",         "city:kazakhstan"),
-            ("🇰🇬 Кыргызстан",        "city:kyrgyzstan"),
-            ("🇹🇯 Таджикистан",       "city:tajikistan"),
-            ("🇹🇲 Туркменистан",      "city:turkmenistan"),
-            ("🌍 Европа",             "city:europe"),
-            ("🌏 Другая страна",      "city:other"),
+            ("🇺🇿 Узбекистан",    "city:uzbekistan"),
+            ("🇺🇸 США",           "city:usa"),
+            ("🇷🇺 Россия",        "city:russia"),
+            ("🇰🇿 Казахстан",     "city:kazakhstan"),
+            ("🇰🇬 Кыргызстан",    "city:kyrgyzstan"),
+            ("🇹🇯 Таджикистан",   "city:tajikistan"),
+            ("🇹🇲 Туркменистан",  "city:turkmenistan"),
+            ("🌍 Европа",         "city:europe"),
+            ("🌏 Другая страна",  "city:other"),
         ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
 
-    # 13 областей — по 2 в ряд; 8 стран — по 1 в ряд
-    uz_opts = opts[:13]
-    int_opts = opts[13:]
+
+def uz_regions_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Шаг 2: Выбор области Узбекистана (13 опций, по 2 в ряд) + Назад."""
+    if lang == "uz":
+        opts = [
+            ("🏙 Toshkent (shahar)",  "region:tashkent"),
+            ("🌆 Toshkent viloyati",  "region:tashkent_region"),
+            ("🏛 Samarqand",          "region:samarkand"),
+            ("🌸 Farg'ona",           "region:fergana"),
+            ("🌿 Andijon",            "region:andijan"),
+            ("🏔 Namangan",           "region:namangan"),
+            ("🏜 Buxoro",            "region:bukhara"),
+            ("🌾 Qashqadaryo",        "region:kashkadarya"),
+            ("🏕 Surxondaryo",        "region:surkhandarya"),
+            ("🌊 Xorazm",            "region:khorezm"),
+            ("🏝 Qoraqalpog'iston",  "region:karakalpakstan"),
+            ("🌄 Jizzax",            "region:jizzakh"),
+            ("🌻 Sirdaryo",          "region:sirdarya"),
+        ]
+        back_text = "🔙 Orqaga"
+    else:
+        opts = [
+            ("🏙 Ташкент (город)",    "region:tashkent"),
+            ("🌆 Ташкентская обл.",   "region:tashkent_region"),
+            ("🏛 Самарканд",          "region:samarkand"),
+            ("🌸 Фергана",            "region:fergana"),
+            ("🌿 Андижан",            "region:andijan"),
+            ("🏔 Наманган",           "region:namangan"),
+            ("🏜 Бухара",             "region:bukhara"),
+            ("🌾 Кашкадарья",         "region:kashkadarya"),
+            ("🏕 Сурхандарья",        "region:surkhandarya"),
+            ("🌊 Хорезм",             "region:khorezm"),
+            ("🏝 Каракалпакстан",     "region:karakalpakstan"),
+            ("🌄 Джизак",             "region:jizzakh"),
+            ("🌻 Сырдарья",           "region:sirdarya"),
+        ]
+        back_text = "🔙 Назад"
+
     buttons = []
-    for i in range(0, len(uz_opts), 2):
-        row = [InlineKeyboardButton(text=uz_opts[i][0], callback_data=uz_opts[i][1])]
-        if i + 1 < len(uz_opts):
-            row.append(InlineKeyboardButton(text=uz_opts[i + 1][0], callback_data=uz_opts[i + 1][1]))
+    for i in range(0, len(opts), 2):
+        row = [InlineKeyboardButton(text=opts[i][0], callback_data=opts[i][1])]
+        if i + 1 < len(opts):
+            row.append(InlineKeyboardButton(text=opts[i + 1][0], callback_data=opts[i + 1][1]))
         buttons.append(row)
-    for txt, cb in int_opts:
-        buttons.append([InlineKeyboardButton(text=txt, callback_data=cb)])
+    buttons.append([InlineKeyboardButton(text=back_text, callback_data="city_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
