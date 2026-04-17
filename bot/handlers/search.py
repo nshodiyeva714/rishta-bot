@@ -936,25 +936,36 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             # Анкеты с city_code="other" (пользователь ввёл город свободным текстом)
             conditions.append(Profile.city_code == "other")
         else:
-            region_map = {
-                "tashkent": "ташкент%", "samarkand": "самарканд%",
-                "fergana": "ферган%", "bukhara": "бухар%",
-                "namangan": "наманган%", "andijan": "андижан%", "nukus": "нукус%",
+            # Паттерны «содержит где угодно» — ловим разные варианты написания
+            # ("Samarqand", "самарканд", "г. Самарканд", "Samarkand" и т.п.)
+            region_map_ru = {
+                "tashkent": "%ташкент%", "samarkand": "%самарканд%",
+                "fergana": "%ферган%", "bukhara": "%бухар%",
+                "namangan": "%наманган%", "andijan": "%андижан%", "nukus": "%нукус%",
             }
             region_map_uz = {
-                "tashkent": "toshkent%", "samarkand": "samarqand%",
-                "fergana": "farg'ona%", "bukhara": "buxoro%",
-                "namangan": "namangan%", "andijan": "andijon%", "nukus": "nukus%",
+                "tashkent": "%toshkent%", "samarkand": "%samarqand%",
+                "fergana": "%farg'ona%", "bukhara": "%buxoro%",
+                "namangan": "%namangan%", "andijan": "%andijon%", "nukus": "%nukus%",
             }
-            pat_ru = region_map.get(region_val, f"{region_val}%")
-            pat_uz = region_map_uz.get(region_val, f"{region_val}%")
+            # Дополнительно — английская транслитерация
+            region_map_en = {
+                "tashkent": "%tashkent%", "samarkand": "%samarkand%",
+                "fergana": "%fergana%", "bukhara": "%bukhara%",
+                "namangan": "%namangan%", "andijan": "%andijan%", "nukus": "%nukus%",
+            }
+            pat_ru = region_map_ru.get(region_val, f"%{region_val}%")
+            pat_uz = region_map_uz.get(region_val, f"%{region_val}%")
+            pat_en = region_map_en.get(region_val, f"%{region_val}%")
             from sqlalchemy import or_
             conditions.append(or_(
                 Profile.city_code == region_val,
                 Profile.family_region.ilike(pat_ru),
                 Profile.family_region.ilike(pat_uz),
+                Profile.family_region.ilike(pat_en),
                 Profile.city.ilike(pat_ru),
                 Profile.city.ilike(pat_uz),
+                Profile.city.ilike(pat_en),
             ))
 
     # Фильтр: национальность
