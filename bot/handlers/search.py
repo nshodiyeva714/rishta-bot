@@ -21,7 +21,7 @@ from bot.keyboards.inline import (
 )
 from bot.utils.helpers import age_text, calculate_age, format_anketa_public
 from bot.config import config
-from bot.states import SearchStates
+from bot.states import SearchStates, ContactStates
 
 logger = logging.getLogger(__name__)
 
@@ -1717,9 +1717,9 @@ async def skip_profile(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data.startswith("get_contact:"))
 async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """Пользователь жмёт 💌 → прямые deep-links на операторов + уведомление модераторам."""
-    from urllib.parse import quote
-    from bot.config import config as bot_config, MODERATOR_USERNAMES, get_all_moderator_ids
+    """Запрос контакта → уведомляем модераторов полной карточкой."""
+    from bot.config import get_all_moderator_ids
+    import datetime
 
     profile_id = int(callback.data.split(":")[1])
     lang = await get_lang(session, callback.from_user.id)
@@ -1730,9 +1730,8 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
         return
 
     display_id = profile.display_id or "—"
-    await state.update_data(contact_profile_id=profile_id, contact_display_id=display_id)
 
-    # Регистрируем запрос
+    # Регистрируем запрос в БД
     try:
         cr = ContactRequest(
             requester_user_id=callback.from_user.id,
@@ -1745,633 +1744,175 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
     except Exception as _e:
         logger.debug("ignored: %s", _e)
 
-    # Уведомление модераторам (всем)
+    # Полная карточка для модератора
+    age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
+    edu_raw = profile.education.value if profile.education else "—"
+    rel_raw = profile.religiosity.value if profile.religiosity else "—"
+    mar_raw = profile.marital_status.value if profile.marital_status else "—"
+    occ_raw = profile.occupation or "—"
+
     username = callback.from_user.username or "—"
     mod_text = (
-        f"💌 <b>Новый запрос контакта!</b>\n\n"
+        f"💌 <b>НОВЫЙ ЗАПРОС КОНТАКТА</b>\n\n"
+        f"КТО ИЩЕТ:\n"
+        f"👤 @{username}\n"
+        f"ID: <code>{callback.from_user.id}</code>\n\n"
+        f"НА КОГО:\n"
         f"🔖 {display_id}\n"
-        f"👤 {profile.name or '—'} · {profile.city or '—'}\n\n"
-        f"От: @{username}\n"
-        f"ID: <code>{callback.from_user.id}</code>"
+        f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n"
+        f"🎓 {edu_raw} · 💼 {occ_raw}\n"
+        f"🕌 {rel_raw} · 💍 {mar_raw}"
     )
+    mod_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="💬 Написать пользователю",
+            callback_data=f"mod_write:{callback.from_user.id}:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="❌ Отклонить запрос",
+            callback_data=f"mod_reject_req:{callback.from_user.id}:{profile_id}",
+        )],
+    ])
+
     for mod_id in get_all_moderator_ids():
         if not mod_id:
             continue
         try:
-            await callback.bot.send_message(mod_id, mod_text, parse_mode="HTML")
+            await callback.bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
 
-    # Уведомление владельцу анкеты (сохраняем)
-    if profile.user_id and profile.user_id != callback.from_user.id:
-        try:
-            owner = await session.get(User, profile.user_id)
-            owner_lang = owner.language.value if owner and owner.language else "ru"
-            if owner_lang == "uz":
-                owner_msg = (
-                    f"💌 <b>Anketangizga qiziqish bor!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Kimdir siz bilan bog'lanishni xohlaydi.\n"
-                    f"Moderator tez orada siz bilan\n"
-                    f"bog'lanadi. 🤝"
-                )
-            else:
-                owner_msg = (
-                    f"💌 <b>Вашей анкетой заинтересовались!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Кто-то хочет узнать ваш контакт.\n"
-                    f"Модератор скоро свяжется\n"
-                    f"с вами. 🤝"
-                )
-            await callback.bot.send_message(profile.user_id, owner_msg, parse_mode="HTML")
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
-
-    # Операторы для deep-link
-    mod_tashkent = MODERATOR_USERNAMES.get("tashkent") or "rishta_manager_tashkent"
-    mod_samarkand = MODERATOR_USERNAMES.get("samarkand") or "rishta_manager_samarkand"
-
+    # Ответ пользователю
     if lang == "uz":
-        start_text = (
-            f"Assalomu alaykum! {display_id} anketasiga qiziqish bildirdim. "
-            f"Kontaktni olmoqchiman."
-        )
         text = (
             f"🔖 <b>{display_id}</b>\n\n"
-            f"Anketaga qiziqish bildirdingiz!\n\n"
-            f"Operatorimiz bilan bog'laning —\n"
-            f"u oilalar o'rtasida\n"
-            f"tanishuvni tashkil etadi. 🤝"
+            f"✅ So'rovingiz qabul qilindi!\n\n"
+            f"Operatorimiz tez orada\n"
+            f"siz bilan bog'lanadi. 🤝\n\n"
+            f"Odatda 1-2 soat ichida."
         )
-        back_txt = "🔙 Orqaga"
     else:
-        start_text = (
-            f"Здравствуйте! Меня заинтересовала анкета {display_id}. "
-            f"Хотел(а) бы узнать контакт."
-        )
         text = (
             f"🔖 <b>{display_id}</b>\n\n"
-            f"Вы заинтересовались этой анкетой!\n\n"
-            f"Свяжитесь с нашим оператором —\n"
-            f"он поможет организовать\n"
-            f"знакомство семей. 🤝"
+            f"✅ Запрос принят!\n\n"
+            f"Оператор свяжется с вами\n"
+            f"в ближайшее время. 🤝\n\n"
+            f"Обычно в течение 1-2 часов."
         )
-        back_txt = "🔙 Назад"
 
-    url_text = quote(start_text)
-    buttons = [
-        [InlineKeyboardButton(
-            text=f"💬 @{mod_tashkent}",
-            url=f"https://t.me/{mod_tashkent}?text={url_text}",
-        )],
-        [InlineKeyboardButton(
-            text=f"💬 @{mod_samarkand}",
-            url=f"https://t.me/{mod_samarkand}?text={url_text}",
-        )],
-        [InlineKeyboardButton(
-            text=back_txt,
-            callback_data=f"skip_profile:{profile_id}",
-        )],
-    ]
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(text, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer()
 
 
 # ══════════════════════════════════════════════════════════
-# ВРЕМЕННО ОТКЛЮЧЕНО — contact flow через бота
-# Вернуть когда будет готова оплата
+#  Пользовательская часть платёжного flow
 # ══════════════════════════════════════════════════════════
-# @router.callback_query(F.data.startswith("contact_via:mod:"))
-# async def contact_via_mod(callback: CallbackQuery, session: AsyncSession):
-#     """Связаться с оператором — выбор конкретного менеджера (Ташкент/Самарканд)."""
-#     profile_id = int(callback.data.split(":")[2])
-#     lang = await get_lang(session, callback.from_user.id)
-#
-#     profile = await session.get(Profile, profile_id)
-#     display_id = (profile.display_id if profile else "—") or "—"
-#
-#     from bot.config import config as bot_config, MODERATOR_USERNAMES
-#     mod_tashkent_name = MODERATOR_USERNAMES.get("tashkent") or "rishta_manager_tashkent"
-#     mod_samarkand_name = MODERATOR_USERNAMES.get("samarkand") or "rishta_manager_samarkand"
-#     mod_tashkent_id = bot_config.mod_tashkent_id
-#     mod_samarkand_id = bot_config.mod_samarkand_id
-#
-#     requester_id = callback.from_user.id
-#
-#     if lang == "uz":
-#         text = (
-#             f"🔖 <b>{display_id}</b>\n\n"
-#             f"💁‍♀️ Operatorni tanlang:"
-#         )
-#         back_txt = "🔙 Orqaga"
-#     else:
-#         text = (
-#             f"🔖 <b>{display_id}</b>\n\n"
-#             f"💁‍♀️ Выберите оператора:"
-#         )
-#         back_txt = "🔙 Назад"
-#
-#     buttons = [
-#         [InlineKeyboardButton(
-#             text=f"💬 @{mod_tashkent_name}",
-#             callback_data=f"mod_contact:{requester_id}:{profile_id}:{mod_tashkent_id}",
-#         )],
-#         [InlineKeyboardButton(
-#             text=f"💬 @{mod_samarkand_name}",
-#             callback_data=f"mod_contact:{requester_id}:{profile_id}:{mod_samarkand_id}",
-#         )],
-#         [InlineKeyboardButton(
-#             text=back_txt,
-#             callback_data=f"get_contact:{profile_id}",
-#         )],
-#     ]
-#
-#     await callback.message.edit_text(
-#         text,
-#         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-#         parse_mode="HTML",
-#     )
-#     await callback.answer()
-#
-#
-# # ══════════════════════════════════════════════════════════
-# #  ВРЕМЕННО ОТКЛЮЧЕНО — оплата картой. Вернуть позже.
-# # ══════════════════════════════════════════════════════════
-# # @router.callback_query(F.data.startswith("contact_via:pay:"))
-# # async def contact_via_pay(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-# #     """Оплата картой — показать реквизиты и ждать скриншот."""
-# #     from bot.states import PaymentStates
-# #     profile_id = int(callback.data.split(":")[2])
-# #     lang = await get_lang(session, callback.from_user.id)
-# #     profile = await session.get(Profile, profile_id)
-# #     display_id = (profile.display_id if profile else "—") or "—"
-# #     if lang == "uz":
-# #         text = (
-# #             f"💳 <b>Ma'lumotlar uchun to'lov</b>\n\n"
-# #             f"🔖 {display_id}\n"
-# #             f"💰 Summa: <b>30 000 so'm</b>\n\n"
-# #             f"Rekvizitlar:\n"
-# #             f"💳 <code>5614 6887 0899 8959</code>\n"
-# #             f"👤 SHODIYEVA NASIBA\n\n"
-# #             f"📸 To'lovdan so'ng skrinshot yuboring"
-# #         )
-# #     else:
-# #         text = (
-# #             f"💳 <b>Оплата контакта</b>\n\n"
-# #             f"🔖 {display_id}\n"
-# #             f"💰 Сумма: <b>30 000 сум</b>\n\n"
-# #             f"Реквизиты для перевода:\n"
-# #             f"💳 <code>5614 6887 0899 8959</code>\n"
-# #             f"👤 SHODIYEVA NASIBA\n\n"
-# #             f"📸 Отправьте скриншот после оплаты"
-# #         )
-# #     buttons = [
-# #         [InlineKeyboardButton(
-# #             text="← Orqaga" if lang == "uz" else "← Назад",
-# #             callback_data=f"get_contact:{profile_id}",
-# #         )],
-# #     ]
-# #     await callback.message.edit_text(
-# #         text,
-# #         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
-# #         parse_mode="HTML",
-# #     )
-# #     await state.update_data(
-# #         contact_profile_id=profile_id,
-# #         contact_display_id=display_id,
-# #     )
-# #     await state.set_state(PaymentStates.awaiting_contact_screenshot)
-# #     await callback.answer()
-#
-#
-# # ══════════════════════════════════════════════════════════
-# #  Operator-only flow: оператор одобряет/отклоняет передачу контакта
-# # ══════════════════════════════════════════════════════════
-#
-# @router.callback_query(F.data.startswith("mod_contact:"))
-# async def mod_contact_selected(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-#     """Пользователь выбрал оператора — уведомляем выбранного оператора."""
-#     parts = callback.data.split(":")
-#     try:
-#         requester_id = int(parts[1])
-#         profile_id = int(parts[2])
-#         mod_id = int(parts[3])
-#     except (ValueError, IndexError):
-#         await callback.answer("❌")
-#         return
-#
-#     lang = await get_lang(session, callback.from_user.id)
-#     profile = await session.get(Profile, profile_id)
-#     display_id = (profile.display_id if profile else "—") or "—"
-#
-#     # Собираем краткую сводку анкеты для оператора
-#     if profile:
-#         import datetime
-#         age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
-#         prof_line = f"👤 {profile.name or '—'} · {age} · {profile.city or '—'}"
-#     else:
-#         prof_line = "👤 —"
-#
-#     req_username = callback.from_user.username or "—"
-#     mod_text = (
-#         f"💌 <b>Новый запрос контакта!</b>\n\n"
-#         f"🔖 {display_id}\n"
-#         f"{prof_line}\n\n"
-#         f"От: @{req_username}\n"
-#         f"ID: <code>{requester_id}</code>"
-#     )
-#     mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-#         [InlineKeyboardButton(
-#             text="✅ Передать контакт",
-#             callback_data=f"give_contact:{requester_id}:{profile_id}",
-#         )],
-#         [InlineKeyboardButton(
-#             text="❌ Отклонить",
-#             callback_data=f"reject_contact:{requester_id}:{profile_id}",
-#         )],
-#         [InlineKeyboardButton(
-#             text="💬 Написать пользователю",
-#             callback_data=f"modreply:{requester_id}",
-#         )],
-#     ])
-#
-#     delivered = False
-#     try:
-#         await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
-#         delivered = True
-#     except Exception as e:
-#         logger.error(f"Не удалось уведомить оператора {mod_id}: {e}")
-#
-#     if lang == "uz":
-#         if delivered:
-#             text = (
-#                 "✅ <b>So'rovingiz yuborildi!</b>\n\n"
-#                 "Operator tez orada\n"
-#                 "siz bilan bog'lanadi. 🤝\n\n"
-#                 "Odatda 1-2 soat ichida."
-#             )
-#         else:
-#             text = (
-#                 "⚠️ Operator bilan bog'lanib bo'lmadi.\n"
-#                 "Iltimos, keyinroq urinib ko'ring\n"
-#                 "yoki boshqa operatorni tanlang."
-#             )
-#     else:
-#         if delivered:
-#             text = (
-#                 "✅ <b>Запрос отправлен!</b>\n\n"
-#                 "Оператор свяжется с вами\n"
-#                 "в ближайшее время. 🤝\n\n"
-#                 "Обычно в течение 1-2 часов."
-#             )
-#         else:
-#             text = (
-#                 "⚠️ Не удалось связаться с оператором.\n"
-#                 "Попробуйте позже или выберите\n"
-#                 "другого оператора."
-#             )
-#
-#     try:
-#         await callback.message.edit_text(text, parse_mode="HTML")
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     await callback.answer()
-#
-#
-# @router.callback_query(F.data.startswith("give_contact:"))
-# async def give_contact(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-#     """Оператор одобрил — передаём контакт пользователю и уведомляем владельца."""
-#     parts = callback.data.split(":")
-#     try:
-#         requester_id = int(parts[1])
-#         profile_id = int(parts[2])
-#     except (ValueError, IndexError):
-#         await callback.answer("❌")
-#         return
-#
-#     profile = await session.get(Profile, profile_id)
-#     if not profile:
-#         await callback.answer("❌ Анкета не найдена")
-#         return
-#
-#     import datetime
-#     age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
-#
-#     contacts = []
-#     if profile.parent_phone:
-#         contacts.append(f"📞 {profile.parent_phone}")
-#     if profile.parent_telegram:
-#         contacts.append(f"📱 {profile.parent_telegram}")
-#     if profile.candidate_telegram:
-#         contacts.append(f"💬 {profile.candidate_telegram}")
-#     if profile.address:
-#         contacts.append(f"🏠 {profile.address}")
-#     contact_text = "\n".join(contacts) if contacts else "Контакты не указаны"
-#
-#     # Получатель контакта — язык из БД
-#     try:
-#         req_user = await session.get(User, requester_id)
-#         req_lang = req_user.language.value if req_user and req_user.language else "ru"
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#         req_lang = "ru"
-#
-#     display_id = profile.display_id or "—"
-#     if req_lang == "uz":
-#         user_msg = (
-#             f"✅ <b>Kontakt yuborildi!</b>\n\n"
-#             f"🔖 {display_id}\n"
-#             f"👤 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
-#             f"<b>Oila kontaktlari:</b>\n"
-#             f"{contact_text}\n\n"
-#             f"Bu uchrashuv baxt boshlanishi bo'lsin! 🤲"
-#         )
-#     else:
-#         user_msg = (
-#             f"✅ <b>Контакт передан!</b>\n\n"
-#             f"🔖 {display_id}\n"
-#             f"👤 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
-#             f"<b>Контакты семьи:</b>\n"
-#             f"{contact_text}\n\n"
-#             f"Пусть эта встреча станет\n"
-#             f"началом счастья! 🤲"
-#         )
-#
-#     try:
-#         await bot.send_message(requester_id, user_msg, parse_mode="HTML")
-#     except Exception as e:
-#         logger.error(f"Ошибка отправки контакта {requester_id}: {e}")
-#
-#     # Уведомить владельца анкеты
-#     if profile.user_id and profile.user_id != requester_id:
-#         try:
-#             owner = await session.get(User, profile.user_id)
-#             owner_lang = owner.language.value if owner and owner.language else "ru"
-#             if owner_lang == "uz":
-#                 owner_msg = (
-#                     f"💌 <b>Sizning kontaktingiz ulashildi!</b>\n\n"
-#                     f"🔖 {display_id}\n\n"
-#                     f"Jiddiy oila anketangizga qiziqdi.\n"
-#                     f"Qo'ng'iroqni kuting! 🤝"
-#                 )
-#             else:
-#                 owner_msg = (
-#                     f"💌 <b>Вашим контактом поделились!</b>\n\n"
-#                     f"🔖 {display_id}\n\n"
-#                     f"Серьёзная семья заинтересовалась\n"
-#                     f"вашей анкетой. Ждите звонка! 🤝"
-#                 )
-#             await bot.send_message(profile.user_id, owner_msg, parse_mode="HTML")
-#         except Exception as _e:
-#             logger.debug("ignored: %s", _e)
-#     # Обновить статус последнего запроса этого юзера к этой анкете → CONTACT_GIVEN
-#     try:
-#         from sqlalchemy import update
-#         await session.execute(
-#             update(ContactRequest)
-#             .where(
-#                 ContactRequest.requester_user_id == requester_id,
-#                 ContactRequest.target_profile_id == profile_id,
-#                 ContactRequest.status == RequestStatus.PENDING,
-#             )
-#             .values(status=RequestStatus.CONTACT_GIVEN)
-#         )
-#         await session.commit()
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     try:
-#         await callback.message.edit_text(
-#             callback.message.text + "\n\n✅ КОНТАКТ ПЕРЕДАН",
-#             parse_mode="HTML",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     await callback.answer("✅ Контакт передан!")
-#
-#
-# @router.callback_query(F.data.startswith("reject_contact:"))
-# async def reject_contact(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-#     """Оператор отклонил запрос — уведомляем пользователя."""
-#     parts = callback.data.split(":")
-#     try:
-#         requester_id = int(parts[1])
-#         profile_id = int(parts[2])
-#     except (ValueError, IndexError):
-#         await callback.answer("❌")
-#         return
-#
-#     try:
-#         req_user = await session.get(User, requester_id)
-#         req_lang = req_user.language.value if req_user and req_user.language else "ru"
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#         req_lang = "ru"
-#
-#     if req_lang == "uz":
-#         text = (
-#             "❌ Afsuski, so'rov rad etildi.\n\n"
-#             "Boshqa operatorga murojaat qiling\n"
-#             "yoki boshqa anketani tanlang.\n\n"
-#             "Izlanishda muvaffaqiyat tilaymiz! 🤲"
-#         )
-#     else:
-#         text = (
-#             "❌ К сожалению, запрос отклонён.\n\n"
-#             "Попробуйте связаться с другим\n"
-#             "оператором или выберите\n"
-#             "другую анкету.\n\n"
-#             "Удачи в поиске! 🤲"
-#         )
-#
-#     try:
-#         await bot.send_message(requester_id, text)
-#     except Exception as e:
-#         logger.error(f"Ошибка уведомления об отклонении {requester_id}: {e}")
-#
-#     # Обновить статус запроса
-#     try:
-#         from sqlalchemy import update
-#         await session.execute(
-#             update(ContactRequest)
-#             .where(
-#                 ContactRequest.requester_user_id == requester_id,
-#                 ContactRequest.target_profile_id == profile_id,
-#                 ContactRequest.status == RequestStatus.PENDING,
-#             )
-#             .values(status=RequestStatus.REJECTED)
-#         )
-#         await session.commit()
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     try:
-#         await callback.message.edit_text(
-#             callback.message.text + "\n\n❌ ОТКЛОНЕНО",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     await callback.answer("❌ Отклонено")
-#
-#
-# from bot.states import PaymentStates as _PaymentStates
-#
-#
-# @router.message(F.photo, _PaymentStates.awaiting_contact_screenshot)
-# async def contact_payment_screenshot(message, state: FSMContext, session: AsyncSession, bot: Bot):
-#     """Скриншот оплаты за контакт → модераторам."""
-#     data = await state.get_data()
-#     profile_id = data.get("contact_profile_id")
-#     display_id = data.get("contact_display_id", "—")
-#     user_id = message.from_user.id
-#     lang = await get_lang(session, user_id)
-#     photo_id = message.photo[-1].file_id
-#
-#     # Уведомляем модераторов
-#     from bot.config import get_all_moderator_ids
-#     mod_text = (
-#         f"💳 <b>НОВАЯ ОПЛАТА ЗА КОНТАКТ</b>\n\n"
-#         f"Анкета: <b>{display_id}</b>\n"
-#         f"От: @{message.from_user.username or '—'} "
-#         f"(ID: <code>{user_id}</code>)\n\n"
-#         f"Проверьте скриншот и подтвердите:"
-#     )
-#     mod_kb = InlineKeyboardMarkup(inline_keyboard=[
-#         [InlineKeyboardButton(
-#             text="✅ Подтвердить — передать контакт",
-#             callback_data=f"pay_confirm:{user_id}:{profile_id}",
-#         )],
-#         [InlineKeyboardButton(
-#             text="❌ Отклонить",
-#             callback_data=f"pay_reject:{user_id}:{profile_id}",
-#         )],
-#     ])
-#
-#     for mod_id in get_all_moderator_ids():
-#         try:
-#             await bot.send_photo(
-#                 mod_id, photo_id,
-#                 caption=mod_text,
-#                 reply_markup=mod_kb,
-#                 parse_mode="HTML",
-#             )
-#         except Exception as _e:
-#             logger.debug("ignored: %s", _e)
-#     if lang == "uz":
-#         reply = (
-#             "✅ Skrinshot qabul qilindi!\n\n"
-#             "Moderator to'lovni tekshirib,\n"
-#             "ma'lumotlarni yaqin orada yuboradi. 🤝\n\n"
-#             "Odatda 1-2 soat ichida."
-#         )
-#     else:
-#         reply = (
-#             "✅ Скриншот получен!\n\n"
-#             "Модератор проверит оплату\n"
-#             "и передаст контакт в\n"
-#             "ближайшее время. 🤝\n\n"
-#             "Обычно в течение 1-2 часов."
-#         )
-#
-#     await message.answer(reply)
-#     await state.set_state(None)
-#
 
-# @router.callback_query(F.data.startswith("pay_confirm:"))
-# async def pay_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-#     """Модератор подтверждает оплату → передаём контакт покупателю."""
-#     parts = callback.data.split(":")
-#     buyer_id = int(parts[1])
-#     profile_id = int(parts[2])
-#
-#     profile = await session.get(Profile, profile_id)
-#     if not profile:
-#         await callback.answer("❌ Анкета не найдена")
-#         return
-#
-#     display_id = profile.display_id or "—"
-#
-#     contacts = []
-#     if getattr(profile, "parent_phone", None):
-#         contacts.append(f"📞 {profile.parent_phone}")
-#     if getattr(profile, "parent_telegram", None):
-#         contacts.append(f"📱 {profile.parent_telegram}")
-#     if getattr(profile, "candidate_telegram", None):
-#         contacts.append(f"💬 {profile.candidate_telegram}")
-#     if getattr(profile, "address", None):
-#         contacts.append(f"🏠 {profile.address}")
-#     contact_text = "\n".join(contacts) if contacts else "Контакты не указаны"
-#
-#     try:
-#         await bot.send_message(
-#             buyer_id,
-#             f"✅ <b>Оплата подтверждена!</b>\n\n"
-#             f"🔖 {display_id}\n\n"
-#             f"<b>Контакты семьи:</b>\n"
-#             f"{contact_text}\n\n"
-#             f"Пусть эта встреча станет\n"
-#             f"началом счастья! 🤲",
-#             parse_mode="HTML",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     # Уведомляем владельца анкеты
-#     if profile.user_id:
-#         try:
-#             await bot.send_message(
-#                 profile.user_id,
-#                 f"🔥 Вашей анкетой <b>{display_id}</b>\n"
-#                 f"заинтересовалась семья.\n\n"
-#                 f"Модератор свяжется с вами\n"
-#                 f"для организации знакомства. 🤝",
-#                 parse_mode="HTML",
-#             )
-#         except Exception as _e:
-#             logger.debug("ignored: %s", _e)
-#     # Обновляем подпись у модератора
-#     try:
-#         old_caption = callback.message.caption or ""
-#         await callback.message.edit_caption(
-#             caption=old_caption + "\n\n✅ <b>Подтверждено — контакт передан</b>",
-#             parse_mode="HTML",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     await callback.answer("✅ Контакт передан!")
-#
-#
-# @router.callback_query(F.data.startswith("pay_reject:"))
-# async def pay_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-#     """Модератор отклоняет оплату."""
-#     parts = callback.data.split(":")
-#     buyer_id = int(parts[1])
-#     profile_id = int(parts[2])
-#
-#     profile = await session.get(Profile, profile_id)
-#     display_id = (profile.display_id if profile else "—") or "—"
-#
-#     from bot.config import MODERATOR_USERNAMES
-#     mod_username = MODERATOR_USERNAMES.get("tashkent") or "rishta_manager_tashkent"
-#
-#     try:
-#         await bot.send_message(
-#             buyer_id,
-#             f"❌ Оплата по анкете <b>{display_id}</b> не подтверждена.\n\n"
-#             f"Обратитесь к модератору:\n"
-#             f"@{mod_username}",
-#             parse_mode="HTML",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     try:
-#         old_caption = callback.message.caption or ""
-#         await callback.message.edit_caption(
-#             caption=old_caption + "\n\n❌ <b>Отклонено</b>",
-#             parse_mode="HTML",
-#         )
-#     except Exception as _e:
-#         logger.debug("ignored: %s", _e)
-#     await callback.answer("❌ Отклонено")
+@router.callback_query(F.data.startswith("send_screenshot:"))
+async def send_screenshot_start(callback: CallbackQuery, state: FSMContext):
+    """Пользователь жмёт «📸 Отправить скриншот» — ждём фото."""
+    profile_id = int(callback.data.split(":")[1])
+    await state.update_data(screenshot_profile_id=profile_id)
+    await state.set_state(ContactStates.waiting_screenshot)
+    try:
+        await callback.message.edit_text("📸 Отправьте скриншот оплаты:")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.message(ContactStates.waiting_screenshot, F.photo)
+async def receive_screenshot(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
+    """Пользователь прислал скриншот — пересылаем модераторам с кнопками."""
+    from bot.config import get_all_moderator_ids
+    data = await state.get_data()
+    profile_id = data.get("screenshot_profile_id")
+    profile = await session.get(Profile, profile_id) if profile_id else None
+    display_id = (profile.display_id if profile else "—") or "—"
+
+    photo_id = message.photo[-1].file_id
+    username = message.from_user.username or "—"
+    user_id = message.from_user.id
+
+    mod_caption = (
+        f"📸 <b>СКРИНШОТ ОПЛАТЫ</b>\n\n"
+        f"От: @{username}\n"
+        f"ID: <code>{user_id}</code>\n"
+        f"Анкета: <b>{display_id}</b>"
+    )
+    mod_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="✅ Оплата получена — передать контакт",
+            callback_data=f"confirm_payment:{user_id}:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text="❌ Оплата не подтверждена",
+            callback_data=f"reject_payment:{user_id}:{profile_id}",
+        )],
+    ])
+
+    for mod_id in get_all_moderator_ids():
+        if not mod_id:
+            continue
+        try:
+            await bot.send_photo(mod_id, photo_id, caption=mod_caption, reply_markup=mod_kb, parse_mode="HTML")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+
+    await message.answer(
+        "✅ Скриншот получен!\n\n"
+        "Оператор проверит оплату\n"
+        "и передаст контакт. 🤝\n\n"
+        "Обычно в течение 1-2 часов."
+    )
+    await state.set_state(None)
+
+
+@router.callback_query(F.data.startswith("ask_operator:"))
+async def ask_operator_start(callback: CallbackQuery, state: FSMContext):
+    """Пользователь жмёт «💬 Задать вопрос» — ждём текст."""
+    profile_id = int(callback.data.split(":")[1])
+    await state.update_data(question_profile_id=profile_id)
+    await state.set_state(ContactStates.waiting_question)
+    try:
+        await callback.message.edit_text("💬 Напишите ваш вопрос оператору:")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.message(ContactStates.waiting_question, F.text)
+async def send_question_to_operator(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
+    """Пользователь прислал вопрос — пересылаем всем модераторам."""
+    from bot.config import get_all_moderator_ids
+    data = await state.get_data()
+    profile_id = data.get("question_profile_id")
+    profile = await session.get(Profile, profile_id) if profile_id else None
+    display_id = (profile.display_id if profile else "—") or "—"
+
+    username = message.from_user.username or "—"
+    user_id = message.from_user.id
+
+    q_text = (
+        f"💬 <b>Вопрос от пользователя</b>\n\n"
+        f"От: @{username} (ID: <code>{user_id}</code>)\n"
+        f"Анкета: {display_id}\n\n"
+        f"❓ {message.text}"
+    )
+    q_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💬 Ответить", callback_data=f"modreply:{user_id}"),
+    ]])
+
+    for mod_id in get_all_moderator_ids():
+        if not mod_id:
+            continue
+        try:
+            await bot.send_message(mod_id, q_text, reply_markup=q_kb, parse_mode="HTML")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+
+    await message.answer("✅ Вопрос отправлен оператору!\n\nОтвет придёт в ближайшее время.")
+    await state.set_state(None)

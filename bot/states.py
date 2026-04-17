@@ -116,3 +116,8 @@ class ModeratorReplyStates(StatesGroup):
 class ModeratorEditStates(StatesGroup):
     choosing_field = State()
     editing_value = State()
+
+
+class ContactStates(StatesGroup):
+    waiting_screenshot = State()
+    waiting_question = State()
