@@ -77,7 +77,9 @@ class RequirementStates(StatesGroup):
 
 class SearchStates(StatesGroup):
     browsing = State()
-    filter_age = State()  # ожидаем ввод возраста "20-30"
+    filter_age = State()  # ожидаем ввод возраста "20-30" (legacy)
+    age_from = State()    # ввод нижней границы кастомного диапазона
+    age_to = State()      # ввод верхней границы кастомного диапазона
 
 
 class PaymentStates(StatesGroup):

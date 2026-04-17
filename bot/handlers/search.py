@@ -4,7 +4,7 @@ import random
 import asyncio
 import logging
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, desc, case, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,7 @@ from bot.keyboards.inline import (
 )
 from bot.utils.helpers import age_text, calculate_age, format_anketa_public
 from bot.config import config
-# SearchStates больше не используется — возраст теперь через кнопки
+from bot.states import SearchStates
 
 logger = logging.getLogger(__name__)
 
@@ -484,11 +484,148 @@ async def filter_age(callback: CallbackQuery, session: AsyncSession):
         ("28–35", "fval:age:28_35"),
         ("36–45", "fval:age:36_45"),
         ("45+",   "fval:age:45plus"),
+        ("✏️ O'z oralig'ingiz" if lang == "uz" else "✏️ Свой диапазон",
+                                                     "filter_age:custom"),
         ("Не важно" if lang == "ru" else "Muhim emas", "fval:age:any"),
     ]
-    title = "Возраст:" if lang == "ru" else "Yosh:"
+    title = "🎂 Возраст:" if lang == "ru" else "🎂 Yosh:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
     await callback.answer()
+
+
+# ── Свой диапазон возраста ──
+@router.callback_query(F.data == "filter_age:custom")
+async def filter_age_custom(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    text = "🎂 Dan (yosh) kiriting:\n(masalan: 25)" if lang == "uz" else "🎂 Введите ОТ (лет):\n(например: 25)"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="🔙 Orqaga" if lang == "uz" else "🔙 Назад",
+            callback_data="filter:age",
+        )
+    ]])
+    await callback.message.edit_text(text, reply_markup=kb)
+    await state.update_data(
+        custom_age_lang=lang,
+        last_bot_msg_id=callback.message.message_id,
+    )
+    await state.set_state(SearchStates.age_from)
+    await callback.answer()
+
+
+@router.message(SearchStates.age_from)
+async def filter_age_from(message: Message, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("custom_age_lang", "ru")
+    try:
+        age_from = int(message.text.strip())
+    except (ValueError, AttributeError):
+        err = "⚠️ Raqam kiriting" if lang == "uz" else "⚠️ Введите число"
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        tmp = await message.answer(err)
+        # не ломаем state — юзер может попробовать ещё раз
+        return
+    if age_from < 18 or age_from > 60:
+        err = "⚠️ Yosh 18 dan 60 gacha bo'lishi kerak" if lang == "uz" else "⚠️ От 18 до 60 лет"
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await message.answer(err)
+        return
+
+    await state.update_data(custom_age_from=age_from)
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    # Удаляем старое сообщение бота
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(message.chat.id, last_id)
+        except Exception:
+            pass
+
+    text = "🎂 Gacha (yosh) kiriting:\n(masalan: 35)" if lang == "uz" else "🎂 Введите ДО (лет):\n(например: 35)"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="🔙 Orqaga" if lang == "uz" else "🔙 Назад",
+            callback_data="filter:age",
+        )
+    ]])
+    sent = await message.answer(text, reply_markup=kb)
+    await state.update_data(last_bot_msg_id=sent.message_id)
+    await state.set_state(SearchStates.age_to)
+
+
+@router.message(SearchStates.age_to)
+async def filter_age_to(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("custom_age_lang", "ru")
+    age_from = data.get("custom_age_from", 18)
+    filters = data.get("search_filters", {})
+
+    try:
+        age_to = int(message.text.strip())
+    except (ValueError, AttributeError):
+        err = "⚠️ Raqam kiriting" if lang == "uz" else "⚠️ Введите число"
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await message.answer(err)
+        return
+
+    if age_to < age_from:
+        err = (f"⚠️ Yosh {age_from} dan katta bo'lishi kerak"
+               if lang == "uz" else
+               f"⚠️ Должно быть больше {age_from}")
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await message.answer(err)
+        return
+    if age_to > 60:
+        err = "⚠️ 60 dan oshmasin" if lang == "uz" else "⚠️ Не более 60 лет"
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        await message.answer(err)
+        return
+
+    # Сохраняем кастомный диапазон
+    filters["age"] = f"custom_{age_from}_{age_to}"
+    filters["age_from"] = age_from
+    filters["age_to"] = age_to
+    await state.update_data(search_filters=filters)
+    await state.set_state(None)
+
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(message.chat.id, last_id)
+        except Exception:
+            pass
+
+    # Показываем экран фильтров с сохранённым диапазоном
+    text = t("search_filters_title", lang)
+    selected = build_selected_filters_text(filters, lang)
+    if selected:
+        text += "\n\n" + selected
+    kb = search_filter_kb(lang, filters)
+    sent = await message.answer(text, reply_markup=kb)
+    await state.update_data(last_bot_msg_id=sent.message_id)
 
 
 # ── Фильтр: религиозность ──
