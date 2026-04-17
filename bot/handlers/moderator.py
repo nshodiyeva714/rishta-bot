@@ -662,6 +662,9 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
 async def db_check(message: Message, session: AsyncSession):
     """Пошаговая диагностика БД — каждый блок отправляется отдельно,
     чтобы было видно на каком запросе происходит падение."""
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Доступ запрещён")
+        return
     await message.answer(f"🛠 /dbcheck запущен от id={message.from_user.id}")
 
     from sqlalchemy import text
@@ -741,6 +744,9 @@ async def db_check(message: Message, session: AsyncSession):
 @router.message(Command("testsearch"))
 async def test_search(message: Message, session: AsyncSession):
     """Прямой тест: запускает SQLAlchemy-запрос поиска как в _build_search_query."""
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Доступ запрещён")
+        return
     from sqlalchemy import select, or_
     from bot.db.models import Profile, ProfileType, ProfileStatus
     import traceback

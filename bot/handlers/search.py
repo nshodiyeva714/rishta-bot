@@ -922,10 +922,7 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
 
     from sqlalchemy import or_ as _or_active
     conditions = [
-        Profile.status.in_([
-            ProfileStatus.PUBLISHED,
-            ProfileStatus.PENDING,  # временно показывать анкеты на проверке
-        ]),
+        Profile.status == ProfileStatus.PUBLISHED,
         # is_active: True или NULL (старые записи) — исключаем только явное False
         _or_active(Profile.is_active.is_(True), Profile.is_active.is_(None)),
         Profile.profile_type == target_type,
