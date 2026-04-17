@@ -146,6 +146,13 @@ async def choose_language(callback: CallbackQuery, state: FSMContext, session: A
     )
     await callback.answer()
 
+    # Уведомление о новых лайках (после показа меню)
+    try:
+        from bot.handlers.menu import check_new_favorites
+        await check_new_favorites(callback, session, uid, lang)
+    except Exception as e:
+        logger.error(f"Ошибка проверки новых лайков в /start: {e}")
+
 
 # ── Согласие: общее ──
 @router.callback_query(F.data == "consent:general:yes", ConsentStates.general)

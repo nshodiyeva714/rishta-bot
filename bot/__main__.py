@@ -47,6 +47,12 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
+        try:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_favorites_count INTEGER DEFAULT 0"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей

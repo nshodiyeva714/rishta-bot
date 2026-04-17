@@ -51,6 +51,90 @@ async def show_main_menu(callback: CallbackQuery, session: AsyncSession):
         t("main_menu", lang),
         reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
+    # Уведомление о новых лайках
+    try:
+        await check_new_favorites(callback, session, callback.from_user.id, lang)
+    except Exception as e:
+        logger.error(f"Ошибка проверки новых лайков: {e}")
+
+
+async def check_new_favorites(
+    callback_or_message,
+    session: AsyncSession,
+    user_id: int,
+    lang: str,
+) -> None:
+    """Проверить, сколько раз анкету пользователя добавили в избранное с прошлого входа.
+
+    Если появились новые — показать уведомление и обновить seen_favorites_count.
+    """
+    from sqlalchemy import func as sqlfunc
+
+    # Анкета пользователя
+    profile_res = await session.execute(
+        select(Profile).where(
+            Profile.user_id == user_id,
+            Profile.status != ProfileStatus.DELETED,
+        ).limit(1)
+    )
+    my_profile = profile_res.scalar_one_or_none()
+    if not my_profile:
+        return
+
+    # Сколько раз сейчас в избранном
+    fav_res = await session.execute(
+        select(sqlfunc.count(Favorite.id)).where(
+            Favorite.profile_id == my_profile.id
+        )
+    )
+    total_favs = fav_res.scalar() or 0
+
+    user = await session.get(User, user_id)
+    if not user:
+        return
+    seen = user.seen_favorites_count or 0
+    new_favs = total_favs - seen
+    if new_favs <= 0:
+        return
+
+    user.seen_favorites_count = total_favs
+    await session.commit()
+
+    is_male = my_profile.profile_type == ProfileType.SON
+    if lang == "uz":
+        who_word = "yigit" if not is_male else "qiz"
+        text = (
+            f"❤️ <b>Siz {new_favs} ta {who_word}ga yoqdingiz!</b>\n\n"
+            f"Anketangiz e'tiborni tortmoqda. 🌟\n\n"
+            f"Davom eting — munosib nomzod\n"
+            f"sizni kutayotgan bo'lishi mumkin! 💍"
+        )
+        view_btn = "👀 Anketalarni ko'rish"
+        cont_btn = "➡️ Davom etish"
+    else:
+        if is_male:
+            who_word = "девушке" if new_favs == 1 else ("девушкам" if new_favs < 5 else "девушкам")
+        else:
+            who_word = "парню" if new_favs == 1 else ("парням" if new_favs < 5 else "парням")
+        text = (
+            f"❤️ <b>Вы понравились {new_favs} {who_word}!</b>\n\n"
+            f"Ваша анкета привлекает внимание. 🌟\n\n"
+            f"Продолжайте — достойный кандидат\n"
+            f"может уже ждать вас! 💍"
+        )
+        view_btn = "👀 Посмотреть анкеты"
+        cont_btn = "➡️ Продолжить"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=view_btn, callback_data="menu:search")],
+        [InlineKeyboardButton(text=cont_btn, callback_data="menu:main")],
+    ])
+
+    target = getattr(callback_or_message, "message", callback_or_message)
+    try:
+        await target.answer(text, reply_markup=kb, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Не удалось показать уведомление о лайках: {e}")
 
 
 @router.callback_query(F.data == "back:menu")

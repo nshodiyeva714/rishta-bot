@@ -163,6 +163,7 @@ class User(Base):
     language = Column(Enum(Language), default=Language.RU)
     consent_general = Column(Boolean, default=False)
     consent_special = Column(Boolean, default=False)
+    seen_favorites_count = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
