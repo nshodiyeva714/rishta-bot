@@ -459,10 +459,19 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
     """Показать меню ручных фильтров — всегда с чистыми фильтрами."""
     data = await state.get_data()
 
-    # Определяем search_type если ещё нет
-    if "search_type" not in data:
+    # Всегда проверяем search_type (а не только если его нет — защита от None/пустой строки)
+    search_type = data.get("search_type")
+    if not search_type:
         my_profile = await _get_user_profile(session, callback.from_user.id)
-        search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
+        if my_profile:
+            search_type = (
+                ProfileType.DAUGHTER.value
+                if my_profile.profile_type == ProfileType.SON
+                else ProfileType.SON.value
+            )
+        else:
+            # Гость без анкеты — по умолчанию ищем дочерей (невестку)
+            search_type = "daughter"
         await state.update_data(search_type=search_type)
 
     # Всегда начинаем с пустых фильтров
