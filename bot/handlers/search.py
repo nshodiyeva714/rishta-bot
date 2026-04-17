@@ -372,6 +372,9 @@ async def search_guest(callback: CallbackQuery, session: AsyncSession, state: FS
         search_offset=0,
         search_type=search_type.value,
         is_guest=True,
+        search_results=None,
+        search_scores=None,
+        current_index=0,
     )
     lang = await get_lang(session, callback.from_user.id)
     await _show_search_results(callback, session, state, lang)
@@ -418,6 +421,9 @@ async def search_by_my_requirements(callback: CallbackQuery, session: AsyncSessi
         search_filters=filters,
         search_offset=0,
         search_type=search_type.value,
+        search_results=None,
+        search_scores=None,
+        current_index=0,
     )
 
     await _show_search_results(callback, session, state, lang)
@@ -468,7 +474,8 @@ async def search_manual(callback: CallbackQuery, session: AsyncSession, state: F
         await state.update_data(search_type=search_type)
 
     # Всегда начинаем с пустых фильтров
-    await state.update_data(search_filters={}, search_offset=0)
+    await state.update_data(search_filters={}, search_offset=0,
+                            search_results=None, search_scores=None, current_index=0)
 
     await show_search_filters(callback, session, state)
 
@@ -845,7 +852,8 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
 # ── Сбросить фильтры ──
 @router.callback_query(F.data == "filter:clear")
 async def filter_clear(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    await state.update_data(search_filters={}, search_offset=0)
+    await state.update_data(search_filters={}, search_offset=0,
+                            search_results=None, search_scores=None, current_index=0)
 
     # Обновляем экран фильтров (show_search_filters сам вызовет callback.answer)
     await show_search_filters(callback, session, state)
@@ -863,7 +871,8 @@ async def filter_go(callback: CallbackQuery, session: AsyncSession, state: FSMCo
         search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
         await state.update_data(search_type=search_type)
 
-    await state.update_data(search_offset=0)
+    await state.update_data(search_offset=0, search_results=None,
+                            search_scores=None, current_index=0)
     await _show_search_results(callback, session, state, lang)
 
 
@@ -880,7 +889,8 @@ async def search_all(callback: CallbackQuery, session: AsyncSession, state: FSMC
     if not search_type:
         my_profile = await _get_user_profile(session, callback.from_user.id)
         search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
-    await state.update_data(search_filters={}, search_offset=0, search_type=search_type)
+    await state.update_data(search_filters={}, search_offset=0, search_type=search_type,
+                            search_results=None, search_scores=None, current_index=0)
     await _show_search_results(callback, session, state, lang)
 
 
@@ -897,7 +907,8 @@ async def search_browse_compat(callback: CallbackQuery, session: AsyncSession, s
     if not search_type:
         my_profile = await _get_user_profile(session, callback.from_user.id)
         search_type = "daughter" if my_profile and my_profile.profile_type == ProfileType.SON else "son"
-    await state.update_data(search_filters={}, search_offset=0, search_type=search_type)
+    await state.update_data(search_filters={}, search_offset=0, search_type=search_type,
+                            search_results=None, search_scores=None, current_index=0)
     await _show_search_results(callback, session, state, lang)
 
 
@@ -1121,24 +1132,76 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
     return profiles, user_req
 
 
-async def _show_search_results(callback: CallbackQuery, session: AsyncSession, state: FSMContext, lang: str):
-    """Показать одну анкету за раз."""
+async def _safe_show_card(callback: CallbackQuery, text: str, kb: InlineKeyboardMarkup) -> None:
+    """Показать карточку: edit_text, фолбэк — delete+answer (перекрывает фото↔текст)."""
+    try:
+        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        return
+    except Exception:
+        pass
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    try:
+        await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Ошибка показа анкеты: {e}")
+
+
+async def _rebuild_search_snapshot(
+    session: AsyncSession, state: FSMContext, user_id: int
+) -> list[int]:
+    """Пересобрать список ID анкет в FSM (снимок порядка)."""
     data = await state.get_data()
     filters = data.get("search_filters", {})
-    offset = data.get("search_offset", 0)
     search_type = data.get("search_type", "daughter")
     is_guest = data.get("is_guest", False)
+
+    profiles, user_req = await _build_search_query(
+        session, user_id, search_type, filters, is_guest=is_guest
+    )
+
+    scored = [(p, compute_match_score(p, user_req)) for p in profiles]
+    scored.sort(key=lambda x: (
+        0 if x[0].vip_status == VipStatus.ACTIVE else 1,
+        -(x[0].vip_expires_at.timestamp()
+          if x[0].vip_status == VipStatus.ACTIVE and x[0].vip_expires_at else 0),
+        -x[1],
+        -(x[0].published_at.timestamp() if x[0].published_at else 0),
+    ))
+
+    ids = [p.id for p, _ in scored]
+    scores = {p.id: s for p, s in scored}
+    await state.update_data(
+        search_results=ids,
+        search_scores=scores,
+        current_index=0,
+        search_offset=0,  # back-compat
+    )
+    return ids
+
+
+async def _show_search_results(
+    callback: CallbackQuery, session: AsyncSession, state: FSMContext, lang: str
+):
+    """Показать текущую анкету. Список ID хранится в FSM (search_results)."""
     user_id = callback.from_user.id
+    data = await state.get_data()
 
-    profiles, user_req = await _build_search_query(session, user_id, search_type, filters, is_guest=is_guest)
-    total = len(profiles)
+    ids: list[int] = data.get("search_results") or []
 
-    # Нет анкет
+    # Нет снимка — собираем
+    if not ids:
+        ids = await _rebuild_search_snapshot(session, state, user_id)
+        data = await state.get_data()
+
+    total = len(ids)
+    idx = data.get("current_index", 0)
+
+    # Пустой результат
     if total == 0:
-        if lang == "uz":
-            text = "🔍 Anketalar topilmadi."
-        else:
-            text = "🔍 Анкеты не найдены."
+        text = "🔍 Anketalar topilmadi." if lang == "uz" else "🔍 Анкеты не найдены."
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text="🔧 Filtrlarni o'zgartirish" if lang == "uz" else "🔧 Изменить фильтры",
@@ -1153,34 +1216,17 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
                 callback_data="menu:main",
             )],
         ])
-        try:
-            await callback.message.edit_text(text, reply_markup=kb)
-        except Exception:
-            await callback.message.answer(text, reply_markup=kb)
+        await _safe_show_card(callback, text, kb)
         await callback.answer()
         return
 
-    # Сортировка: VIP по дате оплаты → score → дата публикации
-    scored = []
-    for p in profiles:
-        score = compute_match_score(p, user_req)
-        scored.append((p, score))
-
-    scored.sort(key=lambda x: (
-        0 if x[0].vip_status == VipStatus.ACTIVE else 1,
-        -(x[0].vip_expires_at.timestamp()
-          if x[0].vip_status == VipStatus.ACTIVE and x[0].vip_expires_at else 0),
-        -x[1],
-        -(x[0].published_at.timestamp() if x[0].published_at else 0),
-    ))
-
-    # Все просмотрены
-    if offset >= total:
-        if lang == "uz":
-            text = f"🔍 Siz barcha {total} ta anketani ko'rdingiz!"
-        else:
-            text = f"🔍 Вы просмотрели все {total} анкет!"
-
+    # Индекс за границей — экран «просмотрели все»
+    if idx >= total:
+        text = (
+            f"🔍 Siz barcha {total} ta anketani ko'rdingiz!"
+            if lang == "uz" else
+            f"🔍 Вы просмотрели все {total} анкет!"
+        )
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text="🔄 Boshidan boshlash" if lang == "uz" else "🔄 Начать сначала",
@@ -1195,18 +1241,32 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
                 callback_data="menu:main",
             )],
         ])
-        try:
-            await callback.message.edit_text(text, reply_markup=kb)
-        except Exception:
-            await callback.message.answer(text, reply_markup=kb)
+        await _safe_show_card(callback, text, kb)
         await callback.answer()
         return
 
-    # Текущая анкета
-    profile, score = scored[offset]
+    # Подгружаем анкету из БД по ID
+    profile_id = ids[idx]
+    profile = await session.get(Profile, profile_id)
 
-    # Иллюзия загрузки только при первом показе
-    if offset == 0:
+    if not profile:
+        # Анкета удалена/скрыта — пропускаем
+        ids.pop(idx)
+        await state.update_data(search_results=ids)
+        if not ids:
+            await _show_search_results(callback, session, state, lang)
+            return
+        if idx >= len(ids):
+            await state.update_data(current_index=len(ids) - 1, search_offset=len(ids) - 1)
+        await _show_search_results(callback, session, state, lang)
+        return
+
+    scores: dict = data.get("search_scores") or {}
+    score = scores.get(profile_id) or scores.get(str(profile_id)) or 50
+
+    # Иллюзия загрузки — только при первом показе
+    if idx == 0 and callback.data in ("search:my_req", "search:manual", "search:all",
+                                      "search:restart", "filter:go", None):
         loading = (
             "🔍 Siz uchun eng yaxshilarini tanlamoqdamiz..."
             if lang == "uz" else
@@ -1218,34 +1278,24 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
         except Exception:
             pass
 
-    # Счётчик
-    if lang == "uz":
-        counter = f"🔍 Anketa {offset + 1} / {total}"
-    else:
-        counter = f"🔍 Анкета {offset + 1} из {total}"
-
-    # Карточка анкеты
+    counter = (
+        f"🔍 Anketa {idx + 1} / {total}"
+        if lang == "uz" else
+        f"🔍 Анкета {idx + 1} из {total}"
+    )
     card_text = format_anketa_public(profile, score, lang)
     full_text = counter + "\n\n" + card_text
-
-    # Показывать "Следующая" только если есть ещё анкеты
-    show_next = (offset + 1) < total
 
     kb = profile_card_kb(
         profile.id, lang,
         profile.display_id or "",
-        show_next=show_next,
-        current=offset + 1,
+        show_prev=(idx > 0),
+        show_next=(idx < total - 1),
+        current=idx + 1,
         total=total,
     )
 
-    try:
-        await callback.message.edit_text(full_text, reply_markup=kb, parse_mode="HTML")
-    except Exception:
-        try:
-            await callback.message.answer(full_text, reply_markup=kb, parse_mode="HTML")
-        except Exception as e:
-            logger.error(f"Ошибка показа анкеты: {e}")
+    await _safe_show_card(callback, full_text, kb)
 
     # Счётчик просмотров + уведомление владельцу
     profile.views_count = (profile.views_count or 0) + 1
@@ -1258,24 +1308,74 @@ async def _show_search_results(callback: CallbackQuery, session: AsyncSession, s
     await callback.answer()
 
 
-# ── Навигация: следующая / рестарт ──
+# ── Навигация: вперёд / назад / рестарт ──
 
-@router.callback_query(F.data == "search:next_one")
-async def search_next_one(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """Следующая анкета."""
+@router.callback_query(F.data.startswith("search_nav:"))
+async def search_nav(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Двусторонняя навигация по снимку search_results."""
     lang = await get_lang(session, callback.from_user.id)
+    direction = callback.data.split(":", 1)[1]  # "prev" | "next"
+
     data = await state.get_data()
-    offset = data.get("search_offset", 0)
-    await state.update_data(search_offset=offset + 1)
+    ids: list[int] = data.get("search_results") or []
+    idx = data.get("current_index", 0)
+    total = len(ids)
+
+    if total == 0:
+        await _show_search_results(callback, session, state, lang)
+        return
+
+    if direction == "prev":
+        if idx <= 0:
+            await callback.answer(
+                "⬅️ Bu birinchi anketa" if lang == "uz" else "⬅️ Это первая анкета",
+                show_alert=False,
+            )
+            return
+        idx -= 1
+    else:  # next
+        if idx >= total - 1:
+            await callback.answer(
+                "➡️ Boshqa anketalar yo'q" if lang == "uz" else "➡️ Больше анкет нет",
+                show_alert=False,
+            )
+            return
+        idx += 1
+
+    await state.update_data(current_index=idx, search_offset=idx)
     await _show_search_results(callback, session, state, lang)
 
 
 @router.callback_query(F.data == "search:restart")
 async def search_restart(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
-    """Начать поиск сначала."""
+    """Начать поиск сначала — пересобрать снимок."""
     lang = await get_lang(session, callback.from_user.id)
-    await state.update_data(search_offset=0)
+    await state.update_data(search_results=None, search_scores=None,
+                            current_index=0, search_offset=0)
     await _show_search_results(callback, session, state, lang)
+
+
+# Back-compat: старый callback «Следующая ➡️»
+@router.callback_query(F.data == "search:next_one")
+async def search_next_one_legacy(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    lang = await get_lang(session, callback.from_user.id)
+    data = await state.get_data()
+    ids: list[int] = data.get("search_results") or []
+    idx = data.get("current_index", 0)
+    if ids and idx >= len(ids) - 1:
+        await callback.answer(
+            "➡️ Boshqa anketalar yo'q" if lang == "uz" else "➡️ Больше анкет нет",
+            show_alert=False,
+        )
+        return
+    await state.update_data(current_index=idx + 1, search_offset=idx + 1)
+    await _show_search_results(callback, session, state, lang)
+
+
+@router.callback_query(F.data == "noop")
+async def noop_handler(callback: CallbackQuery):
+    """Тихий ответ на кнопку-счётчик."""
+    await callback.answer()
 
 
 # Совместимость со старой пагинацией search_page:N
@@ -1339,10 +1439,15 @@ async def add_favorite(callback: CallbackQuery, session: AsyncSession, state: FS
         toast = random.choice(phrases)
     await callback.answer(toast, show_alert=False)
 
-    # Автоматически к следующей анкете
+    # Автоматически к следующей анкете (если не последняя)
     data = await state.get_data()
-    offset = data.get("search_offset", 0)
-    await state.update_data(search_offset=offset + 1)
+    ids: list = data.get("search_results") or []
+    idx = data.get("current_index", data.get("search_offset", 0))
+    if ids and idx >= len(ids) - 1:
+        # Уже на последней — просто перерисовываем текущую
+        await _show_search_results(callback, session, state, lang)
+        return
+    await state.update_data(current_index=idx + 1, search_offset=idx + 1)
     await _show_search_results(callback, session, state, lang)
 
 

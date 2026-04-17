@@ -1,4 +1,5 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.texts import t
 
 
@@ -807,33 +808,70 @@ def profile_card_kb(
     lang: str = "ru",
     display_id: str = "",
     show_next: bool = True,
+    show_prev: bool = False,
     current: int = 0,
     total: int = 0,
 ) -> InlineKeyboardMarkup:
+    """Клавиатура карточки анкеты с двусторонней навигацией.
+
+    current/total — 1-based позиции для счётчика.
+    show_prev/show_next — кнопки навигации, скрываются на границах.
+    """
     if lang == "uz":
         interest_txt = "💌 Ma'lumotni olish"
         fav_txt = "❤️ Saqlash"
-        next_txt = "➡️ Keyingisi"
+        prev_txt = "⬅️ Orqaga"
+        next_txt = "Keyingisi ➡️"
         filters_txt = "🔧 Filtrlarni o'zgartirish"
         menu_txt = "🏠 Menyu"
     else:
         interest_txt = "💌 Узнать контакт"
         fav_txt = "❤️ В избранное"
-        next_txt = "➡️ Следующая"
+        prev_txt = "⬅️ Назад"
+        next_txt = "Следующая ➡️"
         filters_txt = "🔧 Изменить фильтры"
         menu_txt = "🏠 Меню"
 
-    buttons = [
-        [InlineKeyboardButton(text=interest_txt, callback_data=f"get_contact:{profile_id}")],
-    ]
-    row2 = [InlineKeyboardButton(text=fav_txt, callback_data=f"fav:{profile_id}")]
-    if show_next:
-        row2.append(InlineKeyboardButton(text=next_txt, callback_data="search:next_one"))
-    buttons.append(row2)
-    buttons.append([InlineKeyboardButton(text=filters_txt, callback_data="search:manual")])
-    buttons.append([InlineKeyboardButton(text=menu_txt, callback_data="menu:main")])
+    builder = InlineKeyboardBuilder()
 
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    # 1-й ряд: действие по текущей анкете
+    builder.row(InlineKeyboardButton(
+        text=interest_txt, callback_data=f"get_contact:{profile_id}"
+    ))
+
+    # 2-й ряд: ❤️ В избранное
+    builder.row(InlineKeyboardButton(
+        text=fav_txt, callback_data=f"fav:{profile_id}"
+    ))
+
+    # 3-й ряд: ⬅️ Назад · счётчик · Следующая ➡️
+    nav_row: list[InlineKeyboardButton] = []
+    if show_prev:
+        nav_row.append(InlineKeyboardButton(
+            text=prev_txt, callback_data="search_nav:prev"
+        ))
+    if total > 0:
+        nav_row.append(InlineKeyboardButton(
+            text=f"📄 {current}/{total}", callback_data="noop"
+        ))
+    if show_next:
+        nav_row.append(InlineKeyboardButton(
+            text=next_txt, callback_data="search_nav:next"
+        ))
+    if nav_row:
+        builder.row(*nav_row)
+
+    # 4-й ряд: фильтры
+    builder.row(InlineKeyboardButton(
+        text=filters_txt, callback_data="search:manual"
+    ))
+
+    # 5-й ряд: меню
+    builder.row(InlineKeyboardButton(
+        text=menu_txt, callback_data="menu:main"
+    ))
+
+    return builder.as_markup()
 
 
 def get_contact_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
