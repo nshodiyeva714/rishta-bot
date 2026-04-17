@@ -198,7 +198,7 @@ async def req_marital(callback: CallbackQuery, state: FSMContext):
 
     if value == "never_married":
         # Не замужем/не женат → детей нет автоматически → пропускаем вопрос
-        await state.update_data(req_children="no")
+        await state.update_data(req_children="no_children")
         await _after_req_children(callback, state)
     else:
         # Разведена/вдова/любое → спросить про детей
@@ -212,15 +212,14 @@ async def req_marital(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("reqchild:"), RequirementStates.children)
 async def req_children(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    # Маппинг кнопочных значений в значения БД/поиска
+    value = callback.data.replace("reqchild:", "")
     children_map = {
         "no": "no_children",
         "yes": "has_children",
         "any": "any",
     }
-    mapped_value = children_map.get(value, value)
-    await state.update_data(req_children=mapped_value)
+    value = children_map.get(value, value)
+    await state.update_data(req_children=value)
     await _after_req_children(callback, state)
     await callback.answer()
 
