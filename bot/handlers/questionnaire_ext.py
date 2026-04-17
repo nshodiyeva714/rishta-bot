@@ -118,6 +118,18 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
         snippet = char[:40] + ("..." if len(char) > 40 else "")
         lines.append(f"✨ {snippet}")
 
+    # Здоровье
+    health = data.get("health_notes")
+    if health:
+        snippet = health[:40] + ("..." if len(health) > 40 else "")
+        lines.append(f"❤️ {snippet}")
+
+    # О себе
+    about = data.get("ideal_family_life")
+    if about:
+        snippet = about[:40] + ("..." if len(about) > 40 else "")
+        lines.append(f"💬 {snippet}")
+
     # Жильё
     house_map = {
         "ru": {"own_house": "Свой дом", "own_apt": "Своя квартира",
@@ -625,18 +637,12 @@ async def _ask_parent_phone(m_or_cb, state: FSMContext):
     await state.set_state(QuestionnaireStates.ext_parent_phone)
 
 
-def _parent_tg_text(lang: str) -> str:
+def _parent_tg_text(lang: str, card: str = "") -> str:
     if lang == "uz":
-        return (
-            "📱 Ota-onalar Telegram:\n"
-            "(@username)\n\n"
-            f"{_CONTACT_NOTICE_SHORT_UZ}"
-        )
-    return (
-        "📱 Telegram родителей:\n"
-        "(@username)\n\n"
-        f"{_CONTACT_NOTICE_SHORT_RU}"
-    )
+        body = "📱 Ota-onalar Telegram:\n(@username)"
+    else:
+        body = "📱 Telegram родителей:\n(@username)"
+    return (card + SEP + body) if card else body
 
 
 @router.message(QuestionnaireStates.ext_parent_phone)
@@ -650,13 +656,28 @@ async def ext_parent_phone(message: Message, state: FSMContext):
     await state.update_data(parent_phone=phone)
     lang = await _lang(state)
 
+    # Удаляем сообщение пользователя
     try:
         await message.delete()
     except Exception:
         pass
 
-    text = _parent_tg_text(lang)
-    await _show_question(message, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    # Удаляем старое окно бота
+    data = await state.get_data()
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+        await state.update_data(last_bot_msg_id=None)
+
+    # Отправляем следующий вопрос с обновлённой карточкой
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _parent_tg_text(lang, card)
+    sent = await message.answer(text, reply_markup=skip_kb(lang))
+    await state.update_data(last_bot_msg_id=sent.message_id)
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
 
 
@@ -664,25 +685,21 @@ async def ext_parent_phone(message: Message, state: FSMContext):
 async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_phone=None)
     lang = await _lang(state)
-    text = _parent_tg_text(lang)
-    await _show_question(callback, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _parent_tg_text(lang, card)
+    await _show_question(callback, state, text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_parent_telegram)
     await callback.answer()
 
 
 # ── 9b. Telegram родителей ──
-def _candidate_tg_text(lang: str) -> str:
+def _candidate_tg_text(lang: str, card: str = "") -> str:
     if lang == "uz":
-        return (
-            "💬 Nomzod Telegram:\n"
-            "(@username)\n\n"
-            f"{_CONTACT_NOTICE_SHORT_UZ}"
-        )
-    return (
-        "💬 Telegram кандидата:\n"
-        "(@username)\n\n"
-        f"{_CONTACT_NOTICE_SHORT_RU}"
-    )
+        body = "💬 Nomzod Telegram:\n(@username)"
+    else:
+        body = "💬 Telegram кандидата:\n(@username)"
+    return (card + SEP + body) if card else body
 
 
 @router.message(QuestionnaireStates.ext_parent_telegram)
@@ -693,13 +710,28 @@ async def ext_parent_tg(message: Message, state: FSMContext):
     await state.update_data(parent_telegram=tg)
     lang = await _lang(state)
 
+    # Удаляем сообщение пользователя
     try:
         await message.delete()
     except Exception:
         pass
 
-    text = _candidate_tg_text(lang)
-    await _show_question(message, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    # Удаляем старое окно бота
+    data = await state.get_data()
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+        await state.update_data(last_bot_msg_id=None)
+
+    # Отправляем следующий вопрос с карточкой
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _candidate_tg_text(lang, card)
+    sent = await message.answer(text, reply_markup=skip_kb(lang))
+    await state.update_data(last_bot_msg_id=sent.message_id)
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
 
 
@@ -707,8 +739,10 @@ async def ext_parent_tg(message: Message, state: FSMContext):
 async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_telegram=None)
     lang = await _lang(state)
-    text = _candidate_tg_text(lang)
-    await _show_question(callback, state, text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _candidate_tg_text(lang, card)
+    await _show_question(callback, state, text, reply_markup=skip_kb(lang))
     await state.set_state(QuestionnaireStates.ext_candidate_telegram)
     await callback.answer()
 
@@ -739,11 +773,11 @@ async def ext_candidate_tg_skip(callback: CallbackQuery, state: FSMContext):
 # ── 9d. Адрес / Геолокация / Ссылка ──
 async def _ask_address(m_or_cb, state: FSMContext):
     lang = await _lang(state)
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+
     if lang == "uz":
-        text = (
-            "🏠 Manzil yoki joylashuv:\n\n"
-            f"{_CONTACT_NOTICE_SHORT_UZ}"
-        )
+        body = "🏠 Manzil yoki joylashuv:"
         opts = [
             ("🏠 Manzil yozish", "addr:text"),
             ("📍 Geolokatsiya yuborish", "addr:geo"),
@@ -751,10 +785,7 @@ async def _ask_address(m_or_cb, state: FSMContext):
             ("⏭ O'tkazib yuborish", "addr:skip"),
         ]
     else:
-        text = (
-            "🏠 Адрес или геолокация:\n\n"
-            f"{_CONTACT_NOTICE_SHORT_RU}"
-        )
+        body = "🏠 Адрес или геолокация:"
         opts = [
             ("🏠 Написать адрес", "addr:text"),
             ("📍 Отправить геолокацию", "addr:geo"),
@@ -762,10 +793,11 @@ async def _ask_address(m_or_cb, state: FSMContext):
             ("⏭ Пропустить", "addr:skip"),
         ]
 
+    text = (card + SEP + body) if card else body
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
     ])
-    await _show_question(m_or_cb, state, text, reply_markup=kb, parse_mode="HTML")
+    await _show_question(m_or_cb, state, text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_address)
 
 

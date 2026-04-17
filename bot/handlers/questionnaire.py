@@ -572,21 +572,9 @@ async def _ask_occupation(message_or_callback, state: FSMContext, lang: str):
 async def q8_occupation_choice(callback: CallbackQuery, state: FSMContext):
     choice = callback.data.split(":")[1]
     lang = await _lang(state)
-
-    if choice in ("works", "business", "other"):
-        # Спросить подробнее
-        await state.update_data(occupation_type=choice)
-        data = await state.get_data()
-        bar = progress_bar(8, 10)
-        q_text = t("q8_occupation_detail", lang, bar=bar)
-        full_text = _with_card(data, lang, q_text)
-        await callback.message.edit_text(full_text, reply_markup=back_step_kb(lang))
-        await state.update_data(last_bot_msg=callback.message.message_id)
-        await state.set_state(QuestionnaireStates.q6_occupation)
-    else:
-        # student / housewife → сохранить и перейти к религиозности
-        await state.update_data(occupation_type=choice, occupation=choice)
-        await _ask_religion(callback, state, lang)
+    # Любой выбор → сохраняем и сразу к вопросу о религиозности
+    await state.update_data(occupation_type=choice, occupation=choice)
+    await _ask_religion(callback, state, lang)
     await callback.answer()
 
 
