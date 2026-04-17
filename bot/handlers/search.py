@@ -1731,8 +1731,16 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
 
     display_id = profile.display_id or "—"
 
-    # Уникальный номер запроса
-    req_number = f"ЗАП-{datetime.datetime.now().strftime('%d%m%H%M%S')}"
+    # Уникальный номер запроса — порядковый счётчик #ЗАП-001, #ЗАП-002, ...
+    try:
+        count_res = await session.execute(
+            select(sa_func.count()).select_from(ContactRequest)
+        )
+        count = (count_res.scalar() or 0) + 1
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+        count = 1
+    req_number = f"ЗАП-{count:03d}"
 
     # Регистрируем запрос в БД
     try:
