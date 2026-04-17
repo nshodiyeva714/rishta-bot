@@ -689,7 +689,7 @@ async def _build_search_query(session: AsyncSession, user_id: int, search_type: 
             ProfileStatus.PUBLISHED,
             ProfileStatus.PENDING,  # временно показывать анкеты на проверке
         ]),
-        Profile.is_active == True,
+        Profile.is_active != False,   # включает True и NULL
         Profile.profile_type == target_type,
         Profile.user_id != user_id,
     ]
