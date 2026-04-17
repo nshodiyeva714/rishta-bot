@@ -1762,12 +1762,9 @@ async def _render_requests_list(target_message: Message, session: AsyncSession, 
     for i, req in enumerate(requests):
         try:
             profile = await session.get(Profile, req.target_profile_id)
-            user = await session.get(User, req.requester_user_id)
             p_name = profile.name if profile else "—"
-            username = (
-                f"@{user.username}" if user and user.username
-                else f"ID:{req.requester_user_id}"
-            )
+            # User.username не хранится в БД — показываем только ID
+            username = f"ID:{req.requester_user_id}"
             req_id = req.display_id or f"ЗАП-{req.id}"
             logger.warning(f"RENDER: req {i} → {req_id} from {username} → {p_name}")
             label = f"📋 #{req_id} · {username} · {p_name}"
@@ -1885,11 +1882,8 @@ async def view_request(callback: CallbackQuery, session: AsyncSession):
         req = requests[current_index]
 
     profile = await session.get(Profile, req.target_profile_id)
-    user = await session.get(User, req.requester_user_id)
-    username = (
-        f"@{user.username}" if user and user.username
-        else f"ID:{req.requester_user_id}"
-    )
+    # User.username не хранится в БД — показываем только ID
+    username = f"ID:{req.requester_user_id}"
     req_number = req.display_id or f"ЗАП-{req.id}"
 
     # Статус
