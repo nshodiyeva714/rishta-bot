@@ -1723,7 +1723,26 @@ async def _active_requests(session: AsyncSession) -> list:
 
 async def _render_requests_list(target_message: Message, session: AsyncSession, *, edit: bool = False):
     """Отрисовать список активных запросов — в новое сообщение или edit_text."""
-    requests = await _active_requests(session)
+    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
+    logger.warning("RENDER_REQUESTS: start")
+    try:
+        requests = await _active_requests(session)
+        logger.warning(f"RENDER_REQUESTS: found {len(requests)} requests")
+        if hasattr(target_message, "answer"):
+            try:
+                await target_message.answer(f"DEBUG requests: found {len(requests)}")
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
+    except Exception as e:
+        logger.error(f"RENDER_REQUESTS ERROR: {e}", exc_info=True)
+        if hasattr(target_message, "answer"):
+            try:
+                await target_message.answer(f"ERROR: {type(e).__name__}: {e}")
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
+        return
+    # ── КОНЕЦ DEBUG ────────────────────────────────────────
+
     if not requests:
         text = "📋 Активных запросов нет."
         try:
