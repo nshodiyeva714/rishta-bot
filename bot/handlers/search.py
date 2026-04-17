@@ -571,11 +571,23 @@ async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data == "filter:children")
 async def filter_children(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    options = [
-        ("Без детей" if lang == "ru" else "Farzandsiz", "fval:children:no"),
-    ]
-    title = "Наличие детей:" if lang == "ru" else "Farzandlar:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    if lang == "uz":
+        options = [
+            ("👶 Farzandsiz",  "fval:children:no"),
+            ("👶 Farzand bor", "fval:children:has_children"),
+            ("✅ Muhim emas",  "fval:children:any"),
+        ]
+        title = "Farzandlar:"
+    else:
+        options = [
+            ("👶 Без детей",  "fval:children:no"),
+            ("👶 Есть дети",  "fval:children:has_children"),
+            ("✅ Не важно",   "fval:children:any"),
+        ]
+        title = "👶 Наличие детей:"
+    await callback.message.edit_text(
+        title, reply_markup=filter_option_kb(options, lang)
+    )
     await callback.answer()
 
 
