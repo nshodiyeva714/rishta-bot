@@ -35,6 +35,24 @@ def back_main_kb(lang: str = "ru", back_cb: str = "back:menu") -> InlineKeyboard
     return InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, back_cb))
 
 
+def skip_back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Этап 2: текстовый вопрос с [⏭ Пропустить] [← Назад] (back_ext_step)."""
+    skip = "⏭ O'tkazib yuborish" if lang == "uz" else "⏭ Пропустить"
+    back = "← Orqaga" if lang == "uz" else "← Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=skip, callback_data="skip")],
+        [InlineKeyboardButton(text=back, callback_data="back_ext_step")],
+    ])
+
+
+def back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Этап 2: обязательный текстовый вопрос (без skip) с [← Назад]."""
+    back = "← Orqaga" if lang == "uz" else "← Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=back, callback_data="back_ext_step")],
+    ])
+
+
 def lang_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [

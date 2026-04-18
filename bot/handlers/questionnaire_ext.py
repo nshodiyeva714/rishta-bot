@@ -21,7 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.states import QuestionnaireStates
 from bot.texts import t
-from bot.keyboards.inline import skip_kb, back_kb, main_menu_kb
+from bot.keyboards.inline import (
+    skip_kb, back_kb, main_menu_kb,
+    skip_back_ext_kb, back_ext_kb, add_nav,
+    enhance_or_publish_kb,
+)
 from bot.db.models import (
     Profile, User,
     Housing, ParentHousing, CarStatus, FamilyPosition,
@@ -237,24 +241,208 @@ async def _show_question(m_or_cb, state: FSMContext, text: str,
 
 
 # ══════════════════════════════════════
+# RENDER-функции для каждого вопроса Этапа 2
+# (используются и в forward-flow, и в back-handler)
+# ══════════════════════════════════════
+
+async def _render_ext_intro(m_or_cb, state: FSMContext):
+    """Возврат на экран «Сделать анкету ярче» (до Этапа 2)."""
+    from bot.states import RequirementStates
+    lang = await _lang(state)
+    if lang == "uz":
+        text = (
+            "✨ <b>Anketani boyiting</b>\n\n"
+            "Qo'shimcha ma'lumotlar qo'shing —\n"
+            "va anketangiz boshqalardan ajralib turadi:\n\n"
+            "👨‍👩‍👧 Oila haqida\n🌸 Xarakter va qiziqishlar\n"
+            "🏡 Turar joy va avtomobil\n📞 Kontaktlar\n\n"
+            "Taxminan 2 daqiqa vaqt oladi 🕐"
+        )
+    else:
+        text = (
+            "✨ <b>Сделайте анкету ярче</b>\n\n"
+            "Добавьте детали — и ваша анкета\nбудет выделяться среди остальных:\n\n"
+            "👨‍👩‍👧 О семье\n🌸 Характер и увлечения\n"
+            "🏡 Жильё и автомобиль\n📞 Контакты\n\n"
+            "Займёт около 2 минут 🕐"
+        )
+    await _show_question(m_or_cb, state, text, reply_markup=enhance_or_publish_kb(lang), parse_mode="HTML")
+    await state.set_state(RequirementStates.summary)
+
+
+async def _ask_father(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(1)
+    if lang == "uz":
+        q = f"👨‍💼 1/9-savol\n{bar}\n\nOtasi — nima bilan shug'ullanadi:"
+    else:
+        q = f"👨‍💼 Вопрос 1/9\n{bar}\n\nОтец — чем занимается:"
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=back_ext_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_father)
+
+
+async def _ask_mother(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(2)
+    if lang == "uz":
+        q = f"👩‍💼 2/9-savol\n{bar}\n\nOnasi — nima bilan shug'ullanadi:"
+    else:
+        q = f"👩‍💼 Вопрос 2/9\n{bar}\n\nМать — чем занимается:"
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=back_ext_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_mother)
+
+
+async def _ask_brothers(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(3)
+    if lang == "uz":
+        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
+    else:
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
+    kb = add_nav(_brothers_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_brothers)
+
+
+async def _ask_sisters(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(3)
+    if lang == "uz":
+        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
+    else:
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
+    kb = add_nav(_sisters_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_sisters)
+
+
+async def _ask_position(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(3)
+    if lang == "uz":
+        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nOiladagi o'rni:"
+    else:
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nМесто в семье:"
+    kb = add_nav(_position_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_position)
+
+
+async def _ask_character(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    bar = ext_progress_bar(4)
+    if lang == "uz":
+        q = f"🌸 4/9-savol\n{bar}\n\nXarakter va qiziqishlar\n(ixtiyoriy):"
+    else:
+        q = f"🌸 Вопрос 4/9\n{bar}\n\nХарактер и увлечения\n(необязательно):"
+    await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=skip_back_ext_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_character)
+
+
+async def _ask_housing_parent(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    if lang == "uz":
+        opts = [("Uy", "phousing:house"), ("Kvartira", "phousing:apt")]
+        title = "Ota-ona uyining turi:"
+    else:
+        opts = [("Дом", "phousing:house"), ("Квартира", "phousing:apt")]
+        title = "Тип жилья родителей:"
+    kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
+    await _show_question(m_or_cb, state, title, reply_markup=kb)
+    await state.set_state(QuestionnaireStates.ext_housing_parent)
+
+
+async def _ask_parent_telegram(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _parent_tg_text(lang, card)
+    await _show_question(m_or_cb, state, text, reply_markup=skip_back_ext_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_parent_telegram)
+
+
+async def _ask_candidate_telegram(m_or_cb, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+    card = build_ext_card(data, lang)
+    text = _candidate_tg_text(lang, card)
+    await _show_question(m_or_cb, state, text, reply_markup=skip_back_ext_kb(lang))
+    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+
+
+# ══════════════════════════════════════
+# BACK_MAP_EXT + handler back_ext_step
+# ══════════════════════════════════════
+
+def _get_back_map_ext():
+    """Отложенное построение мапы: render-функции объявлены выше и _ask_* ниже
+    в файле, так что собираем словарь динамически из глобалей.
+    Для ext_car — специальная логика (см. handler).
+    """
+    return {
+        QuestionnaireStates.ext_father.state:             _render_ext_intro,
+        QuestionnaireStates.ext_mother.state:             _ask_father,
+        QuestionnaireStates.ext_brothers.state:           _ask_mother,
+        QuestionnaireStates.ext_sisters.state:            _ask_brothers,
+        QuestionnaireStates.ext_position.state:           _ask_sisters,
+        QuestionnaireStates.ext_character.state:          _ask_position,
+        QuestionnaireStates.ext_health.state:             _ask_character,
+        QuestionnaireStates.ext_ideal_family.state:       _ask_health,
+        QuestionnaireStates.ext_housing.state:            _ask_about,
+        QuestionnaireStates.ext_housing_parent.state:     _ask_housing,
+        # ext_car — conditional, см. handler ниже
+        QuestionnaireStates.ext_parent_phone.state:       _ask_car,
+        QuestionnaireStates.ext_parent_telegram.state:    _ask_parent_phone,
+        QuestionnaireStates.ext_candidate_telegram.state: _ask_parent_telegram,
+        QuestionnaireStates.ext_address.state:            _ask_candidate_telegram,
+        QuestionnaireStates.ext_address_text.state:       _ask_address,
+        QuestionnaireStates.ext_location.state:           _ask_address,
+        QuestionnaireStates.ext_address_link.state:       _ask_address,
+    }
+
+
+@router.callback_query(F.data == "back_ext_step")
+async def back_ext_step(callback: CallbackQuery, state: FSMContext):
+    """Универсальный «← Назад» на Этапе 2 — возврат к предыдущему вопросу."""
+    current = await state.get_state()
+    data = await state.get_data()
+
+    # Специальный случай: Q8 → Q7a (если housing=parents) или Q7
+    if current == QuestionnaireStates.ext_car.state:
+        if data.get("housing") == "parents":
+            await _ask_housing_parent(callback, state)
+        else:
+            await _ask_housing(callback, state)
+        await callback.answer()
+        return
+
+    # Q9d2 ext_location: known limitation — reply-keyboard for geolocation
+    # cannot be mixed with inline back button. Пользователь сам вошёл в этот
+    # путь; если передумал — может нажать «Меню».
+
+    render_fn = _get_back_map_ext().get(current)
+    if not render_fn:
+        await callback.answer("🔙")
+        return
+    await render_fn(callback, state)
+    await callback.answer()
+
+
+# ══════════════════════════════════════
 # СТАРТ ЭТАПА 2
 # ══════════════════════════════════════
 
 @router.callback_query(F.data == "ext:start")
 async def ext_start(callback: CallbackQuery, state: FSMContext):
     """Старт Этапа 2 — сразу к вопросу 1 (отец)."""
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = ext_progress_bar(1)
-
-    if lang == "uz":
-        q_text = f"👨‍💼 1/9-savol\n{bar}\n\nOtasi — nima bilan shug'ullanadi:"
-    else:
-        q_text = f"👨‍💼 Вопрос 1/9\n{bar}\n\nОтец — чем занимается:"
-
-    full_text = _with_card(data, lang, q_text)
-    await _show_question(callback, state, full_text, reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_father)
+    await _ask_father(callback, state)
     await callback.answer()
 
 
@@ -270,18 +458,7 @@ async def ext_father(message: Message, state: FSMContext):
         await message.delete()
     except Exception:
         pass
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = ext_progress_bar(2)
-
-    if lang == "uz":
-        q_text = f"👩‍💼 2/9-savol\n{bar}\n\nOnasi — nima bilan shug'ullanadi:"
-    else:
-        q_text = f"👩‍💼 Вопрос 2/9\n{bar}\n\nМать — чем занимается:"
-
-    full_text = _with_card(data, lang, q_text)
-    await _show_question(message, state, full_text, reply_markup=back_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_mother)
+    await _ask_mother(message, state)
 
 
 # ── 2. Мать → 3. Братья ──
@@ -336,18 +513,7 @@ async def ext_mother(message: Message, state: FSMContext):
         await message.delete()
     except Exception:
         pass
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = ext_progress_bar(3)
-
-    if lang == "uz":
-        q_text = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
-    else:
-        q_text = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
-
-    full_text = _with_card(data, lang, q_text)
-    await _show_question(message, state, full_text, reply_markup=_brothers_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_brothers)
+    await _ask_brothers(message, state)
 
 
 # ── 3a. Братья ──
@@ -355,10 +521,7 @@ async def ext_mother(message: Message, state: FSMContext):
 async def ext_brothers(callback: CallbackQuery, state: FSMContext):
     count = int(callback.data.replace("brothers:", ""))
     await state.update_data(brothers_count=count)
-    lang = await _lang(state)
-    # Меняем только клавиатуру (текст вопроса тот же — "Братья и сёстры")
-    await callback.message.edit_reply_markup(reply_markup=_sisters_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_sisters)
+    await _ask_sisters(callback, state)
     await callback.answer()
 
 
@@ -367,18 +530,7 @@ async def ext_brothers(callback: CallbackQuery, state: FSMContext):
 async def ext_sisters(callback: CallbackQuery, state: FSMContext):
     count = int(callback.data.replace("sisters:", ""))
     await state.update_data(sisters_count=count)
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = ext_progress_bar(3)
-
-    if lang == "uz":
-        q_text = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nOiladagi o'rni:"
-    else:
-        q_text = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nМесто в семье:"
-
-    full_text = _with_card(data, lang, q_text)
-    await _show_question(callback, state, full_text, reply_markup=_position_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_position)
+    await _ask_position(callback, state)
     await callback.answer()
 
 
@@ -387,18 +539,7 @@ async def ext_sisters(callback: CallbackQuery, state: FSMContext):
 async def ext_position(callback: CallbackQuery, state: FSMContext):
     position = callback.data.replace("fpos:", "")
     await state.update_data(family_position=position)
-    lang = await _lang(state)
-    data = await state.get_data()
-    bar = ext_progress_bar(4)
-
-    if lang == "uz":
-        q_text = f"🌸 4/9-savol\n{bar}\n\nXarakter va qiziqishlar\n(ixtiyoriy):"
-    else:
-        q_text = f"🌸 Вопрос 4/9\n{bar}\n\nХарактер и увлечения\n(необязательно):"
-
-    full_text = _with_card(data, lang, q_text)
-    await _show_question(callback, state, full_text, reply_markup=skip_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_character)
+    await _ask_character(callback, state)
     await callback.answer()
 
 
@@ -418,7 +559,7 @@ async def _ask_health(m_or_cb, state: FSMContext):
         q_text = f"🌿 Вопрос 5/9\n{bar}\n\nОсобенности здоровья\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
-    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang))
     await state.set_state(QuestionnaireStates.ext_health)
 
 
@@ -451,7 +592,7 @@ async def _ask_about(m_or_cb, state: FSMContext):
         q_text = f"💭 Вопрос 6/9\n{bar}\n\nО себе и ожиданиях\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
-    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang))
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang))
     await state.set_state(QuestionnaireStates.ext_ideal_family)
 
 
@@ -495,9 +636,8 @@ async def _ask_housing(m_or_cb, state: FSMContext):
             ("Аренда", "housing:rent"),
         ]
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_housing)
@@ -529,20 +669,9 @@ async def ext_about_skip(callback: CallbackQuery, state: FSMContext):
 async def ext_housing(callback: CallbackQuery, state: FSMContext):
     housing = callback.data.replace("housing:", "")
     await state.update_data(housing=housing)
-    lang = await _lang(state)
 
     if housing == "parents":
-        if lang == "uz":
-            opts = [("Uy", "phousing:house"), ("Kvartira", "phousing:apt")]
-            title = "Ota-ona uyining turi:"
-        else:
-            opts = [("Дом", "phousing:house"), ("Квартира", "phousing:apt")]
-            title = "Тип жилья родителей:"
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-        ])
-        await _show_question(callback, state, title, reply_markup=kb)
-        await state.set_state(QuestionnaireStates.ext_housing_parent)
+        await _ask_housing_parent(callback, state)
     else:
         await _ask_car(callback, state)
     await callback.answer()
@@ -576,9 +705,8 @@ async def _ask_car(m_or_cb, state: FSMContext):
             ("Нет", "car:no"),
         ]
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_car)
@@ -651,7 +779,7 @@ async def _ask_parent_phone(m_or_cb, state: FSMContext):
         )
 
     full_text = (card + SEP + body) if card else body
-    await _show_question(m_or_cb, state, full_text, reply_markup=skip_kb(lang), parse_mode="HTML")
+    await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang), parse_mode="HTML")
     await state.set_state(QuestionnaireStates.ext_parent_phone)
 
 
@@ -672,7 +800,6 @@ async def ext_parent_phone(message: Message, state: FSMContext):
     elif len(digits) == 12 and digits.startswith("998"):
         phone = f"+{digits}"
     await state.update_data(parent_phone=phone)
-    lang = await _lang(state)
 
     # Удаляем сообщение пользователя
     try:
@@ -680,34 +807,13 @@ async def ext_parent_phone(message: Message, state: FSMContext):
     except Exception:
         pass
 
-    # Удаляем старое окно бота
-    data = await state.get_data()
-    last_id = data.get("last_bot_msg_id")
-    if last_id:
-        try:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_id)
-        except Exception:
-            pass
-        await state.update_data(last_bot_msg_id=None)
-
-    # Отправляем следующий вопрос с обновлённой карточкой
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _parent_tg_text(lang, card)
-    sent = await message.answer(text, reply_markup=skip_kb(lang))
-    await state.update_data(last_bot_msg_id=sent.message_id)
-    await state.set_state(QuestionnaireStates.ext_parent_telegram)
+    await _ask_parent_telegram(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_phone)
 async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_phone=None)
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _parent_tg_text(lang, card)
-    await _show_question(callback, state, text, reply_markup=skip_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_parent_telegram)
+    await _ask_parent_telegram(callback, state)
     await callback.answer()
 
 
@@ -726,7 +832,6 @@ async def ext_parent_tg(message: Message, state: FSMContext):
     if not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(parent_telegram=tg)
-    lang = await _lang(state)
 
     # Удаляем сообщение пользователя
     try:
@@ -734,34 +839,13 @@ async def ext_parent_tg(message: Message, state: FSMContext):
     except Exception:
         pass
 
-    # Удаляем старое окно бота
-    data = await state.get_data()
-    last_id = data.get("last_bot_msg_id")
-    if last_id:
-        try:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_id)
-        except Exception:
-            pass
-        await state.update_data(last_bot_msg_id=None)
-
-    # Отправляем следующий вопрос с карточкой
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _candidate_tg_text(lang, card)
-    sent = await message.answer(text, reply_markup=skip_kb(lang))
-    await state.update_data(last_bot_msg_id=sent.message_id)
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+    await _ask_candidate_telegram(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_telegram)
 async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(parent_telegram=None)
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _candidate_tg_text(lang, card)
-    await _show_question(callback, state, text, reply_markup=skip_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
+    await _ask_candidate_telegram(callback, state)
     await callback.answer()
 
 
@@ -812,9 +896,8 @@ async def _ask_address(m_or_cb, state: FSMContext):
         ]
 
     text = (card + SEP + body) if card else body
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
     await _show_question(m_or_cb, state, text, reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_address)
 
@@ -839,10 +922,12 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
 
     if choice == "text":
         text = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
-        sent = await callback.message.answer(text, reply_markup=skip_kb(lang))
+        sent = await callback.message.answer(text, reply_markup=skip_back_ext_kb(lang))
         await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_address_text)
     elif choice == "geo":
+        # Q9d2 known limitation: reply-keyboard for geolocation can't be mixed
+        # with inline back button. Пользователь сам вошёл — может нажать «Меню».
         geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
         title = "📍 Geolokatsiya:" if lang == "uz" else "📍 Геолокация:"
         kb = ReplyKeyboardMarkup(
@@ -854,7 +939,7 @@ async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
         await state.set_state(QuestionnaireStates.ext_location)
     elif choice == "link":
         text = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
-        sent = await callback.message.answer(text, reply_markup=skip_kb(lang))
+        sent = await callback.message.answer(text, reply_markup=skip_back_ext_kb(lang))
         await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(QuestionnaireStates.ext_address_link)
 
