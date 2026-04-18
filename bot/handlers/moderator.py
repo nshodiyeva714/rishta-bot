@@ -1649,6 +1649,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
+    disclaimer = t("contact_disclaimer", req_lang)
     if req_lang == "uz":
         user_msg = (
             f"✅ <b>Kontakt yuborildi!</b>\n\n"
@@ -1657,6 +1658,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             f"🪪 {profile.name or '—'} · {age} · {city_full}\n\n"
             f"<b>Oila kontaktlari:</b>\n"
             f"{contact_text}\n\n"
+            f"{disclaimer}\n\n"
             f"Bu uchrashuv baxt boshlanishi bo'lsin! 🤲"
         )
     else:
@@ -1667,6 +1669,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             f"🪪 {profile.name or '—'} · {age} · {city_full}\n\n"
             f"<b>Контакты семьи:</b>\n"
             f"{contact_text}\n\n"
+            f"{disclaimer}\n\n"
             f"Пусть эта встреча станет\n"
             f"началом счастья! 🤲"
         )

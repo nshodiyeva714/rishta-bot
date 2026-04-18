@@ -1287,6 +1287,22 @@ T = {
     "vip_method_self_label": {"ru": "Оплата самостоятельно (скриншот)"},
     "vip_method_moderator_label": {"ru": "Через модератора (напрямую)"},
 
+    # ── Disclaimer при выдаче контакта ──
+    "contact_disclaimer": {
+        "ru": (
+            "⚠️ Информация заполнена со слов семьи.\n"
+            "Уточняйте детали при встрече.\n"
+            "Rishta не отвечает за достоверность\n"
+            "данных и результаты знакомства."
+        ),
+        "uz": (
+            "⚠️ Ma'lumotlar — oila so'zlari asosida to'ldirilgan.\n"
+            "Tafsilotlarni uchrashuvda aniqlang.\n"
+            "Rishta ma'lumotlar va tanishuv natijalari\n"
+            "uchun javobgar emas."
+        ),
+    },
+
     # ── Фото из анкеты (после передачи контакта) ──
     "contact_photo_regular": {
         "ru": "📸 Фото из анкеты",
