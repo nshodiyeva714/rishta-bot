@@ -192,7 +192,7 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"👀 Jami ko'rishlar: <b>{total_views}</b>\n\n"
             f"✅ Har bir anketa shaxsan tekshiriladi\n"
             f"✅ To'liq maxfiylik\n"
-            f"✅ Kontakt — o'zaro kelishuv asosida\n"
+            f"✅ Kontakt — o'zaro rozilik asosida\n"
             f"✅ Moderator yordam beradi\n"
             f"🔒 Foto skrinshotdan himoyalangan\n\n"
             f"📢 @Rishta_uz | 💬 @Rishta_chat"

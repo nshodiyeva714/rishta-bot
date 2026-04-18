@@ -139,7 +139,7 @@ T = {
             "Biz tajribali sovchi kabi ishlaymiz — faqat butun mamlakatni qamrab olamiz 🇺🇿\n\n"
             "✅ Har bir anketa shaxsan tekshiriladi\n"
             "✅ To'liq maxfiylik\n"
-            "✅ Kontakt — o'zaro kelishuv asosida\n"
+            "✅ Kontakt — o'zaro rozilik asosida\n"
             "✅ Moderator butun jarayonni kuzatib boradi\n"
             "✅ Ikki til — rus va o'zbek\n"
             "✅ Fotosuratlar skrinshotdan himoyalangan 🔒\n\n"
@@ -180,7 +180,7 @@ T = {
             "O'g'lingizning anketasini to'ldiring.\n"
             "Barcha ma'lumotlar qat'iy maxfiy 🔒\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — o'zaro kelishuv asosida\n"
+            "✅ Kontakt va manzil — o'zaro rozilik asosida\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan"
         ),
     },
@@ -196,7 +196,7 @@ T = {
             "👧 <b>QIZ ANKETASINI JOYLASHTIRISH</b>\n\n"
             "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — o'zaro kelishuv asosida\n"
+            "✅ Kontakt va manzil — o'zaro rozilik asosida\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan 🔒"
         ),
     },
