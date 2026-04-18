@@ -121,6 +121,22 @@ class EditProfileStates(StatesGroup):
     parent_phone = State()
     parent_telegram = State()
     candidate_telegram = State()
+    # ── Новые поля Этапа 2 ──
+    father = State()
+    mother = State()
+    siblings_brothers = State()
+    siblings_sisters = State()
+    siblings_position = State()
+    character = State()
+    health = State()
+    about = State()
+    housing = State()
+    housing_parent = State()
+    car = State()
+    address = State()             # выбор text/geo/link
+    address_text = State()
+    address_location = State()    # reply-kb геоточка
+    address_link = State()
 
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()

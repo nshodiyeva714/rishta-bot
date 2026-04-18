@@ -3,7 +3,11 @@
 import logging
 import re
 from aiogram import Router, F, Bot
-from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    CallbackQuery, Message,
+    InlineKeyboardButton, InlineKeyboardMarkup,
+    ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
+)
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import (
     User, Profile, ProfileStatus, VipStatus, ContactRequest, Favorite,
     ProfileType, MaritalStatus, ChildrenStatus, PhotoType,
+    FamilyPosition, Housing, ParentHousing, CarStatus,
 )
 from bot.utils.helpers import format_full_anketa, format_anketa_public
 from bot.states import ModeratorContactStates, FeedbackSuggestionStates, EditProfileStates
@@ -808,6 +813,486 @@ async def edit_candidate_telegram_save(message: Message, state: FSMContext, sess
     if profile and profile.user_id == message.from_user.id:
         profile.candidate_telegram = tg or None
         await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ══════════════════════════════════════
+# Редактирование полей Этапа 2
+# ══════════════════════════════════════
+
+# ── Отец: чем занимается ──
+@router.callback_query(F.data.startswith("edit:father:"))
+async def edit_father_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.father, "edit_father_prompt")
+
+
+@router.message(EditProfileStates.father)
+async def edit_father_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()[:100] if message.text else None
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.father_occupation = text or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ── Мать: чем занимается ──
+@router.callback_query(F.data.startswith("edit:mother:"))
+async def edit_mother_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.mother, "edit_mother_prompt")
+
+
+@router.message(EditProfileStates.mother)
+async def edit_mother_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()[:100] if message.text else None
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.mother_occupation = text or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ── Характер и увлечения ──
+@router.callback_query(F.data.startswith("edit:character:"))
+async def edit_character_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.character, "edit_character_prompt")
+
+
+@router.message(EditProfileStates.character)
+async def edit_character_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()[:500] if message.text else None
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.character_hobbies = text or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ── Здоровье ──
+@router.callback_query(F.data.startswith("edit:health:"))
+async def edit_health_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.health, "edit_health_prompt")
+
+
+@router.message(EditProfileStates.health)
+async def edit_health_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()[:500] if message.text else None
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.health_notes = text or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ── О себе (идеальная семейная жизнь) ──
+@router.callback_query(F.data.startswith("edit:about:"))
+async def edit_about_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.about, "edit_about_prompt")
+
+
+@router.message(EditProfileStates.about)
+async def edit_about_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()[:500] if message.text else None
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.ideal_family_life = text or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ══════════════════════════════════════
+# Братья / сёстры / место в семье (комбо из 3 экранов)
+# ══════════════════════════════════════
+
+def _siblings_count_kb(prefix: str) -> InlineKeyboardMarkup:
+    """0/1/2/3/4+ для братьев или сестёр. prefix = 'editbro' или 'editsis'."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="0", callback_data=f"{prefix}:0"),
+        InlineKeyboardButton(text="1", callback_data=f"{prefix}:1"),
+        InlineKeyboardButton(text="2", callback_data=f"{prefix}:2"),
+        InlineKeyboardButton(text="3", callback_data=f"{prefix}:3"),
+        InlineKeyboardButton(text="4+", callback_data=f"{prefix}:4"),
+    ]])
+
+
+def _siblings_position_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [("Katta", "editpos:oldest"), ("O'rtancha", "editpos:middle"),
+                ("Kenja", "editpos:youngest"), ("Yagona", "editpos:only")]
+    else:
+        opts = [("Старший/ая", "editpos:oldest"), ("Средний/яя", "editpos:middle"),
+                ("Младший/ая", "editpos:youngest"), ("Единственный/ая", "editpos:only")]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+@router.callback_query(F.data.startswith("edit:siblings:"))
+async def edit_siblings_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    await state.set_state(EditProfileStates.siblings_brothers)
+    await _safe_edit(
+        callback,
+        t("edit_siblings_brothers_prompt", lang),
+        reply_markup=_siblings_count_kb("editbro"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editbro:"), EditProfileStates.siblings_brothers)
+async def edit_siblings_brothers(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    count = int(callback.data.replace("editbro:", ""))
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id:
+        profile.brothers_count = count
+        await session.commit()
+    await state.set_state(EditProfileStates.siblings_sisters)
+    await _safe_edit(
+        callback,
+        t("edit_siblings_sisters_prompt", lang),
+        reply_markup=_siblings_count_kb("editsis"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editsis:"), EditProfileStates.siblings_sisters)
+async def edit_siblings_sisters(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    count = int(callback.data.replace("editsis:", ""))
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id:
+        profile.sisters_count = count
+        await session.commit()
+    await state.set_state(EditProfileStates.siblings_position)
+    await _safe_edit(
+        callback,
+        t("edit_siblings_position_prompt", lang),
+        reply_markup=_siblings_position_kb(lang),
+    )
+    await callback.answer()
+
+
+_FAMILY_POS_MAP = {
+    "oldest": FamilyPosition.OLDEST,
+    "middle": FamilyPosition.MIDDLE,
+    "youngest": FamilyPosition.YOUNGEST,
+    "only": FamilyPosition.ONLY,
+}
+
+
+@router.callback_query(F.data.startswith("editpos:"), EditProfileStates.siblings_position)
+async def edit_siblings_position(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("editpos:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id:
+        enum_val = _FAMILY_POS_MAP.get(value)
+        if enum_val:
+            profile.family_position = enum_val
+            await session.commit()
+    await _finish_edit(callback, state, session, lang)
+
+
+# ══════════════════════════════════════
+# Жильё (housing) + тип жилья родителей (housing_parent)
+# ══════════════════════════════════════
+
+def _housing_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [
+            ("Shaxsiy uy", "edithouse:own_house"),
+            ("Shaxsiy kvartira", "edithouse:own_apartment"),
+            ("Ota-ona bilan", "edithouse:with_parents"),
+            ("Ijara", "edithouse:rent"),
+        ]
+    else:
+        opts = [
+            ("Свой дом", "edithouse:own_house"),
+            ("Своя квартира", "edithouse:own_apartment"),
+            ("С родителями", "edithouse:with_parents"),
+            ("Аренда", "edithouse:rent"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+def _housing_parent_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [("Uy", "editphouse:house"), ("Kvartira", "editphouse:apartment")]
+    else:
+        opts = [("Дом", "editphouse:house"), ("Квартира", "editphouse:apartment")]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+_HOUSING_MAP = {
+    "own_house": Housing.OWN_HOUSE,
+    "own_apartment": Housing.OWN_APARTMENT,
+    "with_parents": Housing.WITH_PARENTS,
+    "rent": Housing.RENT,
+}
+
+_PARENT_HOUSING_MAP = {
+    "house": ParentHousing.HOUSE,
+    "apartment": ParentHousing.APARTMENT,
+}
+
+
+@router.callback_query(F.data.startswith("edit:housing:"))
+async def edit_housing_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    await state.set_state(EditProfileStates.housing)
+    await _safe_edit(callback, t("edit_housing_prompt", lang), reply_markup=_housing_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("edithouse:"), EditProfileStates.housing)
+async def edit_housing_choose(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("edithouse:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    enum_val = _HOUSING_MAP.get(value)
+    if not enum_val:
+        await callback.answer()
+        return
+
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id:
+        profile.housing = enum_val
+        if enum_val != Housing.WITH_PARENTS:
+            # Сбрасываем подтип — он не имеет смысла без «с родителями»
+            profile.parent_housing_type = None
+        await session.commit()
+
+    if enum_val == Housing.WITH_PARENTS:
+        # Переход на второй экран: тип жилья родителей
+        await state.set_state(EditProfileStates.housing_parent)
+        await _safe_edit(callback, t("edit_housing_parent_prompt", lang), reply_markup=_housing_parent_kb(lang))
+        await callback.answer()
+    else:
+        await _finish_edit(callback, state, session, lang)
+
+
+@router.callback_query(F.data.startswith("editphouse:"), EditProfileStates.housing_parent)
+async def edit_housing_parent_choose(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("editphouse:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    enum_val = _PARENT_HOUSING_MAP.get(value)
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id and enum_val:
+        profile.parent_housing_type = enum_val
+        await session.commit()
+    await _finish_edit(callback, state, session, lang)
+
+
+# ══════════════════════════════════════
+# Автомобиль
+# ══════════════════════════════════════
+
+def _car_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [
+            ("Shaxsiy", "editcar:personal"),
+            ("Oilaviy", "editcar:family"),
+            ("Yo'q", "editcar:none"),
+        ]
+    else:
+        opts = [
+            ("Личный", "editcar:personal"),
+            ("Семейный", "editcar:family"),
+            ("Нет", "editcar:none"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+_CAR_MAP = {
+    "personal": CarStatus.PERSONAL,
+    "family": CarStatus.FAMILY,
+    "none": CarStatus.NONE,
+}
+
+
+@router.callback_query(F.data.startswith("edit:car:"))
+async def edit_car_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    await state.set_state(EditProfileStates.car)
+    await _safe_edit(callback, t("edit_car_prompt", lang), reply_markup=_car_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editcar:"), EditProfileStates.car)
+async def edit_car_choose(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("editcar:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    enum_val = _CAR_MAP.get(value)
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id and enum_val:
+        profile.car = enum_val
+        await session.commit()
+    await _finish_edit(callback, state, session, lang)
+
+
+# ══════════════════════════════════════
+# Адрес (text / geolocation / link) — копия логики Q14
+# ══════════════════════════════════════
+
+def _address_choice_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [
+            ("🏠 Manzilni yozish", "editaddr:text"),
+            ("📍 Geolokatsiya yuborish", "editaddr:geo"),
+            ("🗺 Xarita havolasi", "editaddr:link"),
+        ]
+    else:
+        opts = [
+            ("🏠 Написать адрес", "editaddr:text"),
+            ("📍 Отправить геолокацию", "editaddr:geo"),
+            ("🗺 Ссылка на карту", "editaddr:link"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+@router.callback_query(F.data.startswith("edit:address:"))
+async def edit_address_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    await state.set_state(EditProfileStates.address)
+    await _safe_edit(callback, t("edit_address_prompt", lang), reply_markup=_address_choice_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editaddr:"), EditProfileStates.address)
+async def edit_address_choose(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    choice = callback.data.replace("editaddr:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+
+    # Удаляем окно выбора
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+    if choice == "text":
+        prompt = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
+        sent = await callback.message.answer(prompt, reply_markup=back_kb(lang))
+        await state.update_data(last_bot_msg_id=sent.message_id)
+        await state.set_state(EditProfileStates.address_text)
+    elif choice == "geo":
+        geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
+        title = "📍 Geolokatsiya:" if lang == "uz" else "📍 Геолокация:"
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=geo_label, request_location=True)]],
+            resize_keyboard=True, one_time_keyboard=True,
+        )
+        sent = await callback.message.answer(title, reply_markup=kb)
+        await state.update_data(last_bot_msg_id=sent.message_id)
+        await state.set_state(EditProfileStates.address_location)
+    elif choice == "link":
+        prompt = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
+        sent = await callback.message.answer(prompt, reply_markup=back_kb(lang))
+        await state.update_data(last_bot_msg_id=sent.message_id)
+        await state.set_state(EditProfileStates.address_link)
+
+    await callback.answer()
+
+
+@router.message(EditProfileStates.address_text)
+async def edit_address_text(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    text = (message.text or "").strip()
+    if not text:
+        return
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == message.from_user.id:
+        profile.address = text
+        await session.commit()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await _finish_edit(message, state, session, lang)
+
+
+@router.message(EditProfileStates.address_location)
+async def edit_address_location(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    if message.location:
+        lat = message.location.latitude
+        lon = message.location.longitude
+        profile = await session.get(Profile, data.get("edit_profile_id"))
+        if profile and profile.user_id == message.from_user.id:
+            profile.location_lat = lat
+            profile.location_lon = lon
+            profile.location_link = f"https://maps.google.com/?q={lat},{lon}"
+            await session.commit()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    # Убираем reply-клавиатуру одноразовым сообщением
+    try:
+        tmp = await message.answer("✓", reply_markup=ReplyKeyboardRemove())
+        await tmp.delete()
+    except Exception:
+        pass
+    # Удаляем старый prompt «Геолокация:»
+    last_id = data.get("last_bot_msg_id")
+    if last_id:
+        try:
+            await message.bot.delete_message(message.chat.id, last_id)
+        except Exception:
+            pass
+        await state.update_data(last_bot_msg_id=None)
+    await _finish_edit(message, state, session, lang)
+
+
+@router.message(EditProfileStates.address_link)
+async def edit_address_link(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    link = (message.text or "").strip()
+    if not link:
+        return
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == message.from_user.id:
+        profile.location_link = link
+        await session.commit()
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await _finish_edit(message, state, session, lang)
 
 

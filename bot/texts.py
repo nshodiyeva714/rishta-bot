@@ -1152,6 +1152,54 @@ T = {
         "ru": "Введите Telegram кандидата (@username):",
         "uz": "Nomzod Telegramini kiriting (@username):",
     },
+    "edit_father_prompt": {
+        "ru": "Чем занимается отец:",
+        "uz": "Otasi nima bilan shug'ullanadi:",
+    },
+    "edit_mother_prompt": {
+        "ru": "Чем занимается мать:",
+        "uz": "Onasi nima bilan shug'ullanadi:",
+    },
+    "edit_siblings_brothers_prompt": {
+        "ru": "Сколько братьев?",
+        "uz": "Nechta aka-uka?",
+    },
+    "edit_siblings_sisters_prompt": {
+        "ru": "Сколько сестёр?",
+        "uz": "Nechta opa-singil?",
+    },
+    "edit_siblings_position_prompt": {
+        "ru": "Место в семье:",
+        "uz": "Oiladagi o'rni:",
+    },
+    "edit_character_prompt": {
+        "ru": "Характер и увлечения (до 500 символов):",
+        "uz": "Xarakter va qiziqishlar (500 belgigacha):",
+    },
+    "edit_health_prompt": {
+        "ru": "Особенности здоровья (до 500 символов):",
+        "uz": "Sog'lig'ining xususiyatlari (500 belgigacha):",
+    },
+    "edit_about_prompt": {
+        "ru": "О себе и ожиданиях (до 500 символов):",
+        "uz": "O'zingiz va kutganlaringiz haqida (500 belgigacha):",
+    },
+    "edit_housing_prompt": {
+        "ru": "Жильё:",
+        "uz": "Turar joy:",
+    },
+    "edit_housing_parent_prompt": {
+        "ru": "Тип жилья родителей:",
+        "uz": "Ota-ona uyining turi:",
+    },
+    "edit_car_prompt": {
+        "ru": "Автомобиль:",
+        "uz": "Avtomobil:",
+    },
+    "edit_address_prompt": {
+        "ru": "Адрес или геолокация:",
+        "uz": "Manzil yoki geolokatsiya:",
+    },
     "edit_saved": {
         "ru": "Сохранено.",
         "uz": "Saqlandi.",
