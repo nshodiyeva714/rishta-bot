@@ -7,13 +7,14 @@ from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import (
     Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus,
     Favorite, ProfileType, ContactRequest, RequestStatus,
     VipRequest, VipRequestStatus, VipPaymentMethod,
+    Requirement, Complaint, Meeting, Feedback,
 )
 from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates, VipModReplyStates
 from bot.texts import t
@@ -2286,3 +2287,148 @@ async def vipmod_reply_send(message: Message, state: FSMContext, session: AsyncS
         f"⚠️ Не удалось отправить ответ по {req.display_id or req_id}"
     )
     await state.set_state(None)
+
+
+# ══════════════════════════════════════════════════════════
+#  /reset — только модератор Ташкент (config.mod_tashkent_id)
+# ══════════════════════════════════════════════════════════
+
+
+async def _delete_profile_cascade(session: AsyncSession, profile: Profile) -> None:
+    """Удалить Profile со всеми связанными записями. Commit — снаружи."""
+    pid = profile.id
+    await session.execute(delete(Favorite).where(Favorite.profile_id == pid))
+    await session.execute(delete(ContactRequest).where(ContactRequest.target_profile_id == pid))
+    await session.execute(delete(Payment).where(Payment.profile_id == pid))
+    await session.execute(delete(VipRequest).where(VipRequest.profile_id == pid))
+    await session.execute(delete(Complaint).where(Complaint.profile_id == pid))
+    await session.execute(delete(Meeting).where(Meeting.profile_id == pid))
+    await session.execute(delete(Feedback).where(Feedback.profile_id == pid))
+    await session.execute(delete(Requirement).where(Requirement.profile_id == pid))
+    await session.execute(delete(Profile).where(Profile.id == pid))
+
+
+@router.message(Command("reset"))
+async def cmd_reset(message: Message, session: AsyncSession):
+    """/reset <id> или /reset all — только для модератора Ташкент."""
+    if message.from_user.id != config.mod_tashkent_id:
+        return
+
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer(
+            "Использование:\n"
+            "<code>/reset &lt;id&gt;</code> — удалить одну анкету (display_id или числовой ID)\n"
+            "<code>/reset all</code> — удалить все анкеты (с подтверждением)"
+        )
+        return
+
+    arg = parts[1].strip()
+
+    if arg.lower() == "all":
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Да, всё удалить", callback_data="reset:confirm_all")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="reset:cancel")],
+        ])
+        await message.answer(
+            "⚠️ <b>Удалить ВСЕ анкеты?</b>\n\n"
+            "Будут удалены все Profile, Requirement, Favorite,\n"
+            "ContactRequest, Payment, VipRequest, Complaint,\n"
+            "Meeting, Feedback.\n\n"
+            "Пользователи (таблица users) остаются.\n"
+            "Действие необратимо.",
+            reply_markup=kb,
+        )
+        return
+
+    # Поиск по display_id (с '#' или без), потом по числовому ID
+    profile: Profile | None = None
+    candidates = [arg, arg.lstrip("#"), f"#{arg.lstrip('#')}"]
+    for cand in candidates:
+        res = await session.execute(select(Profile).where(Profile.display_id == cand))
+        profile = res.scalar_one_or_none()
+        if profile:
+            break
+    if profile is None and arg.isdigit():
+        profile = await session.get(Profile, int(arg))
+
+    if profile is None:
+        await message.answer(f"❌ Анкета не найдена: <code>{arg}</code>")
+        return
+
+    # Запомним для лога и ответа
+    display_id = profile.display_id or f"id={profile.id}"
+    name = profile.name or "—"
+    age = ""
+    if profile.birth_year:
+        try:
+            from datetime import datetime as _dt
+            age = f", {_dt.now().year - profile.birth_year}"
+        except Exception:
+            pass
+    owner_user_id = profile.user_id
+
+    await _delete_profile_cascade(session, profile)
+    await session.commit()
+
+    logger.info(
+        "reset by mod %s: deleted profile %s owned by user %s",
+        message.from_user.id, display_id, owner_user_id,
+    )
+    await message.answer(f"✅ Удалено: <b>{display_id}</b> ({name}{age})")
+
+
+@router.callback_query(F.data == "reset:confirm_all")
+async def reset_confirm_all(callback: CallbackQuery, session: AsyncSession):
+    """Удалить все анкеты + связанные данные. Пользователей не трогаем."""
+    if callback.from_user.id != config.mod_tashkent_id:
+        await callback.answer("⛔")
+        return
+
+    # Считаем до удаления — чтобы дать отчёт
+    counts = {}
+    for model, key in (
+        (Profile, "профилей"), (VipRequest, "VIP-заявок"),
+        (ContactRequest, "контакт-запросов"), (Payment, "платежей"),
+        (Favorite, "избранных"), (Complaint, "жалоб"),
+        (Meeting, "встреч"), (Feedback, "отзывов"), (Requirement, "требований"),
+    ):
+        r = await session.execute(select(func.count(model.id)))
+        counts[key] = r.scalar() or 0
+
+    # Удаляем в правильном порядке
+    await session.execute(delete(Favorite))
+    await session.execute(delete(ContactRequest))
+    await session.execute(delete(Payment))
+    await session.execute(delete(VipRequest))
+    await session.execute(delete(Complaint))
+    await session.execute(delete(Meeting))
+    await session.execute(delete(Feedback))
+    await session.execute(delete(Requirement))
+    await session.execute(delete(Profile))
+    await session.commit()
+
+    logger.info("reset ALL by mod %s: %s", callback.from_user.id, counts)
+
+    summary_lines = [f"{v} {k}" for k, v in counts.items() if v > 0]
+    summary = ", ".join(summary_lines) if summary_lines else "ничего не было"
+    try:
+        await callback.message.edit_text(
+            f"✅ Удалено: {summary}.\n\n"
+            f"Следующая VIP-заявка начнётся с <b>VIP-001</b>."
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("✅ Готово")
+
+
+@router.callback_query(F.data == "reset:cancel")
+async def reset_cancel(callback: CallbackQuery):
+    if callback.from_user.id != config.mod_tashkent_id:
+        await callback.answer("⛔")
+        return
+    try:
+        await callback.message.edit_text("❌ Отменено.")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
