@@ -893,10 +893,18 @@ async def filter_value_set(callback: CallbackQuery, session: AsyncSession, state
 
 @router.callback_query(F.data == "filter:clear")
 async def filter_clear(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    lang = await get_lang(session, callback.from_user.id)
     await state.update_data(search_filters={}, search_offset=0,
                             search_results=None, search_scores=None, current_index=0)
 
-    # Обновляем экран фильтров (show_search_filters сам вызовет callback.answer)
+    # Тост-уведомление
+    try:
+        toast = "✅ Filtrlar tozalandi" if lang == "uz" else "✅ Фильтры сброшены"
+        await callback.answer(toast)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+
+    # Обновляем экран фильтров
     await show_search_filters(callback, session, state)
 
 

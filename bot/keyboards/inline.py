@@ -1059,12 +1059,11 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
         callback_data="filter:go",
     )])
 
-    # Сброс — только если есть выбранные фильтры
-    if filters:
-        buttons.append([InlineKeyboardButton(
-            text="🔄 Tozalash" if is_uz else "🔄 Сбросить фильтры",
-            callback_data="filter:clear",
-        )])
+    # Сброс — всегда (no-op при пустых фильтрах, зато кнопка стабильно на месте)
+    buttons.append([InlineKeyboardButton(
+        text="🔄 Filtrlarni tozalash" if is_uz else "🔄 Сбросить фильтры",
+        callback_data="filter:clear",
+    )])
 
     buttons.append([InlineKeyboardButton(
         text="← Orqaga" if is_uz else "← Назад",
