@@ -334,6 +334,29 @@ async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False)
 
     emoji = "👦" if ptype == "son" else "👧"
 
+    # Контакты и адрес (пустые пропускаем)
+    contact_lines = []
+    phone = data.get("parent_phone")
+    if phone:
+        contact_lines.append(f"📞 {phone}")
+    parent_tg = data.get("parent_telegram")
+    if parent_tg:
+        contact_lines.append(f"📱 {parent_tg}")
+    candidate_tg = data.get("candidate_telegram")
+    if candidate_tg:
+        contact_lines.append(f"💬 {candidate_tg}")
+
+    address = data.get("address")
+    if address:
+        contact_lines.append(f"🏠 {address}")
+    else:
+        loc_link = data.get("location_link")
+        if loc_link:
+            map_label = "🗺 Karta" if L == "uz" else "🗺 Карта"
+            contact_lines.append(map_label)
+
+    contacts_block = ("\n" + "\n".join(contact_lines)) if contact_lines else ""
+
     if L == "uz":
         summary = (
             f"━━━━━━━━━━━━━━━\n"
@@ -343,7 +366,7 @@ async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False)
             f"🎓 {edu}\n"
             f"💼 {work}\n"
             f"{rel}\n"
-            f"{mar}\n\n"
+            f"{mar}{contacts_block}\n\n"
             f"Keyingi qadam:"
         )
     else:
@@ -355,7 +378,7 @@ async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False)
             f"🎓 {edu}\n"
             f"💼 {work}\n"
             f"{rel}\n"
-            f"{mar}\n\n"
+            f"{mar}{contacts_block}\n\n"
             f"Что делаем дальше?"
         )
 
