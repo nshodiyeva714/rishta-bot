@@ -13,7 +13,6 @@ from aiogram import Router, F, Bot
 from aiogram.types import (
     Message, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton,
-    ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
 )
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
@@ -60,7 +59,7 @@ async def _get_profile(session: AsyncSession, profile_id: int, user_id: int):
     return None
 
 
-def ext_progress_bar(current: int, total: int = 8) -> str:
+def ext_progress_bar(current: int, total: int = 7) -> str:
     """Прогресс-бар для Этапа 2."""
     filled = round(current / total * 13)
     empty = 13 - filled
@@ -380,10 +379,6 @@ def _get_back_map_ext():
         QuestionnaireStates.ext_housing.state:            _ask_about,
         QuestionnaireStates.ext_housing_parent.state:     _ask_housing,
         # ext_car — conditional, см. handler ниже
-        QuestionnaireStates.ext_address.state:            _ask_car,
-        QuestionnaireStates.ext_address_text.state:       _ask_address,
-        QuestionnaireStates.ext_location.state:           _ask_address,
-        QuestionnaireStates.ext_address_link.state:       _ask_address,
     }
 
 
@@ -402,9 +397,7 @@ async def back_ext_step(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    # Q9d2 ext_location: known limitation — reply-keyboard for geolocation
-    # cannot be mixed with inline back button. Пользователь сам вошёл в этот
-    # путь; если передумал — может нажать «Меню».
+    # (адрес/геолокация перенесены в Этап 1 как Q14)
 
     render_fn = _get_back_map_ext().get(current)
     if not render_fn:
@@ -694,150 +687,6 @@ async def _ask_car(m_or_cb, state: FSMContext):
 @router.callback_query(F.data.startswith("car:"), QuestionnaireStates.ext_car)
 async def ext_car(callback: CallbackQuery, state: FSMContext):
     await state.update_data(car=callback.data.replace("car:", ""))
-    await _ask_address(callback, state)
-    await callback.answer()
-
-
-# ══════════════════════════════════════
-# БЛОК 4: АДРЕС
-# ══════════════════════════════════════
-
-# ── Адрес / Геолокация / Ссылка ──
-async def _ask_address(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-
-    if lang == "uz":
-        body = "🏠 Manzil yoki geolokasiya:"
-        opts = [
-            ("🏠 Manzilni yozish", "addr:text"),
-            ("📍 Geolokatsiya yuborish", "addr:geo"),
-            ("🗺 Xarita havolasi", "addr:link"),
-            ("⏭ O'tkazib yuborish", "addr:skip"),
-        ]
-    else:
-        body = "🏠 Адрес или геолокация:"
-        opts = [
-            ("🏠 Написать адрес", "addr:text"),
-            ("📍 Отправить геолокацию", "addr:geo"),
-            ("🗺 Ссылка на карту", "addr:link"),
-            ("⏭ Пропустить", "addr:skip"),
-        ]
-
-    text = (card + SEP + body) if card else body
-    kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
-    kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
-    await _show_question(m_or_cb, state, text, reply_markup=kb)
-    await state.set_state(QuestionnaireStates.ext_address)
-
-
-@router.callback_query(F.data.startswith("addr:"), QuestionnaireStates.ext_address)
-async def ext_address_choice(callback: CallbackQuery, state: FSMContext):
-    choice = callback.data.replace("addr:", "")
-    lang = await _lang(state)
-
-    # skip → сразу финальный экран (там своё редактирование)
-    if choice == "skip":
-        await _show_ext_complete(callback, state)
-        await callback.answer()
-        return
-
-    # Удаляем текущее окно с выбором адреса
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
-    await state.update_data(last_bot_msg_id=None)
-
-    if choice == "text":
-        text = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
-        sent = await callback.message.answer(text, reply_markup=skip_back_ext_kb(lang))
-        await state.update_data(last_bot_msg_id=sent.message_id)
-        await state.set_state(QuestionnaireStates.ext_address_text)
-    elif choice == "geo":
-        # Q9d2 known limitation: reply-keyboard for geolocation can't be mixed
-        # with inline back button. Пользователь сам вошёл — может нажать «Меню».
-        geo_label = "📍 Geolokatsiya yuborish" if lang == "uz" else "📍 Отправить геолокацию"
-        title = "📍 Geolokatsiya:" if lang == "uz" else "📍 Геолокация:"
-        kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text=geo_label, request_location=True)]],
-            resize_keyboard=True, one_time_keyboard=True,
-        )
-        sent = await callback.message.answer(title, reply_markup=kb)
-        await state.update_data(last_bot_msg_id=sent.message_id)
-        await state.set_state(QuestionnaireStates.ext_location)
-    elif choice == "link":
-        text = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
-        sent = await callback.message.answer(text, reply_markup=skip_back_ext_kb(lang))
-        await state.update_data(last_bot_msg_id=sent.message_id)
-        await state.set_state(QuestionnaireStates.ext_address_link)
-
-    await callback.answer()
-
-
-@router.message(QuestionnaireStates.ext_address_text)
-async def ext_address_text(message: Message, state: FSMContext):
-    await state.update_data(address=message.text.strip())
-    # Удаляем сообщение пользователя, чтобы экран был чистым
-    try:
-        await message.delete()
-    except Exception:
-        pass
-    await _show_ext_complete(message, state)
-
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_address_text)
-async def ext_address_text_skip(callback: CallbackQuery, state: FSMContext):
-    await _show_ext_complete(callback, state)
-    await callback.answer()
-
-
-@router.message(QuestionnaireStates.ext_location)
-async def ext_location(message: Message, state: FSMContext):
-    if message.location:
-        lat = message.location.latitude
-        lon = message.location.longitude
-        await state.update_data(
-            location_lat=lat,
-            location_lon=lon,
-            location_link=f"https://maps.google.com/?q={lat},{lon}",
-        )
-    # Удаляем сообщение пользователя с геолокацией
-    try:
-        await message.delete()
-    except Exception:
-        pass
-    # Удаляем reply-клавиатуру одноразовым сообщением, которое тут же убираем
-    try:
-        tmp = await message.answer("✓", reply_markup=ReplyKeyboardRemove())
-        await tmp.delete()
-    except Exception:
-        pass
-    # Удаляем старое сообщение бота (с prompt "📍 Геолокация:")
-    data = await state.get_data()
-    last_id = data.get("last_bot_msg_id")
-    if last_id:
-        try:
-            await message.bot.delete_message(message.chat.id, last_id)
-        except Exception:
-            pass
-        await state.update_data(last_bot_msg_id=None)
-    await _show_ext_complete(message, state)
-
-
-@router.message(QuestionnaireStates.ext_address_link)
-async def ext_address_link(message: Message, state: FSMContext):
-    await state.update_data(location_link=message.text.strip())
-    try:
-        await message.delete()
-    except Exception:
-        pass
-    await _show_ext_complete(message, state)
-
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_address_link)
-async def ext_address_link_skip(callback: CallbackQuery, state: FSMContext):
     await _show_ext_complete(callback, state)
     await callback.answer()
 
@@ -886,8 +735,8 @@ async def _show_ext_complete(m_or_cb, state: FSMContext):
     await state.set_state(QuestionnaireStates.ext_confirm)
 
 
-# ── «← Назад» с финального экрана Этапа 2 → снова адрес ──
+# ── «← Назад» с финального экрана Этапа 2 → снова авто (последний вопрос) ──
 @router.callback_query(F.data == "ext:back", QuestionnaireStates.ext_confirm)
 async def ext_back(callback: CallbackQuery, state: FSMContext):
-    await _ask_address(callback, state)
+    await _ask_car(callback, state)
     await callback.answer()
