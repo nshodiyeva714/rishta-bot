@@ -832,7 +832,8 @@ async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, sess
         f"To'lov uchun moderator bilan bog'laning:\n{moderator}"
     )
 
-    await _safe_edit(callback, text, reply_markup=back_main_kb(lang, "menu:my"))
+    back_cb = f"myvip:{profile_id}" if profile_id else "menu:my"
+    await _safe_edit(callback, text, reply_markup=back_main_kb(lang, back_cb))
     await state.clear()
     await callback.answer()
 
