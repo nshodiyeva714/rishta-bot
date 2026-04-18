@@ -168,20 +168,18 @@ T = {
     # ── Step 5: Questionnaire intro ──
     "quest_son_intro": {
         "ru": (
-            "👦 <b>ИЩЕМ НЕВЕСТКУ</b>\n\n"
-            "Заполните анкету вашего сына.\n"
-            "Все данные строго конфиденциальны 🔒\n\n"
+            "👦 <b>РАЗМЕСТИТЬ АНКЕТУ СЫНА</b>\n\n"
+            "Анкета будет проверена модератором перед публикацией.\n\n"
             "✅ Анкета видна всем пользователям\n"
             "✅ Контакт и адрес — по взаимному согласию\n"
-            "📵 Фото защищены от скриншотов"
+            "📵 Фото защищены от скриншотов 🔒"
         ),
         "uz": (
-            "👦 <b>KELIN QIDIRAMIZ</b>\n\n"
-            "O'g'lingizning anketasini to'ldiring.\n"
-            "Ma'lumotlar oshkora etilmaydi 🔒\n\n"
+            "👦 <b>O'G'IL ANKETASINI JOYLASHTIRISH</b>\n\n"
+            "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
             "✅ Kontakt va manzil — rozilik asosida beriladi\n"
-            "📵 Fotosuratlar skrinshotdan himoyalangan"
+            "📵 Fotosuratlar skrinshotdan himoyalangan 🔒"
         ),
     },
     "quest_daughter_intro": {
