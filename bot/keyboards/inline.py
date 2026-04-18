@@ -1423,6 +1423,15 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
             ("📞 Ota-onalar telefoni", "edit:phone"),
             ("📱 Ota-onalar TG", "edit:parent_telegram"),
             ("💬 Nomzod TG", "edit:candidate_telegram"),
+            ("👨‍💼 Otasi", "edit:father"),
+            ("👩‍💼 Onasi", "edit:mother"),
+            ("👨‍👩‍👧 Aka-uka / opa-singil", "edit:siblings"),
+            ("🌸 Xarakter", "edit:character"),
+            ("🌿 Sog'lig'i", "edit:health"),
+            ("💭 O'zi haqida", "edit:about"),
+            ("🏡 Turar joy", "edit:housing"),
+            ("🚗 Avtomobil", "edit:car"),
+            ("🏠 Manzil", "edit:address"),
         ]
         back_text = "🔙 Ortga"
     else:
@@ -1440,6 +1449,15 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
             ("📞 Телефон родителей", "edit:phone"),
             ("📱 TG родителей", "edit:parent_telegram"),
             ("💬 TG кандидата", "edit:candidate_telegram"),
+            ("👨‍💼 Отец", "edit:father"),
+            ("👩‍💼 Мать", "edit:mother"),
+            ("👨‍👩‍👧 Братья / сёстры", "edit:siblings"),
+            ("🌸 Характер", "edit:character"),
+            ("🌿 Здоровье", "edit:health"),
+            ("💭 О себе", "edit:about"),
+            ("🏡 Жильё", "edit:housing"),
+            ("🚗 Автомобиль", "edit:car"),
+            ("🏠 Адрес", "edit:address"),
         ]
         back_text = "🔙 Назад"
     rows = [[InlineKeyboardButton(text=label, callback_data=f"{cd}:{profile_id}")] for label, cd in fields]
