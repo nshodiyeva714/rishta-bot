@@ -121,3 +121,4 @@ class ModeratorEditStates(StatesGroup):
 class ContactStates(StatesGroup):
     waiting_screenshot = State()
     waiting_question = State()
+    waiting_reply = State()  # оператор пишет ответ пользователю

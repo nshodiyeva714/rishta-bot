@@ -1397,9 +1397,9 @@ CARD_OWNER_TXT = "SHODIYEVA NASIBA"
 CONTACT_PRICE = 30_000
 
 
-@router.callback_query(F.data.startswith("mod_write:"))
-async def mod_write_user(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    """Модератор → «Написать пользователю»: отправляем реквизиты."""
+@router.callback_query(F.data.startswith("op_reply:"))
+async def op_reply_start(callback: CallbackQuery, state: FSMContext):
+    """Оператор жмёт «💬 Ответить» — ждём текст ответа."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
@@ -1413,56 +1413,69 @@ async def mod_write_user(callback: CallbackQuery, session: AsyncSession, bot: Bo
         return
     req_number = parts[3] if len(parts) > 3 else "—"
 
-    profile = await session.get(Profile, profile_id)
-    display_id = (profile.display_id if profile else "—") or "—"
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="📸 Отправить скриншот",
-            callback_data=f"send_screenshot:{profile_id}:{req_number}",
-        )],
-        [InlineKeyboardButton(
-            text="💬 Задать вопрос оператору",
-            callback_data=f"ask_operator:{profile_id}:{req_number}",
-        )],
-    ])
-
-    payment_text = (
-        f"💁‍♀️ <b>Сообщение от оператора:</b>\n\n"
-        f"📋 Запрос: <b>#{req_number}</b>\n"
-        f"🔖 Анкета: <b>{display_id}</b>\n\n"
-        f"Для получения контакта\n"
-        f"переведите <b>{CONTACT_PRICE:,} сум</b>:\n\n"
-        f"💳 <code>{CARD_NUMBER_TXT}</code>\n"
-        f"👤 {CARD_OWNER_TXT}\n\n"
-        f"После оплаты отправьте\n"
-        f"скриншот сюда 👇"
+    await state.update_data(
+        reply_user_id=user_id,
+        reply_profile_id=profile_id,
+        reply_req_number=req_number,
     )
-
+    await state.set_state(ContactStates.waiting_reply)
     try:
-        await bot.send_message(user_id, payment_text, reply_markup=kb, parse_mode="HTML")
-        sent = True
-    except Exception as e:
-        logger.error(f"mod_write send to {user_id} failed: {e}")
-        sent = False
-
-    try:
-        await callback.message.edit_text(
-            (callback.message.text or "") + (
-                "\n\n✅ Реквизиты отправлены пользователю"
-                if sent else
-                "\n\n⚠️ Не удалось отправить (пользователь заблокировал бота?)"
-            ),
-            parse_mode="HTML",
+        await callback.message.answer(
+            f"💬 Введите ответ пользователю\n📋 #{req_number}:",
         )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
-    await callback.answer("✅ Отправлено!" if sent else "⚠️ Ошибка доставки")
+    await callback.answer()
 
 
-@router.callback_query(F.data.startswith("mod_reject_req:"))
-async def mod_reject_request(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    """Модератор отклоняет запрос на ранней стадии (до оплаты)."""
+@router.message(ContactStates.waiting_reply, F.text)
+async def op_reply_send(message: Message, state: FSMContext, bot: Bot):
+    """Оператор прислал текст ответа — пересылаем пользователю."""
+    if not is_moderator(message.from_user.id):
+        return
+
+    data = await state.get_data()
+    user_id = data.get("reply_user_id")
+    profile_id = data.get("reply_profile_id")
+    req_number = data.get("reply_req_number") or "—"
+
+    if not user_id:
+        await state.set_state(None)
+        return
+
+    reply_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Ещё вопрос", callback_data=f"ask_op:{profile_id}")],
+        [InlineKeyboardButton(text="📤 Запросить контакт", callback_data=f"req_contact:{profile_id}")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"skip_profile:{profile_id}")],
+    ])
+
+    try:
+        await bot.send_message(
+            user_id,
+            (
+                f"💁‍♀️ <b>Ответ оператора:</b>\n\n"
+                f"📋 #{req_number}\n\n"
+                f"{message.text}"
+            ),
+            reply_markup=reply_kb,
+            parse_mode="HTML",
+        )
+        sent = True
+    except Exception as e:
+        logger.error(f"op_reply_send to {user_id}: {e}")
+        sent = False
+
+    await message.answer(
+        f"✅ Ответ отправлен!\n📋 #{req_number}"
+        if sent else
+        f"⚠️ Не удалось отправить\n📋 #{req_number}"
+    )
+    await state.set_state(None)
+
+
+@router.callback_query(F.data.startswith("op_send_req:"))
+async def op_send_requisites(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Оператор → «📤 Отправить реквизиты»: пользователю приходят реквизиты."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
@@ -1476,32 +1489,94 @@ async def mod_reject_request(callback: CallbackQuery, session: AsyncSession, bot
         return
     req_number = parts[3] if len(parts) > 3 else "—"
 
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📸 Отправить скриншот",
+            callback_data=f"send_screenshot:{profile_id}:{req_number}",
+        )],
+        [InlineKeyboardButton(
+            text="💬 Ещё вопрос",
+            callback_data=f"ask_op:{profile_id}",
+        )],
+    ])
+
+    payment_text = (
+        f"💁‍♀️ <b>Сообщение от оператора:</b>\n\n"
+        f"📋 #{req_number}\n\n"
+        f"Для получения контакта\n"
+        f"переведите <b>{CONTACT_PRICE:,} сум</b>:\n\n"
+        f"💳 <code>{CARD_NUMBER_TXT}</code>\n"
+        f"👤 {CARD_OWNER_TXT}\n\n"
+        f"После оплаты отправьте\n"
+        f"скриншот сюда 👇"
+    )
+
+    try:
+        await bot.send_message(user_id, payment_text, reply_markup=kb, parse_mode="HTML")
+        sent = True
+    except Exception as e:
+        logger.error(f"op_send_req to {user_id}: {e}")
+        sent = False
+
+    try:
+        await callback.message.answer(
+            f"✅ Реквизиты отправлены!\n📋 #{req_number}"
+            if sent else
+            f"⚠️ Не удалось отправить\n📋 #{req_number}"
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("✅ Отправлено!" if sent else "⚠️ Ошибка")
+
+
+@router.callback_query(F.data.startswith("op_reject:"))
+async def op_reject_request(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Оператор отклоняет запрос на ранней стадии."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+
+    parts = callback.data.split(":")
+    try:
+        user_id = int(parts[1])
+        profile_id = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+    req_number = parts[3] if len(parts) > 3 else "—"
+
+    reject_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔍 Продолжить поиск", callback_data="menu:search")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
     try:
         await bot.send_message(
             user_id,
-            f"❌ К сожалению, ваш запрос\n"
-            f"📋 <b>#{req_number}</b> отклонён оператором.\n\n"
-            f"Попробуйте найти другого\n"
-            f"кандидата. 🤲",
+            (
+                f"❌ Запрос отклонён.\n\n"
+                f"📋 #{req_number}\n\n"
+                f"Попробуйте найти другого\n"
+                f"кандидата. 🤲"
+            ),
+            reply_markup=reject_kb,
             parse_mode="HTML",
         )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
 
-    # Обновить статус
     try:
         from sqlalchemy import update
-        from bot.db.models import ContactRequest, RequestStatus
-        await session.execute(
-            update(ContactRequest)
-            .where(
-                ContactRequest.requester_user_id == user_id,
-                ContactRequest.target_profile_id == profile_id,
-                ContactRequest.status == RequestStatus.PENDING,
+        if req_number != "—":
+            await session.execute(
+                update(ContactRequest)
+                .where(
+                    ContactRequest.display_id == req_number,
+                    ContactRequest.status == RequestStatus.PENDING,
+                )
+                .values(status=RequestStatus.REJECTED)
             )
-            .values(status=RequestStatus.REJECTED)
-        )
-        await session.commit()
+            await session.commit()
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     try:
@@ -1514,9 +1589,9 @@ async def mod_reject_request(callback: CallbackQuery, session: AsyncSession, bot
     await callback.answer("❌ Отклонено")
 
 
-@router.callback_query(F.data.startswith("confirm_payment:"))
+@router.callback_query(F.data.startswith("confirm_pay:"))
 async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    """Модератор подтвердил оплату → сразу передаём контакт покупателю."""
+    """Оператор подтвердил оплату → сразу передаём контакт покупателю."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
@@ -1539,7 +1614,6 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     display_id = profile.display_id or "—"
     age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
 
-    # Собрать контакты
     contacts = []
     if profile.parent_phone:
         contacts.append(f"📞 {profile.parent_phone}")
@@ -1551,7 +1625,6 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         contacts.append(f"🏠 {profile.address}")
     contact_text = "\n".join(contacts) if contacts else "Контакты не указаны"
 
-    # Язык получателя
     try:
         req_user = await session.get(User, user_id)
         req_lang = req_user.language.value if req_user and req_user.language else "ru"
@@ -1559,10 +1632,15 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         logger.debug("ignored: %s", _e)
         req_lang = "ru"
 
+    after_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔍 Продолжить поиск", callback_data="menu:search")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
     if req_lang == "uz":
         user_msg = (
             f"✅ <b>Kontakt yuborildi!</b>\n\n"
-            f"📋 So'rov: <b>#{req_number}</b>\n"
+            f"📋 #{req_number}\n"
             f"🔖 {display_id}\n"
             f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
             f"<b>Oila kontaktlari:</b>\n"
@@ -1572,7 +1650,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     else:
         user_msg = (
             f"✅ <b>Контакт получен!</b>\n\n"
-            f"📋 Запрос: <b>#{req_number}</b>\n"
+            f"📋 #{req_number}\n"
             f"🔖 {display_id}\n"
             f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
             f"<b>Контакты семьи:</b>\n"
@@ -1582,11 +1660,10 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         )
 
     try:
-        await bot.send_message(user_id, user_msg, parse_mode="HTML")
+        await bot.send_message(user_id, user_msg, reply_markup=after_kb, parse_mode="HTML")
     except Exception as e:
-        logger.error(f"confirm_payment send contact: {e}")
+        logger.error(f"confirm_pay send contact: {e}")
 
-    # Уведомить владельца анкеты (без кнопок — просто информируем)
     if profile.user_id and profile.user_id != user_id:
         try:
             owner = await session.get(User, profile.user_id)
@@ -1602,17 +1679,15 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
                 owner_msg = (
                     f"💌 <b>Вашим контактом поделились!</b>\n\n"
                     f"🔖 {display_id}\n\n"
-                    f"Серьёзная семья заинтересовалась\n"
-                    f"вашей анкетой. Ждите звонка! 🤝"
+                    f"Серьёзная семья заинтересовалась.\n"
+                    f"Ждите звонка! 🤝"
                 )
             await bot.send_message(profile.user_id, owner_msg, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
 
-    # Обновить статус запроса — только этот конкретный по display_id
     try:
         from sqlalchemy import update
-        from bot.db.models import ContactRequest, RequestStatus
         await session.execute(
             update(ContactRequest)
             .where(
@@ -1625,13 +1700,12 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     except Exception as _e:
         logger.debug("ignored: %s", _e)
 
-    # Пометить карточку модератора
     try:
         mark = (
             f"\n\n✅ <b>КОНТАКТ ПЕРЕДАН</b>\n"
-            f"📋 Запрос: #{req_number}\n"
-            f"👤 ID: <code>{user_id}</code>\n"
-            f"🔖 {display_id}"
+            f"📋 #{req_number}\n"
+            f"🔖 {display_id}\n"
+            f"👤 ID: <code>{user_id}</code>"
         )
         if callback.message.caption is not None:
             await callback.message.edit_caption(
@@ -1648,9 +1722,9 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     await callback.answer("✅ Контакт передан!")
 
 
-@router.callback_query(F.data.startswith("reject_payment:"))
+@router.callback_query(F.data.startswith("reject_pay:"))
 async def reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    """Модератор не подтвердил оплату — уведомляем пользователя."""
+    """Оператор не подтвердил оплату — уведомляем пользователя."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
@@ -1658,38 +1732,38 @@ async def reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bo
     parts = callback.data.split(":")
     try:
         user_id = int(parts[1])
+        profile_id = int(parts[2])
     except (ValueError, IndexError):
         await callback.answer("❌")
         return
     req_number = parts[3] if len(parts) > 3 else "—"
 
+    retry_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📸 Отправить скриншот снова",
+            callback_data=f"send_screenshot:{profile_id}:{req_number}",
+        )],
+        [InlineKeyboardButton(
+            text="💬 Задать вопрос",
+            callback_data=f"ask_op:{profile_id}",
+        )],
+    ])
+
     try:
         await bot.send_message(
             user_id,
-            f"❌ Оплата по запросу <b>#{req_number}</b>\nне подтверждена.\n\n"
-            f"Свяжитесь с оператором для уточнения\n"
-            f"или попробуйте ещё раз. 🤲",
+            (
+                f"❌ Оплата не подтверждена.\n\n"
+                f"📋 #{req_number}\n\n"
+                f"Проверьте правильность\n"
+                f"реквизитов и попробуйте снова."
+            ),
+            reply_markup=retry_kb,
             parse_mode="HTML",
         )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
 
-    # Обновить статус запроса
-    try:
-        from sqlalchemy import update
-        from bot.db.models import ContactRequest, RequestStatus
-        if req_number != "—":
-            await session.execute(
-                update(ContactRequest)
-                .where(
-                    ContactRequest.display_id == req_number,
-                    ContactRequest.status == RequestStatus.PENDING,
-                )
-                .values(status=RequestStatus.REJECTED)
-            )
-            await session.commit()
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
     try:
         mark = f"\n\n❌ Оплата #{req_number} не подтверждена"
         if callback.message.caption is not None:
@@ -1796,21 +1870,6 @@ async def requests_list_back(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data.startswith("view_req:"))
 async def view_request(callback: CallbackQuery, session: AsyncSession):
     """Детальный вид запроса + навигация prev/next."""
-    # ── ВРЕМЕННЫЙ DEBUG ────────────────────────────────────
-    logger.warning(
-        f"VIEW_REQ: from {callback.from_user.id} "
-        f"data={callback.data} "
-        f"is_mod={is_moderator(callback.from_user.id)}"
-    )
-    try:
-        await callback.answer(
-            f"DEBUG view_req: {callback.data[:30]}",
-            show_alert=False,
-        )
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
-    # ── КОНЕЦ DEBUG ────────────────────────────────────────
-
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
@@ -1891,12 +1950,16 @@ async def view_request(callback: CallbackQuery, session: AsyncSession):
 
     buttons: list[list[InlineKeyboardButton]] = [
         [InlineKeyboardButton(
-            text="💬 Написать пользователю",
-            callback_data=f"mod_write:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
+            text="💬 Ответить",
+            callback_data=f"op_reply:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
+        )],
+        [InlineKeyboardButton(
+            text="📤 Отправить реквизиты",
+            callback_data=f"op_send_req:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
         )],
         [InlineKeyboardButton(
             text="❌ Отклонить",
-            callback_data=f"mod_reject_req:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
+            callback_data=f"op_reject:{req.requester_user_id}:{req.target_profile_id}:{req_number}",
         )],
     ]
 
