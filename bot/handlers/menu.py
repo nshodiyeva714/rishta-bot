@@ -160,18 +160,12 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
 
     # Живая статистика
     from sqlalchemy import func
-    from bot.db.models import Feedback, FeedbackResult
     from datetime import datetime
 
     total_result = await session.execute(
         select(func.count(Profile.id)).where(Profile.status == ProfileStatus.PUBLISHED)
     )
     total_ankety = total_result.scalar() or 0
-
-    nikoh_result = await session.execute(
-        select(func.count(Feedback.id)).where(Feedback.result == FeedbackResult.NIKOH)
-    )
-    total_nikoh = nikoh_result.scalar() or 0
 
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     views_result = await session.execute(
@@ -188,11 +182,10 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"sovchilik platformasi 🇺🇿\n\n"
             f"📊 <b>Bugungi holat:</b>\n"
             f"👥 Faol anketalar: <b>{total_ankety}</b>\n"
-            f"💍 Nikohlar: <b>{total_nikoh}</b>\n"
             f"👀 Jami ko'rishlar: <b>{total_views}</b>\n\n"
             f"✅ Har bir anketa shaxsan tekshiriladi\n"
-            f"✅ To'liq maxfiylik\n"
-            f"✅ Kontakt — o'zaro rozilik asosida\n"
+            f"✅ Oshkor etilmaydi\n"
+            f"✅ Kontakt — rozilik asosida beriladi\n"
             f"✅ Moderator yordam beradi\n"
             f"🔒 Foto skrinshotdan himoyalangan\n\n"
             f"📢 @Rishta_uz | 💬 @Rishta_chat"
@@ -204,7 +197,6 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"для сватовства в Узбекистане 🇺🇿\n\n"
             f"📊 <b>Сейчас на платформе:</b>\n"
             f"👥 Активных анкет: <b>{total_ankety}</b>\n"
-            f"💍 Никохов состоялось: <b>{total_nikoh}</b>\n"
             f"👀 Просмотров всего: <b>{total_views}</b>\n\n"
             f"✅ Каждая анкета проверяется лично\n"
             f"✅ Полная конфиденциальность\n"
