@@ -695,16 +695,14 @@ T = {
             "🔖 {display_id}\n\n"
             "Теперь тысячи семей могут\n"
             "увидеть вашу анкету.\n\n"
-            "Пусть поиск будет успешным! 🤲\n"
-            "Никохингиз муборак бўлсин!"
+            "Желаем вам счастья и доброй судьбы! 🤲"
         ),
         "uz": (
             "✅ <b>Anketangiz nashr etildi!</b>\n\n"
             "🔖 {display_id}\n\n"
             "Endi minglab oilalar\n"
             "anketangizni ko'rishi mumkin.\n\n"
-            "Qidiruv muvaffaqiyatli bo'lsin! 🤲\n"
-            "Nikohingiz muborak bo'lsin!"
+            "Sizga baxt va xayrli nasib tilaymiz! 🤲"
         ),
     },
     "mod_profile_rejected": {
@@ -720,22 +718,6 @@ T = {
     "search_no_anketa": {
         "ru": "🔍 <b>Найти кандидата</b>\n\n⚠️ Для поиска сначала разместите свою анкету.",
         "uz": "🔍 <b>Nomzod qidirish</b>\n\n⚠️ Qidirish uchun avval o'z anketangizni joylashtiring.",
-    },
-    "profile_published": {
-        "ru": (
-            "🎉 <b>Анкета опубликована!</b>\n\n"
-            "🔖 #{display_id}\n\n"
-            "Теперь тысячи семей могут\n"
-            "увидеть вашу анкету.\n\n"
-            "Пусть поиск будет успешным! 🤲"
-        ),
-        "uz": (
-            "🎉 <b>Anketa nashr etildi!</b>\n\n"
-            "🔖 #{display_id}\n\n"
-            "Endi minglab oilalar\n"
-            "anketangizni ko'rishi mumkin.\n\n"
-            "Qidiruv muvaffaqiyatli bo'lsin! 🤲"
-        ),
     },
     "payment_confirmed": {
         "ru": (
