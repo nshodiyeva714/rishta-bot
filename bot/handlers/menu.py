@@ -771,6 +771,46 @@ async def edit_phone_save(message: Message, state: FSMContext, session: AsyncSes
     await _finish_edit(message, state, session, lang)
 
 
+# ── Telegram родителей ──
+@router.callback_query(F.data.startswith("edit:parent_telegram:"))
+async def edit_parent_telegram_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.parent_telegram, "edit_parent_telegram_prompt")
+
+
+@router.message(EditProfileStates.parent_telegram)
+async def edit_parent_telegram_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    tg = (message.text or "").strip()[:100]
+    if tg and not tg.startswith("@"):
+        tg = f"@{tg}"
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.parent_telegram = tg or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
+# ── Telegram кандидата ──
+@router.callback_query(F.data.startswith("edit:candidate_telegram:"))
+async def edit_candidate_telegram_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await _start_edit_field(callback, state, session, EditProfileStates.candidate_telegram, "edit_candidate_telegram_prompt")
+
+
+@router.message(EditProfileStates.candidate_telegram)
+async def edit_candidate_telegram_save(message: Message, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    tg = (message.text or "").strip()[:100]
+    if tg and not tg.startswith("@"):
+        tg = f"@{tg}"
+    profile = await session.get(Profile, data["edit_profile_id"])
+    if profile and profile.user_id == message.from_user.id:
+        profile.candidate_telegram = tg or None
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
+
+
 @router.callback_query(F.data.startswith("myvip:"))
 async def upgrade_to_vip(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Переход на VIP — показываем выбор срока с ценами."""

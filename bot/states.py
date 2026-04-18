@@ -25,6 +25,9 @@ class QuestionnaireStates(StatesGroup):
     q16_religiosity = State()      # 9. Религиозность
     q_marital_status = State()     # 10. Семейное положение
     q_children = State()           # 10b. Дети (только если разведён/вдовец)
+    q11_parent_phone = State()     # 11. Телефон родителей (обязательно)
+    q12_parent_telegram = State()  # 12. TG родителей (skip, но хотя бы один TG)
+    q13_candidate_telegram = State()  # 13. TG кандидата (skip, но хотя бы один TG)
     q21_photo_type = State()       # 3. Фото (позиция 3 в анкете)
     q21_photo_upload = State()
     q22_parent_phone = State()     # Телефон (необязательно, убран из Этапа 1)
@@ -111,6 +114,9 @@ class EditProfileStates(StatesGroup):
     photo = State()
     phone = State()
     nationality_custom = State()
+    parent_phone = State()
+    parent_telegram = State()
+    candidate_telegram = State()
 
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()
