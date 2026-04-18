@@ -14,7 +14,7 @@ from bot.db.models import (
     Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus,
     Favorite, ProfileType, ContactRequest, RequestStatus,
 )
-from bot.states import ModeratorReplyStates, ModeratorEditStates
+from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates
 from bot.texts import t
 from bot.config import config, is_moderator
 from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
