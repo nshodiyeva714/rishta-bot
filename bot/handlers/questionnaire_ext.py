@@ -108,10 +108,10 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
             fam.append(f"{sisters} {'сест.' if L == 'ru' else 'opa-singil'}")
         if position:
             pos_map = {
-                "ru": {"first": "старший/ая", "middle": "средний/яя",
-                       "last": "младший/ая", "only": "единственный/ая"},
-                "uz": {"first": "katta", "middle": "o'rtancha",
-                       "last": "kenja", "only": "yagona"},
+                "ru": {"oldest": "старший/ая", "middle": "средний/яя",
+                       "youngest": "младший/ая", "only": "единственный/ая"},
+                "uz": {"oldest": "katta", "middle": "o'rtancha",
+                       "youngest": "kenja", "only": "yagona"},
             }
             fam.append(pos_map[L].get(position, position))
         lines.append(" · ".join(fam))
@@ -136,10 +136,10 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
 
     # Жильё
     house_map = {
-        "ru": {"own_house": "Свой дом", "own_apt": "Своя квартира",
-               "parents": "С родителями", "rent": "Аренда"},
-        "uz": {"own_house": "O'z uyi", "own_apt": "O'z kvartirasi",
-               "parents": "Ota-ona bilan", "rent": "Ijara"},
+        "ru": {"own_house": "Свой дом", "own_apartment": "Своя квартира",
+               "with_parents": "С родителями", "rent": "Аренда"},
+        "uz": {"own_house": "O'z uyi", "own_apartment": "O'z kvartirasi",
+               "with_parents": "Ota-ona bilan", "rent": "Ijara"},
     }
     house = data.get("housing")
     if house:
@@ -348,10 +348,10 @@ async def _ask_character(m_or_cb, state: FSMContext):
 async def _ask_housing_parent(m_or_cb, state: FSMContext):
     lang = await _lang(state)
     if lang == "uz":
-        opts = [("Uy", "phousing:house"), ("Kvartira", "phousing:apt")]
+        opts = [("Uy", "phousing:house"), ("Kvartira", "phousing:apartment")]
         title = "Ota-ona uyining turi:"
     else:
-        opts = [("Дом", "phousing:house"), ("Квартира", "phousing:apt")]
+        opts = [("Дом", "phousing:house"), ("Квартира", "phousing:apartment")]
         title = "Тип жилья родителей:"
     kb_rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
     kb = add_nav(kb_rows, lang, "back_ext_step", show_main=False)
@@ -414,9 +414,9 @@ async def back_ext_step(callback: CallbackQuery, state: FSMContext):
     current = await state.get_state()
     data = await state.get_data()
 
-    # Специальный случай: Q8 → Q7a (если housing=parents) или Q7
+    # Специальный случай: Q8 → Q7a (если housing=with_parents) или Q7
     if current == QuestionnaireStates.ext_car.state:
-        if data.get("housing") == "parents":
+        if data.get("housing") == "with_parents":
             await _ask_housing_parent(callback, state)
         else:
             await _ask_housing(callback, state)
@@ -489,16 +489,16 @@ def _sisters_kb(lang: str) -> InlineKeyboardMarkup:
 def _position_kb(lang: str) -> InlineKeyboardMarkup:
     if lang == "uz":
         opts = [
-            ("Katta farzand", "fpos:first"),
+            ("Katta farzand", "fpos:oldest"),
             ("O'rtancha", "fpos:middle"),
-            ("Kenja farzand", "fpos:last"),
+            ("Kenja farzand", "fpos:youngest"),
             ("Yagona farzand", "fpos:only"),
         ]
     else:
         opts = [
-            ("Старший/ая", "fpos:first"),
+            ("Старший/ая", "fpos:oldest"),
             ("Средний/яя", "fpos:middle"),
-            ("Младший/ая", "fpos:last"),
+            ("Младший/ая", "fpos:youngest"),
             ("Единственный/ая", "fpos:only"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -623,16 +623,16 @@ async def _ask_housing(m_or_cb, state: FSMContext):
         q_text = f"🏡 7/9-savol\n{bar}\n\nTurar joy:"
         opts = [
             ("O'z uyi", "housing:own_house"),
-            ("O'z kvartirasi", "housing:own_apt"),
-            ("Ota-ona bilan", "housing:parents"),
+            ("O'z kvartirasi", "housing:own_apartment"),
+            ("Ota-ona bilan", "housing:with_parents"),
             ("Ijara", "housing:rent"),
         ]
     else:
         q_text = f"🏡 Вопрос 7/9\n{bar}\n\nЖильё:"
         opts = [
             ("Свой дом", "housing:own_house"),
-            ("Своя квартира", "housing:own_apt"),
-            ("С родителями", "housing:parents"),
+            ("Своя квартира", "housing:own_apartment"),
+            ("С родителями", "housing:with_parents"),
             ("Аренда", "housing:rent"),
         ]
 
@@ -670,7 +670,7 @@ async def ext_housing(callback: CallbackQuery, state: FSMContext):
     housing = callback.data.replace("housing:", "")
     await state.update_data(housing=housing)
 
-    if housing == "parents":
+    if housing == "with_parents":
         await _ask_housing_parent(callback, state)
     else:
         await _ask_car(callback, state)
