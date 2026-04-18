@@ -44,7 +44,7 @@ async def choose_tariff_free(callback: CallbackQuery, state: FSMContext):
     await _show_summary(callback, state, is_callback=True)
 
 
-@router.callback_query(F.data == "tariff:vip", TariffStates.choose)
+@router.callback_query(F.data == "tariff:vip")
 async def choose_tariff_vip(callback: CallbackQuery, state: FSMContext):
     """Показываем выбор срока VIP."""
     lang = await _lang(state)
