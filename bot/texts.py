@@ -201,31 +201,31 @@ T = {
 
     # ── Questions (Stage 1 — 10 questions with progress bar) ──
     "q1": {
-        "ru": "🪪 Вопрос 1/13\n{bar}\n\nИмя {child} (можно вымышленное):",
-        "uz": "🪪 1/13-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
+        "ru": "🪪 Вопрос 1/14\n{bar}\n\nИмя {child} (можно вымышленное):",
+        "uz": "🪪 1/14-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
     },
     "q2": {
-        "ru": "🎂📏 Вопрос 2/13\n{bar}\n\nГод рождения (например: 1998):",
-        "uz": "🎂📏 2/13-savol\n{bar}\n\nTug'ilgan yil (masalan: 1998):",
+        "ru": "🎂📏 Вопрос 2/14\n{bar}\n\nГод рождения (например: 1998):",
+        "uz": "🎂📏 2/14-savol\n{bar}\n\nTug'ilgan yil (masalan: 1998):",
     },
     "q2_confirm": {
-        "ru": "Вопрос 2/13\n{bar}\n\nВозраст: {age} — верно?",
-        "uz": "2/13-savol\n{bar}\n\nYoshi: {age} — to'g'rimi?",
+        "ru": "Вопрос 2/14\n{bar}\n\nВозраст: {age} — верно?",
+        "uz": "2/14-savol\n{bar}\n\nYoshi: {age} — to'g'rimi?",
     },
     "q2_height": {
-        "ru": "🎂📏 Вопрос 2/13\n{bar}\n\nРост в см (например: 175):",
-        "uz": "🎂📏 2/13-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
+        "ru": "🎂📏 Вопрос 2/14\n{bar}\n\nРост в см (например: 175):",
+        "uz": "🎂📏 2/14-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
     },
     "q3_photo": {
         "ru": (
-            "🖼 Вопрос 3/13\n{bar}\n\n"
+            "🖼 Вопрос 3/14\n{bar}\n\n"
             "Фото\n\n"
             "💡 Анкеты с фото получают\n"
             "в 3 раза больше просмотров!\n\n"
             "Как хотите разместить фото?"
         ),
         "uz": (
-            "🖼 3/13-savol\n{bar}\n\n"
+            "🖼 3/14-savol\n{bar}\n\n"
             "Fotosurat\n\n"
             "💡 Fotoli anketalar 3 marta\n"
             "ko'proq e'tibor tortadi!\n\n"
@@ -233,36 +233,36 @@ T = {
         ),
     },
     "q4_body_type": {
-        "ru": "⚡ Вопрос 4/13\n{bar}\n\nТелосложение:",
-        "uz": "⚡ 4/13-savol\n{bar}\n\nTana tuzilishi:",
+        "ru": "⚡ Вопрос 4/14\n{bar}\n\nТелосложение:",
+        "uz": "⚡ 4/14-savol\n{bar}\n\nTana tuzilishi:",
     },
     "q5_nationality": {
-        "ru": "🌍 Вопрос 5/13\n{bar}\n\nНациональность:",
-        "uz": "🌍 5/13-savol\n{bar}\n\nMillati:",
+        "ru": "🌍 Вопрос 5/14\n{bar}\n\nНациональность:",
+        "uz": "🌍 5/14-savol\n{bar}\n\nMillati:",
     },
     "q6_city": {
-        "ru": "🏡 Вопрос 6/13\n{bar}\n\nГород (район) проживания:\n(например: Ташкент, Юнусабад)",
-        "uz": "🏡 6/13-savol\n{bar}\n\nYashash shahri (tumani):\n(masalan: Toshkent, Yunusobod)",
+        "ru": "🏡 Вопрос 6/14\n{bar}\n\nГород (район) проживания:\n(например: Ташкент, Юнусабад)",
+        "uz": "🏡 6/14-savol\n{bar}\n\nYashash shahri (tumani):\n(masalan: Toshkent, Yunusobod)",
     },
     "q7_education": {
-        "ru": "Вопрос 7/13\n{bar}\n\nОбразование:",
-        "uz": "7/13-savol\n{bar}\n\nMa'lumoti:",
+        "ru": "Вопрос 7/14\n{bar}\n\nОбразование:",
+        "uz": "7/14-savol\n{bar}\n\nMa'lumoti:",
     },
     "q8_occupation": {
-        "ru": "💼 Вопрос 8/13\n{bar}\n\nЗанятость:",
-        "uz": "💼 8/13-savol\n{bar}\n\nBandligi:",
+        "ru": "💼 Вопрос 8/14\n{bar}\n\nЗанятость:",
+        "uz": "💼 8/14-savol\n{bar}\n\nBandligi:",
     },
     "q8_occupation_detail": {
-        "ru": "Вопрос 8/13\n{bar}\n\nГде и кем работает:",
-        "uz": "8/13-savol\n{bar}\n\nQayerda va kim bo'lib ishlaydi:",
+        "ru": "Вопрос 8/14\n{bar}\n\nГде и кем работает:",
+        "uz": "8/14-savol\n{bar}\n\nQayerda va kim bo'lib ishlaydi:",
     },
     "q9_religion": {
-        "ru": "Вопрос 9/13\n{bar}\n\nРелигиозность:",
-        "uz": "9/13-savol\n{bar}\n\nDindorligi:",
+        "ru": "Вопрос 9/14\n{bar}\n\nРелигиозность:",
+        "uz": "9/14-savol\n{bar}\n\nDindorligi:",
     },
     "q10_marital": {
-        "ru": "Вопрос 10/13\n{bar}\n\nСемейное положение:",
-        "uz": "10/13-savol\n{bar}\n\nOilaviy holati:",
+        "ru": "Вопрос 10/14\n{bar}\n\nСемейное положение:",
+        "uz": "10/14-savol\n{bar}\n\nOilaviy holati:",
     },
     "stage1_complete": {
         "ru": (
@@ -278,24 +278,24 @@ T = {
     },
     # ── Legacy keys (kept for back-compat) ──
     "q3": {
-        "ru": "Вопрос 2/13\n{bar}\n\nРост в см (например: 175):",
-        "uz": "2/13-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
+        "ru": "Вопрос 2/14\n{bar}\n\nРост в см (например: 175):",
+        "uz": "2/14-savol\n{bar}\n\nBo'yingiz (sm, masalan: 175):",
     },
     "q4": {
-        "ru": "Вопрос 4/13\n{bar}\n\nТелосложение:",
-        "uz": "4/13-savol\n{bar}\n\nTana tuzilishi:",
+        "ru": "Вопрос 4/14\n{bar}\n\nТелосложение:",
+        "uz": "4/14-savol\n{bar}\n\nTana tuzilishi:",
     },
     "q5": {
-        "ru": "🎓 Вопрос 7/13\n{bar}\n\nОбразование:",
-        "uz": "🎓 7/13-savol\n{bar}\n\nMa'lumoti:",
+        "ru": "🎓 Вопрос 7/14\n{bar}\n\nОбразование:",
+        "uz": "🎓 7/14-savol\n{bar}\n\nMa'lumoti:",
     },
     "q5_university": {
         "ru": "Укажите название вуза и курс:",
         "uz": "OTM nomi va kursini kiriting:",
     },
     "q6_choice": {
-        "ru": "Вопрос 8/13\n{bar}\n\nЗанятость:",
-        "uz": "8/13-savol\n{bar}\n\nBandligi:",
+        "ru": "Вопрос 8/14\n{bar}\n\nЗанятость:",
+        "uz": "8/14-savol\n{bar}\n\nBandligi:",
     },
     "q6": {
         "ru": "Укажите место работы / род деятельности:",
@@ -314,8 +314,8 @@ T = {
         "uz": "🚗 <b>8-savol</b>\n\nAvtomobil mavjudligi:",
     },
     "q9_city_district": {
-        "ru": "Вопрос 6/13\n{bar}\n\nГород проживания:",
-        "uz": "6/13-savol\n{bar}\n\nYashash shahri:",
+        "ru": "Вопрос 6/14\n{bar}\n\nГород проживания:",
+        "uz": "6/14-savol\n{bar}\n\nYashash shahri:",
     },
     "q9_address": {
         "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n🔒 Адрес не виден в анкете — вы решаете, кому его открыть",
@@ -346,8 +346,8 @@ T = {
         "uz": "🗺 <b>12-savol</b>\n\nOila kelib chiqqan hudud:",
     },
     "q12": {
-        "ru": "🌍 Вопрос 5/13\n{bar}\n\nНациональность:",
-        "uz": "🌍 5/13-savol\n{bar}\n\nMillati:",
+        "ru": "🌍 Вопрос 5/14\n{bar}\n\nНациональность:",
+        "uz": "🌍 5/14-savol\n{bar}\n\nMillati:",
     },
     "q13": {
         "ru": "👨 <b>Вопрос 14</b>\n\nОтец — чем занимается:",
@@ -370,12 +370,12 @@ T = {
         "uz": "Oiladagi o'rni:",
     },
     "q16": {
-        "ru": "🕌 Вопрос 9/13\n{bar}\n\nРелигиозность:",
-        "uz": "🕌 9/13-savol\n{bar}\n\nDindorligi:",
+        "ru": "🕌 Вопрос 9/14\n{bar}\n\nРелигиозность:",
+        "uz": "🕌 9/14-savol\n{bar}\n\nDindorligi:",
     },
     "q_marital_status": {
-        "ru": "💍 Вопрос 10/13\n{bar}\n\nСемейное положение:",
-        "uz": "💍 10/13-savol\n{bar}\n\nOilaviy holati:",
+        "ru": "💍 Вопрос 10/14\n{bar}\n\nСемейное положение:",
+        "uz": "💍 10/14-savol\n{bar}\n\nOilaviy holati:",
     },
     "q_children": {
         "ru": "Есть ли дети?",
@@ -383,7 +383,7 @@ T = {
     },
     "q_parent_phone": {
         "ru": (
-            "📞 Вопрос 11/13\n{bar}\n\n"
+            "📞 Вопрос 11/14\n{bar}\n\n"
             "Контактные данные\n\n"
             "Ваши контакты будут переданы\n"
             "только с вашего одобрения.\n"
@@ -395,7 +395,7 @@ T = {
             "или просто: 901234567"
         ),
         "uz": (
-            "📞 11/13-savol\n{bar}\n\n"
+            "📞 11/14-savol\n{bar}\n\n"
             "Kontaktlar\n\n"
             "Kontaktlaringiz faqat sizning\n"
             "roziligingiz bilan beriladi.\n"
@@ -408,12 +408,12 @@ T = {
         ),
     },
     "q_parent_telegram": {
-        "ru": "📱 Вопрос 12/13\n{bar}\n\nTelegram родителей:\n(@username)",
-        "uz": "📱 12/13-savol\n{bar}\n\nOta-onalar Telegram:\n(@username)",
+        "ru": "📱 Вопрос 12/14\n{bar}\n\nTelegram родителей:\n(@username)",
+        "uz": "📱 12/14-savol\n{bar}\n\nOta-onalar Telegram:\n(@username)",
     },
     "q_candidate_telegram": {
-        "ru": "💬 Вопрос 13/13\n{bar}\n\nTelegram кандидата:\n(@username)",
-        "uz": "💬 13/13-savol\n{bar}\n\nNomzod Telegram:\n(@username)",
+        "ru": "💬 Вопрос 13/14\n{bar}\n\nTelegram кандидата:\n(@username)",
+        "uz": "💬 13/14-savol\n{bar}\n\nNomzod Telegram:\n(@username)",
     },
     "q_tg_at_least_one_required": {
         "ru": "Укажите хотя бы один Telegram — родителей или кандидата.",
@@ -1163,12 +1163,12 @@ T = {
     "works_m": {"ru": "работает", "uz": "ishlaydi"},
     "works_f": {"ru": "работает", "uz": "ishlaydi"},
     "q6_choice_son": {
-        "ru": "Вопрос 8/13\n{bar}\n\nЗанятость:",
-        "uz": "8/13-savol\n{bar}\n\nBandligi:",
+        "ru": "Вопрос 8/14\n{bar}\n\nЗанятость:",
+        "uz": "8/14-savol\n{bar}\n\nBandligi:",
     },
     "q6_choice_daughter": {
-        "ru": "Вопрос 8/13\n{bar}\n\nЗанятость:",
-        "uz": "8/13-savol\n{bar}\n\nBandligi:",
+        "ru": "Вопрос 8/14\n{bar}\n\nЗанятость:",
+        "uz": "8/14-savol\n{bar}\n\nBandligi:",
     },
 
     # ── VIP flow ──

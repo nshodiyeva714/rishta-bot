@@ -28,6 +28,10 @@ class QuestionnaireStates(StatesGroup):
     q11_parent_phone = State()     # 11. Телефон родителей (обязательно)
     q12_parent_telegram = State()  # 12. TG родителей (skip, но хотя бы один TG)
     q13_candidate_telegram = State()  # 13. TG кандидата (skip, но хотя бы один TG)
+    q14_address = State()          # 14. Адрес — выбор (text/geo/link/skip)
+    q14_address_text = State()     # 14a. Ввод текста адреса
+    q14_location = State()         # 14b. Ожидание геоточки
+    q14_address_link = State()     # 14c. Ввод ссылки на карту
     q21_photo_type = State()       # 3. Фото (позиция 3 в анкете)
     q21_photo_upload = State()
     q22_parent_phone = State()     # Телефон (необязательно, убран из Этапа 1)
