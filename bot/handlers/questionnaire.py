@@ -13,6 +13,7 @@ from aiogram.fsm.context import FSMContext
 
 from bot.states import QuestionnaireStates, TariffStates
 from bot.texts import t
+from bot.utils.helpers import occupation_label
 from bot.keyboards.inline import (
     education_kb, nationality_kb, religiosity_kb,
     marital_kb, children_kb, photo_type_kb,
@@ -113,16 +114,8 @@ def build_card(data: dict, lang: str = "ru") -> str:
 
     # Занятость
     occ = data.get("occupation")
-    occ_type = data.get("occupation_type")
-    if occ and occ not in ("—",):
-        occ_type_map = {
-            "ru": {"student": "Студент", "housewife": "Домохозяйка", "works": "Работает", "business": "Свой бизнес", "other": "Другое"},
-            "uz": {"student": "Talaba", "housewife": "Uy bekasi", "works": "Ishlaydi", "business": "O'z biznesi", "other": "Boshqa"},
-        }
-        if occ_type in ("student", "housewife"):
-            lines.append(f"💼 {occ_type_map[L].get(occ_type, occ)}")
-        else:
-            lines.append(f"💼 {occ}")
+    if occ and occ != "—":
+        lines.append(f"💼 {occupation_label(occ, L)}")
 
     # Религиозность
     rel_map = {

@@ -26,7 +26,7 @@ from bot.keyboards.inline import (
     anketa_finish_kb, enhance_or_publish_kb, after_publish_kb,
     housing_kb, add_nav, nav_kb, back_kb,
 )
-from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa
+from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa, occupation_label
 from bot.config import config
 
 router = Router()
@@ -327,7 +327,7 @@ async def _show_summary(msg_or_cb, state: FSMContext, is_callback: bool = False)
     elif uni:
         edu += f", {uni}"
 
-    work = data.get("occupation") or "—"
+    work = occupation_label(data.get("occupation"), L)
     rel = _REL_LABELS.get(L, _REL_LABELS["ru"]).get(data.get("religiosity", ""), "—")
     mar = _MAR_LABELS.get(L, _MAR_LABELS["ru"]).get(data.get("marital_status", ""), "—")
 

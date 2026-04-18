@@ -19,7 +19,7 @@ from bot.keyboards.inline import (
     get_contact_kb, search_mode_kb, search_no_anketa_kb,
     search_filter_kb, filter_option_kb, nav_kb,
 )
-from bot.utils.helpers import age_text, calculate_age, format_anketa_public
+from bot.utils.helpers import age_text, calculate_age, format_anketa_public, occupation_label
 from bot.config import config
 from bot.states import SearchStates, ContactStates
 
@@ -1614,7 +1614,7 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
             edu_map = {"secondary": "среднее", "vocational": "среднее спец.", "higher": "высшее", "studying": "учится"}
             if requester_profile.education:
                 edu_str = edu_map.get(requester_profile.education.value, "—")
-            occ_str = requester_profile.occupation or "—"
+            occ_str = occupation_label(requester_profile.occupation, target_lang)
             req_city = requester_profile.city or "—"
             if requester_profile.residence_status:
                 res_map = {"uzbekistan": "🇺🇿 Узбекистан", "cis": "🇷🇺 СНГ", "usa": "🇺🇸 США", "europe": "🌍 Европа"}
@@ -1909,7 +1909,7 @@ async def request_contact(callback: CallbackQuery, session: AsyncSession, state:
     edu_raw = profile.education.value if profile.education else "—"
     rel_raw = profile.religiosity.value if profile.religiosity else "—"
     mar_raw = profile.marital_status.value if profile.marital_status else "—"
-    occ_raw = profile.occupation or "—"
+    occ_raw = occupation_label(profile.occupation, "ru")
 
     mod_text = (
         f"💌 <b>НОВЫЙ ЗАПРОС #{req_number}</b>\n\n"

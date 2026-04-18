@@ -18,7 +18,7 @@ from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates
 from bot.texts import t
 from bot.config import config, is_moderator
 from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
-from bot.utils.helpers import format_full_anketa
+from bot.utils.helpers import format_full_anketa, occupation_label
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -1930,7 +1930,7 @@ async def view_request(callback: CallbackQuery, session: AsyncSession):
         p_edu = profile.education.value if profile.education else "—"
         p_rel = profile.religiosity.value if profile.religiosity else "—"
         p_mar = profile.marital_status.value if profile.marital_status else "—"
-        p_occ = profile.occupation or "—"
+        p_occ = occupation_label(profile.occupation, "ru")
     else:
         age, p_display, p_name, p_city, p_edu, p_rel, p_mar, p_occ = ("?",) + ("—",) * 7
 

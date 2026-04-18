@@ -20,6 +20,35 @@ def calculate_age(birth_year: int) -> int:
     return datetime.datetime.now().year - birth_year
 
 
+_OCCUPATION_LABELS = {
+    "ru": {
+        "works": "Работает",
+        "student": "Студент/ка",
+        "business": "Свой бизнес",
+        "housewife": "Домохозяйка",
+        "other": "Другое",
+    },
+    "uz": {
+        "works": "Ishlaydi",
+        "student": "Talaba",
+        "business": "O'z biznesi bor",
+        "housewife": "Uy bekasi",
+        "other": "Boshqa",
+    },
+}
+
+
+def occupation_label(key, lang: str = "ru") -> str:
+    """Человекочитаемая метка занятости по ключу из БД.
+
+    None / "—" → "—". Неизвестный ключ (legacy свободный ввод) → key как есть.
+    """
+    if key is None or key == "—":
+        return "—"
+    L = lang if lang in ("ru", "uz") else "ru"
+    return _OCCUPATION_LABELS[L].get(key, key)
+
+
 def age_text(age: int, lang: str = "ru") -> str:
     """Age with correct word form. UZ uses 'da', RU uses год/года/лет."""
     if lang == "uz":
@@ -324,7 +353,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
         f"{(' / ' + bt) if bt else ''}\n"
         f"4. {lb['edu']}: {edu}\n"
         # Работа — введена вручную
-        f"5. {lb['work']}: {profile.occupation or not_specified}\n"
+        f"5. {lb['work']}: {occupation_label(profile.occupation, L) if profile.occupation else not_specified}\n"
         f"6. {lb['housing']}: {housing}\n"
         f"7. {car}\n"
         # Город — введён вручную
@@ -400,23 +429,6 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         "ru": {"practicing": "🕌 Практикующий/ая", "moderate": "☪️ Умеренный/ая", "secular": "🌐 Светский/ая"},
         "uz": {"practicing": "🕌 Amaliyotchi", "moderate": "☪️ Mo'tadil", "secular": "🌐 Dunyoviy"},
     }
-    occ_map = {
-        "ru": {
-            "works": "💼 Работает",
-            "student": "🏛 Студент/ка",
-            "business": "📈 Свой бизнес",
-            "housewife": "🌸 Домохозяйка",
-            "other": "📌 Другое",
-        },
-        "uz": {
-            "works": "💼 Ishlaydi",
-            "student": "🏛 Talaba",
-            "business": "📈 O'z biznesi",
-            "housewife": "🌸 Uy bekasi",
-            "other": "📌 Boshqa",
-        },
-    }
-
     lines = []
 
     # Бейджи: VIP / верификация / популярность / display_id
@@ -478,10 +490,8 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         lines.append(edu_label)
 
     # 6. Занятость — иконка в значении
-    occ_raw = profile.occupation
-    if occ_raw:
-        occ_val = occ_map.get(L, occ_map["ru"]).get(occ_raw, f"💼 {occ_raw}")
-        lines.append(occ_val)
+    if profile.occupation:
+        lines.append(f"💼 {occupation_label(profile.occupation, L)}")
 
     # 7. Религиозность — иконка в значении
     rel_raw = _ev(profile, "religiosity")
