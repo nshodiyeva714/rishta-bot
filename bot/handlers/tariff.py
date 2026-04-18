@@ -402,6 +402,42 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# ── «🔙 Назад» с экрана срока VIP → вернуть на экран выбора тарифа ──
+@router.callback_query(F.data == "profile:back_to_tariff")
+async def back_to_tariff(callback: CallbackQuery, state: FSMContext):
+    lang = await _lang(state)
+    data = await state.get_data()
+
+    from bot.handlers.questionnaire import build_card
+    from bot.keyboards.inline import tariff_kb
+    card = build_card(data, lang)
+
+    if lang == "uz":
+        tariff_text = (
+            "📋 Joylash turi:\n\n"
+            "⭐ VIP anketa — ko'proq ko'rishlar,\n"
+            "qidirishda birinchi ko'rinadi.\n\n"
+            "📋 Oddiy anketa — bepul."
+        )
+    else:
+        tariff_text = (
+            "📋 Тип размещения:\n\n"
+            "⭐ VIP анкета — больше просмотров,\n"
+            "показывается первой в поиске.\n\n"
+            "📋 Обычная анкета — бесплатно."
+        )
+
+    SEP = "\n\n━━━━━━━━━━━━\n\n"
+    full = (card + SEP + tariff_text) if card else tariff_text
+
+    try:
+        await callback.message.edit_text(full, reply_markup=tariff_kb(lang))
+    except Exception:
+        await callback.message.answer(full, reply_markup=tariff_kb(lang))
+    await state.set_state(TariffStates.choose)
+    await callback.answer()
+
+
 # ── «← Назад» из экрана summary → вернуть на тариф ──
 @router.callback_query(F.data == "profile:back", RequirementStates.summary)
 async def profile_back(callback: CallbackQuery, state: FSMContext):

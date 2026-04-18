@@ -1092,8 +1092,8 @@ def vip_duration_kb(lang: str = "ru", region: str = "uzb") -> InlineKeyboardMark
     if pair:
         rows.append(pair)
 
-    cancel = "❌ Bekor qilish" if lang == "uz" else "❌ Отмена"
-    rows.append([InlineKeyboardButton(text=cancel, callback_data="back:menu")])
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+    rows.append([InlineKeyboardButton(text=back, callback_data="profile:back_to_tariff")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
