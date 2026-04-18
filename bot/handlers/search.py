@@ -1700,14 +1700,12 @@ async def get_contact_payment(callback: CallbackQuery, session: AsyncSession):
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("skip_profile:"))
-async def skip_profile(callback: CallbackQuery, session: AsyncSession):
+@router.callback_query(F.data.startswith("back_to_profile:"))
+async def back_to_profile(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    """Назад из подменю контакта — вернуть карточку анкеты."""
     lang = await get_lang(session, callback.from_user.id)
-    if lang == "uz":
-        phrases = ["Keyingisi! 👉", "Davom etamiz 🔍", "Izlashda davom etamiz..."]
-    else:
-        phrases = ["Идём дальше! 👉", "Продолжаем поиск 🔍", "Ищем дальше..."]
-    await callback.answer(random.choice(phrases))
+    await _show_search_results(callback, session, state, lang)
+    await callback.answer()
 
 
 # ══════════════════════════════════════════════════════════
@@ -1745,7 +1743,7 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
             )],
             [InlineKeyboardButton(
                 text="🔙 Orqaga",
-                callback_data=f"skip_profile:{profile_id}",
+                callback_data=f"back_to_profile:{profile_id}",
             )],
         ]
     else:
@@ -1765,7 +1763,7 @@ async def get_contact(callback: CallbackQuery, session: AsyncSession, state: FSM
             )],
             [InlineKeyboardButton(
                 text="🔙 Назад",
-                callback_data=f"skip_profile:{profile_id}",
+                callback_data=f"back_to_profile:{profile_id}",
             )],
         ]
 

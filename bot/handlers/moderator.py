@@ -1446,7 +1446,7 @@ async def op_reply_send(message: Message, state: FSMContext, bot: Bot):
     reply_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💬 Ещё вопрос", callback_data=f"ask_op:{profile_id}")],
         [InlineKeyboardButton(text="📤 Запросить контакт", callback_data=f"req_contact:{profile_id}")],
-        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"skip_profile:{profile_id}")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_profile:{profile_id}")],
     ])
 
     try:
