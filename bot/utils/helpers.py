@@ -142,7 +142,7 @@ LABELS = {
         "health": "Здоровье",
         "char": "Характер",
         "views": "Просмотров",
-        "lock": "🔒 Контакты · адрес · фото — после оплаты",
+        "lock": "🔒 Контакты · адрес · фото — вы решаете, кому их открыть",
         "brothers": "бр.",
         "sisters": "сестр.",
         # private
@@ -178,7 +178,7 @@ LABELS = {
         "health": "Sog'lig'ining xususiyatlari",
         "char": "Xarakteri",
         "views": "Ko'rishlar",
-        "lock": "🔒 Kontakt · manzil · foto — to'lovdan keyin",
+        "lock": "🔒 Kontakt · manzil · foto — kimga ochishni o'zingiz hal qilasiz",
         "brothers": "aka-uka",
         "sisters": "opa-singil",
         # private

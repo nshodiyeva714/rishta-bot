@@ -115,7 +115,7 @@ T = {
             "Мы работаем как опытный сват — только охватываем всю страну 🇺🇿\n\n"
             "✅ Каждая анкета проверяется лично\n"
             "✅ Полная конфиденциальность\n"
-            "✅ Контакт и адрес — только после оплаты\n"
+            "✅ Контакт — по взаимному согласию\n"
             "✅ Модератор сопровождает весь процесс\n"
             "✅ Два языка — русский и узбекский\n"
             "✅ Фото защищены от скриншотов 🔒\n\n"
@@ -139,7 +139,7 @@ T = {
             "Biz tajribali sovchi kabi ishlaymiz — faqat butun mamlakatni qamrab olamiz 🇺🇿\n\n"
             "✅ Har bir anketa shaxsan tekshiriladi\n"
             "✅ To'liq maxfiylik\n"
-            "✅ Kontakt va manzil — faqat to'lovdan keyin\n"
+            "✅ Kontakt — o'zaro kelishuv asosida\n"
             "✅ Moderator butun jarayonni kuzatib boradi\n"
             "✅ Ikki til — rus va o'zbek\n"
             "✅ Fotosuratlar skrinshotdan himoyalangan 🔒\n\n"
@@ -172,7 +172,7 @@ T = {
             "Заполните анкету вашего сына.\n"
             "Все данные строго конфиденциальны 🔒\n\n"
             "✅ Анкета видна всем пользователям\n"
-            "✅ Контакт и адрес — только после оплаты\n"
+            "✅ Контакт и адрес — по взаимному согласию\n"
             "📵 Фото защищены от скриншотов"
         ),
         "uz": (
@@ -180,7 +180,7 @@ T = {
             "O'g'lingizning anketasini to'ldiring.\n"
             "Barcha ma'lumotlar qat'iy maxfiy 🔒\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — faqat to'lovdan keyin\n"
+            "✅ Kontakt va manzil — o'zaro kelishuv asosida\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan"
         ),
     },
@@ -189,14 +189,14 @@ T = {
             "👧 <b>РАЗМЕСТИТЬ АНКЕТУ ДОЧЕРИ</b>\n\n"
             "Анкета будет проверена модератором перед публикацией.\n\n"
             "✅ Анкета видна всем пользователям\n"
-            "✅ Контакт и адрес — только после оплаты\n"
+            "✅ Контакт и адрес — по взаимному согласию\n"
             "📵 Фото защищены от скриншотов 🔒"
         ),
         "uz": (
             "👧 <b>QIZ ANKETASINI JOYLASHTIRISH</b>\n\n"
             "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — faqat to'lovdan keyin\n"
+            "✅ Kontakt va manzil — o'zaro kelishuv asosida\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan 🔒"
         ),
     },
@@ -320,8 +320,8 @@ T = {
         "uz": "6/10-savol\n{bar}\n\nYashash shahri:",
     },
     "q9_address": {
-        "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n⚠️ Адрес передаётся только после оплаты 🔒",
-        "uz": "🏠 <b>10-savol</b>\n\nManzil (ko'cha/mahalla):\n\n⚠️ Manzil faqat to'lovdan keyin beriladi 🔒",
+        "ru": "🏠 <b>Вопрос 10</b>\n\nАдрес (улица/махалля):\n\n🔒 Адрес не виден в анкете — вы решаете, кому его открыть",
+        "uz": "🏠 <b>10-savol</b>\n\nManzil (ko'cha/mahalla):\n\n🔒 Manzil anketada ko'rinmaydi — kimga ochishni o'zingiz hal qilasiz",
     },
     "q10b": {
         "ru": "✈️ <b>Вопрос 11</b>\n\nГде ищете кандидата?",
@@ -535,14 +535,12 @@ T = {
         "ru": (
             "📸 <b>Вопрос 22 — Фото</b>\n\n"
             "Как хотите разместить фото?\n\n"
-            "🔒 Фото защищено от скриншотов\n"
-            "🔒 Видно только после оплаты"
+            "🔒 Фото скрыты от скриншотов — вы решаете, кому их показать"
         ),
         "uz": (
             "📸 <b>22-savol — Fotosurat</b>\n\n"
             "Fotosuratni qanday joylashtirmoqchisiz?\n\n"
-            "🔒 Fotosurat skrinshotdan himoyalangan\n"
-            "🔒 Faqat to'lovdan keyin ko'rinadi"
+            "🔒 Foto skrinshotlardan himoyalangan — kimga ko'rsatishni o'zingiz hal qilasiz"
         ),
     },
     "q21_upload": {
