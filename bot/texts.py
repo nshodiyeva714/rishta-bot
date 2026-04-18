@@ -1257,6 +1257,20 @@ T = {
     "vip_method_self_label": {"ru": "Оплата самостоятельно (скриншот)"},
     "vip_method_moderator_label": {"ru": "Через модератора (напрямую)"},
 
+    # ── Фото из анкеты (после передачи контакта) ──
+    "contact_photo_regular": {
+        "ru": "📸 Фото из анкеты",
+        "uz": "📸 Anketa surati",
+    },
+    "contact_photo_closed": {
+        "ru": "📸 Фото из анкеты — лицо закрыто по желанию семьи",
+        "uz": "📸 Anketa surati — yuz oila xohishiga ko'ra yopilgan",
+    },
+    "contact_photo_silhouette": {
+        "ru": "📸 Силуэт из анкеты — полное фото по дополнительному согласию",
+        "uz": "📸 Anketa siluet — to'liq surat qo'shimcha rozilik asosida",
+    },
+
     # ── Путь Б (диалог с модератором) ──
     "vip_moderator_intro": {
         "ru": (

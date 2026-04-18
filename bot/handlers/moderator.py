@@ -15,6 +15,7 @@ from bot.db.models import (
     Favorite, ProfileType, ContactRequest, RequestStatus,
     VipRequest, VipRequestStatus, VipPaymentMethod,
     Requirement, Complaint, Meeting, Feedback,
+    PhotoType,
 )
 from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates, VipModReplyStates
 from bot.texts import t
@@ -1619,6 +1620,11 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     display_id = profile.display_id or "—"
     age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
 
+    # Город + район (если есть)
+    city_full = profile.city or "—"
+    if profile.city and profile.district:
+        city_full = f"{profile.city}, {profile.district}"
+
     contacts = []
     if profile.parent_phone:
         contacts.append(f"📞 {profile.parent_phone}")
@@ -1628,6 +1634,8 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
         contacts.append(f"💬 {profile.candidate_telegram}")
     if profile.address:
         contacts.append(f"🏠 {profile.address}")
+    if profile.location_link:
+        contacts.append(f"🗺 {profile.location_link}")
     contact_text = "\n".join(contacts) if contacts else "Контакты не указаны"
 
     try:
@@ -1647,7 +1655,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             f"✅ <b>Kontakt yuborildi!</b>\n\n"
             f"📋 #{req_number}\n"
             f"🔖 {display_id}\n"
-            f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
+            f"🪪 {profile.name or '—'} · {age} · {city_full}\n\n"
             f"<b>Oila kontaktlari:</b>\n"
             f"{contact_text}\n\n"
             f"Bu uchrashuv baxt boshlanishi bo'lsin! 🤲"
@@ -1657,17 +1665,53 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             f"✅ <b>Контакт получен!</b>\n\n"
             f"📋 #{req_number}\n"
             f"🔖 {display_id}\n"
-            f"🪪 {profile.name or '—'} · {age} · {profile.city or '—'}\n\n"
+            f"🪪 {profile.name or '—'} · {age} · {city_full}\n\n"
             f"<b>Контакты семьи:</b>\n"
             f"{contact_text}\n\n"
             f"Пусть эта встреча станет\n"
             f"началом счастья! 🤲"
         )
 
+    # Куда прикрепить after_kb: к последнему реальному сообщению
+    has_photo = bool(profile.photo_file_id)
+    has_loc = bool(profile.location_lat and profile.location_lon)
+
+    kb_for_text = after_kb if not (has_photo or has_loc) else None
+    kb_for_photo = after_kb if has_photo and not has_loc else None
+    kb_for_loc = after_kb if has_loc else None
+
     try:
-        await bot.send_message(user_id, user_msg, reply_markup=after_kb, parse_mode="HTML")
+        await bot.send_message(user_id, user_msg, reply_markup=kb_for_text, parse_mode="HTML")
     except Exception as e:
         logger.error(f"confirm_pay send contact: {e}")
+
+    # Фото из анкеты (если есть) — с caption по photo_type
+    if has_photo:
+        _caption_key = {
+            PhotoType.REGULAR:      "contact_photo_regular",
+            PhotoType.CLOSED_FACE:  "contact_photo_closed",
+            PhotoType.SILHOUETTE:   "contact_photo_silhouette",
+        }.get(profile.photo_type, "contact_photo_regular")
+        try:
+            await bot.send_photo(
+                user_id, profile.photo_file_id,
+                caption=t(_caption_key, req_lang),
+                reply_markup=kb_for_photo,
+            )
+        except Exception as _e:
+            logger.debug("send_photo failed: %s", _e)
+
+    # Геоточка (если есть) — всегда последняя
+    if has_loc:
+        try:
+            await bot.send_location(
+                user_id,
+                latitude=profile.location_lat,
+                longitude=profile.location_lon,
+                reply_markup=kb_for_loc,
+            )
+        except Exception as _e:
+            logger.debug("send_location failed: %s", _e)
 
     if profile.user_id and profile.user_id != user_id:
         try:
