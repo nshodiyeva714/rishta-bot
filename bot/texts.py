@@ -97,13 +97,13 @@ T = {
     "choose_moderator": {
         "ru": (
             "💬 <b>Выберите модератора</b>\n\n"
-            "Выберите одного из двух модераторов.\n"
-            "Оба имеют одинаковые полномочия и помогут вам."
+            "Выберите модератора по вашему региону.\n"
+            "Все имеют одинаковые полномочия и помогут вам."
         ),
         "uz": (
             "💬 <b>Moderator tanlang</b>\n\n"
-            "Ikki moderatordan birini tanlang.\n"
-            "Ikkisi ham teng huquqli va yordam bera oladi."
+            "O'z hududingiz bo'yicha moderatorni tanlang.\n"
+            "Hammasi teng huquqli va yordam bera oladi."
         ),
     },
 
