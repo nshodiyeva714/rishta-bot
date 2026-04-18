@@ -178,9 +178,9 @@ T = {
         "uz": (
             "👦 <b>KELIN QIDIRAMIZ</b>\n\n"
             "O'g'lingizning anketasini to'ldiring.\n"
-            "Barcha ma'lumotlar qat'iy maxfiy 🔒\n\n"
+            "Ma'lumotlar oshkora etilmaydi 🔒\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — o'zaro rozilik asosida\n"
+            "✅ Kontakt va manzil — rozilik asosida beriladi\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan"
         ),
     },
@@ -196,7 +196,7 @@ T = {
             "👧 <b>QIZ ANKETASINI JOYLASHTIRISH</b>\n\n"
             "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
-            "✅ Kontakt va manzil — o'zaro rozilik asosida\n"
+            "✅ Kontakt va manzil — rozilik asosida beriladi\n"
             "📵 Fotosuratlar skrinshotdan himoyalangan 🔒"
         ),
     },
