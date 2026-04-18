@@ -66,24 +66,6 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession):
     )
 
 
-@router.message(Command("reset"))
-async def cmd_reset(message: Message, session: AsyncSession):
-    """Полная очистка базы данных — только для модераторов."""
-    if not is_moderator(message.from_user.id):
-        await message.answer("⛔ Только для модераторов")
-        return
-
-    from bot.db.models import (
-        Feedback, Meeting, Complaint, ContactRequest, Favorite,
-        Payment, Requirement, Profile, User,
-    )
-    for model in [Feedback, Meeting, Complaint, ContactRequest, Favorite, Payment, Requirement, Profile, User]:
-        await session.execute(model.__table__.delete())
-    await session.commit()
-
-    await message.answer("✅ База данных полностью очищена. Все анкеты, пользователи и данные удалены.")
-
-
 @router.message(Command("test"))
 async def cmd_test(message: Message, bot: Bot):
     """Проверка связи с модераторами."""
