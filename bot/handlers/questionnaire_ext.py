@@ -61,8 +61,8 @@ async def _get_profile(session: AsyncSession, profile_id: int, user_id: int):
 
 def ext_progress_bar(current: int, total: int = 8) -> str:
     """Прогресс-бар для Этапа 2."""
-    filled = round(current / total * 13)
-    empty = 13 - filled
+    filled = current
+    empty = total - filled
     bar = "▓" * filled + "░" * empty
     pct = round(current / total * 100)
     return f"{bar}  {pct}%"
