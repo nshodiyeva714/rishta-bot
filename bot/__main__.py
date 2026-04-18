@@ -59,6 +59,19 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
+        # VIP: гарантируем, что колонки существуют на старых prod-инстансах
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vip_status VARCHAR(20) DEFAULT 'none'"
+            ))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS vip_expires_at TIMESTAMP"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей
@@ -72,6 +85,7 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
         BotCommand(command="start",    description="Главное меню"),
         BotCommand(command="ankety",   description="Анкеты на проверке"),
         BotCommand(command="requests", description="Активные запросы контакта"),
+        BotCommand(command="vip",      description="VIP-заявки"),
         BotCommand(command="find",     description="Найти анкету по номеру"),
         BotCommand(command="stats",    description="Статистика"),
     ]

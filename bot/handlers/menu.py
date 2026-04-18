@@ -800,73 +800,18 @@ async def upgrade_to_vip(callback: CallbackQuery, state: FSMContext, session: As
         elif res == "cis":
             region = "sng"
 
-    await state.update_data(vip_profile_id=profile_id, vip_region=region)
+    await state.update_data(vip_profile_id=profile_id, vip_region=region, vip_flow="upgrade")
 
-    text = (
-        f"⭐ <b>VIP анкета</b>\n\n"
-        f"🔖 Анкета: {profile.display_id or '—'}\n\n"
-        f"Ваша анкета будет:\n"
-        f"• Показываться первой в поиске\n"
-        f"• Выделена значком ⭐\n"
-        f"• Привлекать больше внимания\n\n"
-        f"Выберите срок:"
-    ) if lang == "ru" else (
-        f"⭐ <b>VIP anketa</b>\n\n"
-        f"🔖 Anketa: {profile.display_id or '—'}\n\n"
-        f"Anketangiz:\n"
-        f"• Qidirishda birinchi ko'rinadi\n"
-        f"• ⭐ belgisi bilan ajratiladi\n"
-        f"• Ko'proq e'tibor tortadi\n\n"
-        f"Muddatni tanlang:"
+    await _safe_edit(
+        callback,
+        t("vip_choose_duration", lang),
+        reply_markup=vip_duration_kb(lang, region, back_cb="my:profile"),
     )
-
-    await _safe_edit(callback, text, reply_markup=vip_duration_kb(lang, region))
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("vip_dur:"))
-async def vip_duration_selected(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Пользователь выбрал срок VIP — направляем к модератору для оплаты."""
-    days = int(callback.data.split(":")[1])
-    lang = await get_lang(session, callback.from_user.id)
-    data = await state.get_data()
-    profile_id = data.get("vip_profile_id")
-    region = data.get("vip_region", "uzb")
-
-    from bot.config import VIP_PRICES_UZB, VIP_PRICES_USD, VIP_PRICES_SNG, VIP_DURATION_LABELS
-
-    prices = {"uzb": VIP_PRICES_UZB, "sng": VIP_PRICES_SNG, "usa": VIP_PRICES_USD}.get(region, VIP_PRICES_UZB)
-    price = prices.get(str(days), 0)
-
-    days_label = VIP_DURATION_LABELS.get(days, {}).get(lang, f"{days}")
-
-    if region == "usa":
-        price_str = f"${price // 100}"
-    else:
-        price_str = f"{price:,} сум".replace(",", " ")
-
-    from bot.config import config
-    moderator = config.moderator_tashkent
-
-    profile = await session.get(Profile, profile_id) if profile_id else None
-    display_id = profile.display_id if profile else "—"
-
-    text = (
-        f"⭐ <b>VIP — {days_label}</b>\n\n"
-        f"🔖 Анкета: {display_id}\n"
-        f"💰 Стоимость: <b>{price_str}</b>\n\n"
-        f"Для оплаты свяжитесь с модератором:\n{moderator}"
-    ) if lang == "ru" else (
-        f"⭐ <b>VIP — {days_label}</b>\n\n"
-        f"🔖 Anketa: {display_id}\n"
-        f"💰 Narxi: <b>{price_str}</b>\n\n"
-        f"To'lov uchun moderator bilan bog'laning:\n{moderator}"
-    )
-
-    back_cb = f"myvip:{profile_id}" if profile_id else "tariff:vip"
-    await _safe_edit(callback, text, reply_markup=back_main_kb(lang, back_cb))
-    await state.clear()
-    await callback.answer()
+# vip_duration_selected перенесён в bot/handlers/payment.py (теперь показывает
+# экран «Как оплатить?» вместо старого экрана реквизитов с ссылкой на модератора)
 
 
 @router.callback_query(F.data.startswith("mydelete:"))

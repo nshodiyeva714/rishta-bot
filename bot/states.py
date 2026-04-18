@@ -125,3 +125,7 @@ class ContactStates(StatesGroup):
     waiting_screenshot = State()
     waiting_question = State()
     waiting_reply = State()  # оператор пишет ответ пользователю
+
+
+class VipPaymentStates(StatesGroup):
+    waiting_screenshot = State()  # юзер прислал выбор срока, жду скриншот оплаты

@@ -1112,6 +1112,152 @@ T = {
         "ru": "Вопрос 8/10\n{bar}\n\nЗанятость:",
         "uz": "8/10-savol\n{bar}\n\nBandligi:",
     },
+
+    # ── VIP flow ──
+    "vip_choose_duration": {
+        "ru": (
+            "⭐ <b>Сделать анкету VIP</b>\n\n"
+            "Преимущества:\n"
+            "• Показывается первой в поиске\n"
+            "• Выделена значком ⭐\n"
+            "• Больше внимания от семей\n\n"
+            "Выберите срок:"
+        ),
+        "uz": (
+            "⭐ <b>Anketani VIP qilish</b>\n\n"
+            "Afzalliklar:\n"
+            "• Qidirishda birinchi ko'rinadi\n"
+            "• ⭐ belgisi bilan ajratiladi\n"
+            "• Oilalardan ko'proq e'tibor\n\n"
+            "Muddatni tanlang:"
+        ),
+    },
+    "vip_skip_for_now": {
+        "ru": "❌ Без VIP пока",
+        "uz": "❌ VIP siz davom etish",
+    },
+    "vip_skip_message": {
+        "ru": (
+            "✅ Анкета отправлена на модерацию.\n\n"
+            "VIP можно оформить позже:\n"
+            "Мои заявки → Моя анкета → Перейти на VIP"
+        ),
+        "uz": (
+            "✅ Anketa tekshiruvga yuborildi.\n\n"
+            "VIP keyinroq ham rasmiylashtirishingiz mumkin:\n"
+            "Mening arizalarim → Mening anketam → VIPga o'tish"
+        ),
+    },
+    "vip_choose_method": {
+        "ru": (
+            "⭐ <b>VIP — {days_label}</b>\n"
+            "💰 Стоимость: <b>{price}</b>\n\n"
+            "Как оплатить?"
+        ),
+        "uz": (
+            "⭐ <b>VIP — {days_label}</b>\n"
+            "💰 Narxi: <b>{price}</b>\n\n"
+            "Qanday to'laysiz?"
+        ),
+    },
+    "btn_vip_pay_self": {
+        "ru": "💳 Оплатить сейчас",
+        "uz": "💳 Hozir to'lash",
+    },
+    "btn_vip_pay_moderator": {
+        "ru": "💁‍♀️ Связаться с модератором",
+        "uz": "💁‍♀️ Moderator bilan bog'lanish",
+    },
+    "vip_pay_card_text": {
+        "ru": (
+            "💳 <b>Реквизиты для оплаты</b>\n\n"
+            "Карта: <code>5614 6887 0899 8959</code>\n"
+            "Получатель: SHODIYEVA NASIBA\n"
+            "Сумма: <b>{price}</b>\n\n"
+            "После оплаты нажмите «📤 Отправить скриншот»."
+        ),
+        "uz": (
+            "💳 <b>To'lov rekvizitlari</b>\n\n"
+            "Karta: <code>5614 6887 0899 8959</code>\n"
+            "Qabul qiluvchi: SHODIYEVA NASIBA\n"
+            "Summa: <b>{price}</b>\n\n"
+            "To'lovdan so'ng «📤 Skrinshot yuborish» tugmasini bosing."
+        ),
+    },
+    "btn_vip_send_screenshot": {
+        "ru": "📤 Отправить скриншот",
+        "uz": "📤 Skrinshot yuborish",
+    },
+    "vip_pay_card_prompt": {
+        "ru": "📸 Пришлите скриншот оплаты фотографией.",
+        "uz": "📸 To'lov skrinshotini rasm ko'rinishida yuboring.",
+    },
+    "vip_pay_moderator_text": {
+        "ru": (
+            "💁‍♀️ <b>Оплата через модератора</b>\n\n"
+            "Сумма: <b>{price}</b>\n"
+            "Модератор: {moderator}\n\n"
+            "Свяжитесь с модератором и укажите номер анкеты {display_id}.\n"
+            "После получения оплаты модератор активирует VIP."
+        ),
+        "uz": (
+            "💁‍♀️ <b>Moderator orqali to'lov</b>\n\n"
+            "Summa: <b>{price}</b>\n"
+            "Moderator: {moderator}\n\n"
+            "Moderator bilan bog'lanib, anketa raqamini ko'rsating: {display_id}.\n"
+            "To'lovni qabul qilgach, moderator VIP ni faollashtiradi."
+        ),
+    },
+    "vip_request_sent": {
+        "ru": (
+            "✅ Заявка <b>{display_id}</b> отправлена.\n\n"
+            "Модератор проверит оплату и активирует VIP.\n"
+            "Обычно это занимает несколько часов."
+        ),
+        "uz": (
+            "✅ Ariza <b>{display_id}</b> yuborildi.\n\n"
+            "Moderator to'lovni tekshirib, VIP ni faollashtiradi.\n"
+            "Odatda bu bir necha soat vaqt oladi."
+        ),
+    },
+    "vip_confirmed_user": {
+        "ru": (
+            "🎉 <b>VIP активирован!</b>\n\n"
+            "🔖 Анкета: {display_id}\n"
+            "📅 Действует до: <b>{expires_at}</b>\n\n"
+            "Анкета опубликована и получает приоритет в поиске."
+        ),
+        "uz": (
+            "🎉 <b>VIP faollashtirildi!</b>\n\n"
+            "🔖 Anketa: {display_id}\n"
+            "📅 Amal qiladi: <b>{expires_at}</b>\n\n"
+            "Anketa chop etildi va qidirishda birinchi o'rinda ko'rinadi."
+        ),
+    },
+    "vip_rejected_user": {
+        "ru": (
+            "⚠️ Оплата VIP не подтверждена.\n"
+            "🔖 Заявка: {display_id}\n\n"
+            "Свяжитесь с модератором {moderator} для уточнения."
+        ),
+        "uz": (
+            "⚠️ VIP to'lovi tasdiqlanmadi.\n"
+            "🔖 Ariza: {display_id}\n\n"
+            "Aniqlik uchun moderator bilan bog'laning: {moderator}."
+        ),
+    },
+    "vip_new_request_mod": {
+        "ru": (
+            "⭐ <b>НОВАЯ VIP-ЗАЯВКА {display_id}</b>\n\n"
+            "👤 Пользователь: {username_or_id}\n"
+            "🔖 Анкета: {profile_display_id}\n"
+            "📅 Срок: {days_label}\n"
+            "💰 Сумма: {price}\n"
+            "💳 Способ: {method_label}"
+        ),
+    },
+    "vip_method_self_label": {"ru": "Оплата самостоятельно (скриншот)"},
+    "vip_method_moderator_label": {"ru": "Через модератора (напрямую)"},
 }
 
 

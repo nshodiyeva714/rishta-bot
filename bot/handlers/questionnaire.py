@@ -17,7 +17,7 @@ from bot.utils.helpers import occupation_label, nationality_label
 from bot.keyboards.inline import (
     education_kb, nationality_kb, nationality_more_kb, religiosity_kb,
     marital_kb, children_kb, photo_type_kb,
-    confirm_age_kb, tariff_kb, skip_kb,
+    confirm_age_kb, skip_kb,
     back_step_kb, add_nav, body_type_kb, occupation_kb,
     anketa_finish_kb, city_kb, uz_regions_kb,
 )
@@ -798,38 +798,9 @@ async def q10_children(callback: CallbackQuery, state: FSMContext):
 # ══════════════════════════════════════
 
 async def _show_stage1_complete(callback: CallbackQuery, state: FSMContext):
-    """После последнего вопроса — показать выбор тарифа."""
-    data = await state.get_data()
-    lang = data.get("lang", "ru")
-
-    card = build_card(data, lang)
-
-    if lang == "uz":
-        tariff_text = (
-            "📋 Joylashtirish turi:\n\n"
-            "⭐ VIP anketa — ko'proq e'tibor,\n"
-            "qidirishda birinchi ko'rinadi.\n\n"
-            "📋 Oddiy anketa — bepul."
-        )
-    else:
-        tariff_text = (
-            "📋 Тип размещения:\n\n"
-            "⭐ VIP анкета — больше просмотров,\n"
-            "показывается первой в поиске.\n\n"
-            "📋 Обычная анкета — бесплатно."
-        )
-
-    full_text = (card + SEP + tariff_text) if card else tariff_text
-    kb = tariff_kb(lang)
-
-    try:
-        await callback.message.edit_text(full_text, reply_markup=kb)
-        await state.update_data(last_bot_msg=callback.message.message_id)
-    except Exception:
-        sent = await callback.message.answer(full_text, reply_markup=kb)
-        await state.update_data(last_bot_msg=sent.message_id)
-
-    await state.set_state(TariffStates.choose)
+    """После последнего вопроса — показать резюме анкеты (экран выбора тарифа удалён)."""
+    from bot.handlers.tariff import _show_summary
+    await _show_summary(callback, state, is_callback=True)
 
 
 # ══════════════════════════════════════

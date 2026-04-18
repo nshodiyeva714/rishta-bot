@@ -467,19 +467,16 @@ def profile_status_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Экран завершения Этапа 1: предпросмотр / опубликовать / дополнить."""
-    back_text = "← Orqaga" if lang == "uz" else "← Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="👁 Anketani ko'rish", callback_data="profile:preview")],
             [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
-            [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
         ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👁 Посмотреть анкету", callback_data="profile:preview")],
         [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
         [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
-        [InlineKeyboardButton(text=back_text, callback_data="profile:back")],
     ])
 
 
@@ -509,18 +506,6 @@ def after_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✨ Дополнить анкету", callback_data="after:extend")],
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="menu:main")],
-    ])
-
-
-def tariff_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    if lang == "uz":
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⭐ VIP anketa — narxlar", callback_data="tariff:vip")],
-            [InlineKeyboardButton(text="📋 Oddiy anketa — bepul", callback_data="tariff:free")],
-        ])
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐ VIP анкета — выбрать срок", callback_data="tariff:vip")],
-        [InlineKeyboardButton(text="📋 Обычная анкета — бесплатно", callback_data="tariff:free")],
     ])
 
 
@@ -1105,35 +1090,98 @@ def _fmt_price(price: int, region: str) -> str:
     return f"{price:,} сум".replace(",", " ")
 
 
-def vip_duration_kb(lang: str = "ru", region: str = "uzb") -> InlineKeyboardMarkup:
-    """Выбор срока VIP с ценами для пользователя."""
+VIP_DURATIONS = [
+    (7,   {"ru": "7 дней",    "uz": "7 kun"}),
+    (14,  {"ru": "14 дней",   "uz": "14 kun"}),
+    (30,  {"ru": "1 месяц",   "uz": "1 oy"}),
+    (90,  {"ru": "3 месяца",  "uz": "3 oy"}),
+    (180, {"ru": "6 месяцев", "uz": "6 oy"}),
+    (365, {"ru": "1 год",     "uz": "1 yil"}),
+]
+
+
+def _vip_price_for(days: int, region: str) -> int:
     from bot.config import VIP_PRICES_UZB, VIP_PRICES_USD, VIP_PRICES_SNG
     prices = {"uzb": VIP_PRICES_UZB, "sng": VIP_PRICES_SNG, "usa": VIP_PRICES_USD}.get(region, VIP_PRICES_UZB)
+    return prices[str(days)]
 
-    durations = [
-        (7,   {"ru": "7 дней",    "uz": "7 kun"}),
-        (14,  {"ru": "14 дней",   "uz": "14 kun"}),
-        (30,  {"ru": "1 месяц",   "uz": "1 oy"}),
-        (90,  {"ru": "3 месяца",  "uz": "3 oy"}),
-        (180, {"ru": "6 месяцев", "uz": "6 oy"}),
-        (365, {"ru": "1 год",     "uz": "1 yil"}),
-    ]
 
-    rows = []
-    pair = []
-    for days, labels in durations:
-        price_str = _fmt_price(prices[str(days)], region)
-        text = f"{labels[lang]} — {price_str}"
-        pair.append(InlineKeyboardButton(text=text, callback_data=f"vip_dur:{days}"))
+def vip_duration_kb(
+    lang: str = "ru",
+    region: str = "uzb",
+    *,
+    back_cb: str | None = None,
+    show_skip: bool = False,
+) -> InlineKeyboardMarkup:
+    """Выбор срока VIP с ценами для пользователя.
+
+    show_skip=True → добавляет «❌ Без VIP пока» (creation flow).
+    back_cb → callback для «🔙 Назад» (upgrade flow). Если None — кнопки назад нет.
+    """
+    rows: list = []
+    pair: list = []
+    for days, labels in VIP_DURATIONS:
+        price_str = _fmt_price(_vip_price_for(days, region), region)
+        text_btn = f"{labels[lang]} — {price_str}"
+        pair.append(InlineKeyboardButton(text=text_btn, callback_data=f"vip_dur:{days}"))
         if len(pair) == 2:
             rows.append(pair)
             pair = []
     if pair:
         rows.append(pair)
 
-    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
-    rows.append([InlineKeyboardButton(text=back, callback_data="profile:back_to_tariff")])
+    if show_skip:
+        rows.append([InlineKeyboardButton(text=t("vip_skip_for_now", lang), callback_data="vip:skip")])
+    if back_cb:
+        back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+        rows.append([InlineKeyboardButton(text=back, callback_data=back_cb)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def vip_method_kb(profile_id: int, days: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Выбор способа оплаты VIP: свою карту или связь с модератором."""
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_vip_pay_self", lang),
+                              callback_data=f"vip_pay:self:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=t("btn_vip_pay_moderator", lang),
+                              callback_data=f"vip_pay:moderator:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=back, callback_data=f"vip:back_to_duration:{profile_id}")],
+    ])
+
+
+def vip_pay_card_kb(profile_id: int, days: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Экран реквизитов: кнопка 📤 Отправить скриншот + 🔙 Назад."""
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_vip_send_screenshot", lang),
+                              callback_data=f"vip_send_ss:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=back,
+                              callback_data=f"vip:back_to_method:{profile_id}:{days}")],
+    ])
+
+
+def vip_mod_list_kb(requests: list) -> InlineKeyboardMarkup:
+    """Список PENDING VipRequest для модератора (/vip)."""
+    rows = []
+    for r in requests:
+        days_label = f"{r.days} дн"
+        rows.append([InlineKeyboardButton(
+            text=f"{r.display_id or '—'} · {days_label}",
+            callback_data=f"vipmod:view:{r.id}",
+        )])
+    if not rows:
+        rows.append([InlineKeyboardButton(text="Нет заявок", callback_data="noop")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def vip_mod_card_kb(req_id: int) -> InlineKeyboardMarkup:
+    """Карточка VIP-заявки для модератора: ✅ / ❌ / 🔙 к списку."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"vipmod:confirm:{req_id}")],
+        [InlineKeyboardButton(text="❌ Отклонить",   callback_data=f"vipmod:reject:{req_id}")],
+        [InlineKeyboardButton(text="🔙 К списку",    callback_data="vipmod:list")],
+    ])
 
 
 def mod_vip_duration_kb(profile_id: int) -> InlineKeyboardMarkup:

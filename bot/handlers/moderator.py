@@ -1,7 +1,7 @@
-"""Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям, /ankety, /stats."""
+"""Шаг 9 — Модератор: проверка анкет и оплат, ответ пользователям, /ankety, /stats, /vip."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
@@ -13,11 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import (
     Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus,
     Favorite, ProfileType, ContactRequest, RequestStatus,
+    VipRequest, VipRequestStatus, VipPaymentMethod,
 )
 from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates
 from bot.texts import t
 from bot.config import config, is_moderator
-from bot.keyboards.inline import mod_review_kb, mod_found_kb, mod_vip_duration_kb
+from bot.keyboards.inline import (
+    mod_review_kb, mod_found_kb, mod_vip_duration_kb,
+    vip_mod_list_kb, vip_mod_card_kb,
+)
 from bot.utils.helpers import format_full_anketa, occupation_label
 
 logger = logging.getLogger(__name__)
@@ -1994,3 +1998,219 @@ async def view_request(callback: CallbackQuery, session: AsyncSession):
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     await callback.answer()
+
+
+# ══════════════════════════════════════════════════════════
+#  /vip — VIP-заявки: список, просмотр, подтверждение/отклонение
+# ══════════════════════════════════════════════════════════
+
+
+async def _pending_vip_requests(session: AsyncSession) -> list[VipRequest]:
+    result = await session.execute(
+        select(VipRequest)
+        .where(VipRequest.status == VipRequestStatus.PENDING)
+        .order_by(VipRequest.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def _render_vip_list(msg_or_cb, session: AsyncSession, edit: bool):
+    reqs = await _pending_vip_requests(session)
+    text = f"⭐ <b>VIP-заявки</b>\nВ очереди: {len(reqs)}"
+    kb = vip_mod_list_kb(reqs)
+    target = msg_or_cb.message if hasattr(msg_or_cb, "message") else msg_or_cb
+    try:
+        if edit:
+            await target.edit_text(text, reply_markup=kb)
+        else:
+            await target.answer(text, reply_markup=kb)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+
+
+@router.message(Command("vip"))
+async def cmd_vip(message: Message, session: AsyncSession):
+    """Список PENDING VIP-заявок."""
+    if not is_moderator(message.from_user.id):
+        return
+    await _render_vip_list(message, session, edit=False)
+
+
+@router.callback_query(F.data == "vipmod:list")
+async def vipmod_list_back(callback: CallbackQuery, session: AsyncSession):
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    await _render_vip_list(callback, session, edit=True)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "noop")
+async def _noop(callback: CallbackQuery):
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("vipmod:view:"))
+async def vipmod_view(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Карточка VIP-заявки."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        req_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    req = await session.get(VipRequest, req_id)
+    if not req:
+        await callback.answer("Заявка не найдена", show_alert=True)
+        return
+
+    profile = await session.get(Profile, req.profile_id)
+    p_display = profile.display_id if profile else "—"
+    p_name = profile.name if profile else "—"
+
+    method_label = (
+        t("vip_method_self_label", "ru")
+        if req.payment_method == VipPaymentMethod.SELF
+        else t("vip_method_moderator_label", "ru")
+    )
+    price_str = f"{req.amount:,} сум".replace(",", " ")
+
+    text = (
+        f"⭐ <b>{req.display_id or '—'}</b>\n\n"
+        f"👤 user_id: <code>{req.user_id}</code>\n"
+        f"🔖 Анкета: {p_display}\n"
+        f"🪪 {p_name}\n"
+        f"📅 Срок: {req.days} дн.\n"
+        f"💰 Сумма: {price_str}\n"
+        f"💳 Способ: {method_label}"
+    )
+
+    kb = vip_mod_card_kb(req.id)
+    try:
+        if req.payment_method == VipPaymentMethod.SELF and req.screenshot_file_id:
+            # Скриншот + текст — отдельным сообщением, карточка ниже
+            await callback.message.edit_text(text, reply_markup=kb)
+            try:
+                await callback.message.answer_photo(
+                    photo=req.screenshot_file_id,
+                    caption=f"📸 Скриншот: {req.display_id}",
+                )
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
+        else:
+            await callback.message.edit_text(text, reply_markup=kb)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("vipmod:confirm:"))
+async def vipmod_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Подтвердить VIP-заявку: опубликовать анкету (если PENDING/PAUSED) и активировать VIP."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        req_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    req = await session.get(VipRequest, req_id)
+    if not req or req.status != VipRequestStatus.PENDING:
+        await callback.answer("Заявка уже обработана", show_alert=True)
+        return
+
+    profile = await session.get(Profile, req.profile_id)
+    if not profile:
+        await callback.answer("Анкета не найдена", show_alert=True)
+        return
+
+    now = datetime.now()
+    req.status = VipRequestStatus.CONFIRMED
+    req.confirmed_at = now
+
+    if profile.status in (ProfileStatus.PENDING, ProfileStatus.PAUSED):
+        profile.status = ProfileStatus.PUBLISHED
+        profile.is_active = True
+        if not profile.published_at:
+            profile.published_at = now
+    profile.vip_status = VipStatus.ACTIVE
+    profile.vip_expires_at = now + timedelta(days=req.days)
+
+    await session.commit()
+
+    # Язык юзера для уведомления
+    user_result = await session.execute(select(User).where(User.id == req.user_id))
+    user = user_result.scalar_one_or_none()
+    user_lang = user.language.value if user and user.language else "ru"
+
+    try:
+        await bot.send_message(
+            req.user_id,
+            t(
+                "vip_confirmed_user", user_lang,
+                display_id=profile.display_id or "—",
+                expires_at=profile.vip_expires_at.strftime("%d.%m.%Y"),
+            ),
+        )
+    except Exception as _e:
+        logger.debug("notify user %s failed: %s", req.user_id, _e)
+
+    try:
+        await callback.message.edit_text(
+            f"✅ <b>{req.display_id}</b> подтверждена. VIP до {profile.vip_expires_at.strftime('%d.%m.%Y')}.",
+            reply_markup=vip_mod_card_kb(req.id),
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("✅ Подтверждено")
+
+
+@router.callback_query(F.data.startswith("vipmod:reject:"))
+async def vipmod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Отклонить VIP-заявку. Анкета статус не меняет."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        req_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    req = await session.get(VipRequest, req_id)
+    if not req or req.status != VipRequestStatus.PENDING:
+        await callback.answer("Заявка уже обработана", show_alert=True)
+        return
+
+    req.status = VipRequestStatus.REJECTED
+    await session.commit()
+
+    user_result = await session.execute(select(User).where(User.id == req.user_id))
+    user = user_result.scalar_one_or_none()
+    user_lang = user.language.value if user and user.language else "ru"
+
+    try:
+        await bot.send_message(
+            req.user_id,
+            t(
+                "vip_rejected_user", user_lang,
+                display_id=req.display_id or "—",
+                moderator=config.moderator_tashkent,
+            ),
+        )
+    except Exception as _e:
+        logger.debug("notify user %s failed: %s", req.user_id, _e)
+
+    try:
+        await callback.message.edit_text(
+            f"❌ <b>{req.display_id}</b> отклонена.",
+            reply_markup=vip_mod_card_kb(req.id),
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("❌ Отклонено")

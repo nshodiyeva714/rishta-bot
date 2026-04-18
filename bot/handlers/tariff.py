@@ -22,7 +22,7 @@ from bot.keyboards.inline import (
     req_religiosity_kb, req_marital_kb, req_children_kb,
     req_car_kb, req_housing_kb, req_job_kb,
     skip_kb, confirm_profile_kb, main_menu_kb,
-    mod_review_kb,
+    mod_review_kb, vip_duration_kb,
     anketa_finish_kb, enhance_or_publish_kb, after_publish_kb,
     housing_kb, add_nav, nav_kb, back_kb,
 )
@@ -37,51 +37,19 @@ async def _lang(state: FSMContext) -> str:
     return data.get("lang", "ru")
 
 
-# ── Шаг 6: Тариф ──
-@router.callback_query(F.data == "tariff:free", TariffStates.choose)
-async def choose_tariff_free(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(is_vip=False, vip_days=0)
-    await _show_summary(callback, state, is_callback=True)
+# ── Шаг 6: Тариф ── (экран Free/VIP удалён — VIP предлагается после публикации)
 
 
-@router.callback_query(F.data == "tariff:vip")
-async def choose_tariff_vip(callback: CallbackQuery, state: FSMContext):
-    """Показываем выбор срока VIP."""
+@router.callback_query(F.data == "vip:skip")
+async def vip_skip(callback: CallbackQuery, state: FSMContext):
+    """«❌ Без VIP пока» — анкета осталась PENDING без VIP, юзер → главное меню."""
     lang = await _lang(state)
-    data = await state.get_data()
-
-    # Определяем регион по residence_status из анкеты (если уже заполнен)
-    region = "uzb"
-    res = data.get("residence_status")
-    if res in ("usa", "europe", "citizenship_other", "other_country"):
-        region = "usa"
-    elif res == "cis":
-        region = "sng"
-
-    from bot.keyboards.inline import vip_duration_kb
-    text = (
-        "⭐ <b>VIP анкета</b>\n\n"
-        "• Показывается первой в поиске\n"
-        "• Выделена значком ⭐\n\n"
-        "Выберите срок:"
-    ) if lang == "ru" else (
-        "⭐ <b>VIP anketa</b>\n\n"
-        "• Qidirishda birinchi ko'rinadi\n"
-        "• ⭐ belgisi bilan ajratiladi\n\n"
-        "Muddatni tanlang:"
+    await callback.message.edit_text(
+        t("vip_skip_message", lang),
+        reply_markup=main_menu_kb(lang, callback.from_user.id),
     )
-    await callback.message.edit_text(text, reply_markup=vip_duration_kb(lang, region))
-    # Остаёмся в TariffStates.choose — ждём vip_dur:N
+    await state.clear()
     await callback.answer()
-
-
-@router.callback_query(F.data.startswith("vip_dur:"), TariffStates.choose)
-async def choose_vip_duration(callback: CallbackQuery, state: FSMContext):
-    """Пользователь выбрал срок VIP — переходим к требованиям."""
-    days = int(callback.data.split(":")[1])
-    await state.update_data(is_vip=True, vip_days=days)
-    lang = await _lang(state)
-    await _show_summary(callback, state, is_callback=True)
 
 
 # ── Шаг 7: Требования (отключено, хендлеры оставлены для совместимости) ──
@@ -435,73 +403,6 @@ async def profile_enhance(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# ── «🔙 Назад» с экрана срока VIP → вернуть на экран выбора тарифа ──
-@router.callback_query(F.data == "profile:back_to_tariff")
-async def back_to_tariff(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-
-    from bot.handlers.questionnaire import build_card
-    from bot.keyboards.inline import tariff_kb
-    card = build_card(data, lang)
-
-    if lang == "uz":
-        tariff_text = (
-            "📋 Joylash turi:\n\n"
-            "⭐ VIP anketa — ko'proq ko'rishlar,\n"
-            "qidirishda birinchi ko'rinadi.\n\n"
-            "📋 Oddiy anketa — bepul."
-        )
-    else:
-        tariff_text = (
-            "📋 Тип размещения:\n\n"
-            "⭐ VIP анкета — больше просмотров,\n"
-            "показывается первой в поиске.\n\n"
-            "📋 Обычная анкета — бесплатно."
-        )
-
-    SEP = "\n\n━━━━━━━━━━━━\n\n"
-    full = (card + SEP + tariff_text) if card else tariff_text
-
-    try:
-        await callback.message.edit_text(full, reply_markup=tariff_kb(lang))
-    except Exception:
-        await callback.message.answer(full, reply_markup=tariff_kb(lang))
-    await state.set_state(TariffStates.choose)
-    await callback.answer()
-
-
-# ── «← Назад» из экрана summary → вернуть на тариф ──
-@router.callback_query(F.data == "profile:back", RequirementStates.summary)
-async def profile_back(callback: CallbackQuery, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-
-    from bot.handlers.questionnaire import build_card, SEP
-    card = build_card(data, lang)
-
-    if lang == "uz":
-        tariff_text = (
-            "📋 Joylashtirish turi:\n\n"
-            "⭐ VIP anketa — ko'proq e'tibor,\n"
-            "qidirishda birinchi ko'rinadi.\n\n"
-            "📋 Oddiy anketa — bepul."
-        )
-    else:
-        tariff_text = (
-            "📋 Тип размещения:\n\n"
-            "⭐ VIP анкета — больше просмотров,\n"
-            "показывается первой в поиске.\n\n"
-            "📋 Обычная анкета — бесплатно."
-        )
-
-    full_text = (card + SEP + tariff_text) if card else tariff_text
-    from bot.keyboards.inline import tariff_kb
-    await callback.message.edit_text(full_text, reply_markup=tariff_kb(lang))
-    await state.set_state(TariffStates.choose)
-    await callback.answer()
-
-
 # ── «← Назад» из экрана enhance → вернуть на summary ──
 @router.callback_query(F.data == "profile:back_enhance", RequirementStates.summary)
 async def profile_back_enhance(callback: CallbackQuery, state: FSMContext):
@@ -652,62 +553,54 @@ async def profile_confirm_after_ext(callback: CallbackQuery, state: FSMContext, 
     if updated:
         await session.commit()
 
-    # Показываем финальный экран «опубликовано»
-    if lang == "uz":
-        submitted_text = (
-            f"🎉 <b>Anketa yuborildi!</b>\n\n"
-            f"🔖 #{display_id}\n\n"
-            f"Moderator 24 soat ichida tekshiradi\n"
-            f"va nashr etadi 🤝"
-        )
-    else:
-        submitted_text = (
-            f"🎉 <b>Анкета отправлена!</b>\n\n"
-            f"🔖 #{display_id}\n\n"
-            f"Модератор проверит в течение\n"
-            f"24 часов и опубликует 🤝"
-        )
-
-    await callback.message.edit_text(submitted_text, reply_markup=main_menu_kb(lang, callback.from_user.id))
-    await state.clear()
+    await _show_vip_offer_after_publish(callback, state, profile, display_id, lang)
     await callback.answer()
+
+
+def _region_for_profile(profile: Profile) -> str:
+    """Определяем регион цен VIP по residence_status анкеты."""
+    if profile.residence_status:
+        res = profile.residence_status.value
+        if res in ("usa", "europe", "citizenship_other", "other_country"):
+            return "usa"
+        if res == "cis":
+            return "sng"
+    return "uzb"
+
+
+async def _show_vip_offer_after_publish(
+    callback: CallbackQuery, state: FSMContext, profile: Profile, display_id: str, lang: str,
+) -> None:
+    """После сохранения анкеты — показать выбор срока VIP с кнопкой «Без VIP пока»."""
+    region = _region_for_profile(profile)
+    await state.update_data(
+        vip_profile_id=profile.id, vip_region=region, vip_flow="creation",
+        ext_profile_id=profile.id,
+    )
+
+    if lang == "uz":
+        saved = f"✅ Anketa <b>{display_id}</b> saqlandi va tekshiruvga yuborildi.\n\n"
+    else:
+        saved = f"✅ Анкета <b>{display_id}</b> сохранена и отправлена на модерацию.\n\n"
+    text = saved + t("vip_choose_duration", lang)
+    await callback.message.edit_text(
+        text,
+        reply_markup=vip_duration_kb(lang, region, show_skip=True),
+    )
+    # Чистим FSM-state чтобы vip_dur:N ловился глобальным handler'ом в menu.py
+    await state.set_state(None)
 
 
 # ── «🚀 Отправить на публикацию» ──
 @router.callback_query(F.data == "profile:publish", RequirementStates.summary)
 async def publish_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
-    """Сохраняем и публикуем анкету."""
+    """Сохраняем анкету и предлагаем VIP."""
     profile, display_id = await _save_profile(callback, state, session, bot)
     if not profile:
         return
-
     data = await state.get_data()
     lang = data.get("lang", "ru")
-
-    # Сохраняем profile_id на случай «Дополнить позже»
-    await state.update_data(ext_profile_id=profile.id)
-
-    if lang == "uz":
-        submitted_text = (
-            f"🎉 <b>Anketa yuborildi!</b>\n\n"
-            f"🔖 #{display_id}\n\n"
-            f"Moderator 24 soat ichida tekshiradi\n"
-            f"va nashr etadi 🤝\n\n"
-            f"Kutayotganda — anketangizni\n"
-            f"boyitishingiz mumkin 👇"
-        )
-    else:
-        submitted_text = (
-            f"🎉 <b>Анкета отправлена!</b>\n\n"
-            f"🔖 #{display_id}\n\n"
-            f"Модератор проверит в течение\n"
-            f"24 часов и опубликует 🤝\n\n"
-            f"Пока ждёте — можете\n"
-            f"сделать анкету ярче 👇"
-        )
-
-    await callback.message.edit_text(submitted_text, reply_markup=after_publish_kb(lang))
-    await state.set_state(RequirementStates.confirm)
+    await _show_vip_offer_after_publish(callback, state, profile, display_id, lang)
     await callback.answer()
 
 
@@ -813,11 +706,7 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
         is_active=data.get("is_active", True),
     )
 
-    if data.get("is_vip"):
-        vip_days = data.get("vip_days", 30)
-        profile.vip_status = VipStatus.ACTIVE
-        profile.vip_expires_at = datetime.now() + timedelta(days=vip_days)
-
+    # VIP активируется только после подтверждения модератором через /vip
     session.add(profile)
     await session.flush()
 

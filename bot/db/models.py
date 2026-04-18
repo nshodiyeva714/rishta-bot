@@ -154,6 +154,17 @@ class FeedbackResult(str, enum.Enum):
     NOT_MATCHED = "not_matched"
 
 
+class VipRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class VipPaymentMethod(str, enum.Enum):
+    SELF = "self"            # Юзер сам платит, присылает скриншот
+    MODERATOR = "moderator"  # Юзер платит модератору напрямую
+
+
 # ── Models ─────────────────────────────────────────────
 
 class User(Base):
@@ -357,6 +368,25 @@ class Payment(Base):
 
     user = relationship("User", back_populates="payments")
     profile = relationship("Profile")
+
+
+class VipRequest(Base):
+    __tablename__ = "vip_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    profile_id = Column(Integer, ForeignKey("profiles.id"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    days = Column(Integer, nullable=False)
+    amount = Column(Integer, nullable=False)  # в тиинах (UZS)
+    display_id = Column(String(20), nullable=True)  # VIP-NNN
+    status = Column(Enum(VipRequestStatus), default=VipRequestStatus.PENDING)
+    payment_method = Column(Enum(VipPaymentMethod), nullable=False)
+    screenshot_file_id = Column(String(200), nullable=True)  # NULL для MODERATOR
+    created_at = Column(DateTime, server_default=func.now())
+    confirmed_at = Column(DateTime, nullable=True)
+
+    profile = relationship("Profile")
+    user = relationship("User")
 
 
 class Complaint(Base):
