@@ -585,7 +585,7 @@ async def _show_vip_offer_after_publish(
     text = saved + t("vip_choose_duration", lang)
     await callback.message.edit_text(
         text,
-        reply_markup=vip_duration_kb(lang, region, show_skip=True),
+        reply_markup=vip_duration_kb(lang, region, show_skip=True, back_cb="menu:main"),
     )
     # Чистим FSM-state чтобы vip_dur:N ловился глобальным handler'ом в menu.py
     await state.set_state(None)

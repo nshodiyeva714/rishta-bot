@@ -297,11 +297,11 @@ async def photo_type(callback: CallbackQuery, state: FSMContext):
         # Без фото → сразу к телосложению (вопрос 4)
         await _ask_body_type(callback, state, lang)
     elif value == "closed_face":
-        await callback.message.edit_text(t("q21_closed_face_hint", lang))
+        await callback.message.edit_text(t("q21_closed_face_hint", lang), reply_markup=back_step_kb(lang))
         await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q21_photo_upload)
     else:
-        await callback.message.edit_text(t("q21_upload", lang))
+        await callback.message.edit_text(t("q21_upload", lang), reply_markup=back_step_kb(lang))
         await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q21_photo_upload)
     await callback.answer()
@@ -846,6 +846,11 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
         QuestionnaireStates.q21_photo_type.state: (
             "q2_height", QuestionnaireStates.q3_height, None,
             lambda l, c: _with_card(data, l, t("q2_height", l, bar=progress_bar(2, 10)))
+        ),
+        QuestionnaireStates.q21_photo_upload.state: (
+            "q3_photo", QuestionnaireStates.q21_photo_type,
+            lambda: add_nav(photo_type_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+            lambda l, c: _with_card(data, l, t("q3_photo", l, bar=progress_bar(3, 10)))
         ),
         QuestionnaireStates.q4_body_type.state: (
             "q3_photo", QuestionnaireStates.q21_photo_type,
