@@ -130,9 +130,12 @@ async def choose_payment(callback: CallbackQuery, state: FSMContext, session: As
         )
         await state.set_state(PaymentStates.awaiting_screenshot)
     elif method == "moderator":
-        # Через модератора
-        region = "🇺🇿 Узбекистан"
-        moderator = config.moderator_tashkent
+        # Через модератора целевой анкеты (той, кому хотят написать)
+        from bot.services.moderator_routing import resolve_primary_moderator
+        target_profile = await session.get(Profile, profile_id)
+        mod = resolve_primary_moderator(target_profile)
+        region = f"🇺🇿 {mod['region_label']}"
+        moderator = f"@{mod['username']}"
         hours = "08:00–00:00"
         await callback.message.edit_text(
             t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
@@ -173,20 +176,22 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
 
     profile = await session.get(Profile, profile_id) if profile_id else None
 
-    # Отправляем всем модераторам
-    from bot.config import get_all_moderator_ids
+    # Адресный пуш: модератор целевой анкеты (кого хотят связаться).
+    # Для контакт-флоу копии нет (control_copy — только VIP из USA).
+    from bot.services.moderator_routing import resolve_primary_moderator
+    mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else config.mod_tashkent_id
+
     mod_text = t("mod_payment_manual", "ru",
         username=message.from_user.username or "—",
         user_id=message.from_user.id,
         display_id=profile.display_id if profile else "—",
         amount="30,000 сум",
     )
-    for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text, reply_markup=mod_payment_kb(payment.id))
-            await bot.send_photo(mod_id, photo.file_id)
-        except Exception:
-            pass
+    try:
+        await bot.send_message(mod_id, mod_text, reply_markup=mod_payment_kb(payment.id))
+        await bot.send_photo(mod_id, photo.file_id)
+    except Exception as _e:
+        logger.debug("notify mod %s failed: %s", mod_id, _e)
 
     from aiogram.types import InlineKeyboardMarkup
     await message.answer(
@@ -229,11 +234,16 @@ async def _notify_mods_new_vip_request(
     bot: Bot, req: VipRequest, profile: Profile, username_or_id: str,
     *, reply_kb=None, custom_text: str | None = None,
 ):
-    """Пуш всем модераторам о новой VIP-заявке.
+    """Адресный пуш о новой VIP-заявке: primary-модератор + копия для USA.
 
     reply_kb — опциональная клавиатура (например, «💬 Ответить» для вопросов).
+            Копия для контроля (USA → Ташкент) приходит БЕЗ клавиатуры.
     custom_text — если задан, используется вместо стандартного шаблона.
     """
+    from bot.services.moderator_routing import (
+        resolve_primary_moderator, resolve_control_copy_moderator,
+    )
+
     if custom_text is not None:
         text = custom_text
     else:
@@ -253,14 +263,29 @@ async def _notify_mods_new_vip_request(
             price=price_str,
             method_label=method_label,
         )
-    for mod_id in get_all_moderator_ids():
+
+    primary_id = resolve_primary_moderator(profile)["telegram_id"]
+    copy_id = resolve_control_copy_moderator(profile)
+
+    # Primary — с reply_kb
+    try:
+        if req.screenshot_file_id:
+            await bot.send_photo(primary_id, photo=req.screenshot_file_id, caption=text, reply_markup=reply_kb)
+        else:
+            await bot.send_message(primary_id, text, reply_markup=reply_kb)
+    except Exception as _e:
+        logger.debug("notify primary mod %s failed: %s", primary_id, _e)
+
+    # Копия для контроля (только USA → Ташкент) — без кнопок
+    if copy_id and copy_id != primary_id:
+        copy_prefix = "📋 КОПИЯ ДЛЯ КОНТРОЛЯ\n\n"
         try:
             if req.screenshot_file_id:
-                await bot.send_photo(mod_id, photo=req.screenshot_file_id, caption=text, reply_markup=reply_kb)
+                await bot.send_photo(copy_id, photo=req.screenshot_file_id, caption=copy_prefix + text)
             else:
-                await bot.send_message(mod_id, text, reply_markup=reply_kb)
+                await bot.send_message(copy_id, copy_prefix + text)
         except Exception as _e:
-            logger.debug("notify mod %s failed: %s", mod_id, _e)
+            logger.debug("notify copy mod %s failed: %s", copy_id, _e)
 
 
 # ── vip_dur:N — пользователь выбрал срок (глобальный, без state) ──

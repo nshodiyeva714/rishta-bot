@@ -122,12 +122,14 @@ async def meeting_time(message: Message, state: FSMContext, session: AsyncSessio
         f"━━━━━━━━━━━━━━━"
     )
 
-    from bot.config import get_all_moderator_ids
-    for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text)
-        except Exception:
-            pass
+    # Адресный пуш: модератор target-анкеты (того, с кем хотят встретиться)
+    from bot.services.moderator_routing import resolve_primary_moderator
+    from bot.config import config as _cfg
+    mod_id = resolve_primary_moderator(target_profile)["telegram_id"] if target_profile else _cfg.mod_tashkent_id
+    try:
+        await bot.send_message(mod_id, mod_text)
+    except Exception:
+        pass
 
     from aiogram.types import InlineKeyboardMarkup
     await message.answer(

@@ -730,16 +730,16 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
 
     await state.update_data(ext_profile_id=profile.id)
 
-    # Уведомляем модераторов
-    from bot.config import get_all_moderator_ids
+    # Адресный пуш: модератор region'а новой анкеты
+    from bot.services.moderator_routing import resolve_primary_moderator
+    mod_id = resolve_primary_moderator(profile)["telegram_id"]
     mod_text = format_full_anketa(profile, lang="ru")
-    for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text, reply_markup=mod_review_kb(profile.id))
-            if profile.photo_file_id:
-                await bot.send_photo(mod_id, profile.photo_file_id)
-        except Exception:
-            pass
+    try:
+        await bot.send_message(mod_id, mod_text, reply_markup=mod_review_kb(profile.id))
+        if profile.photo_file_id:
+            await bot.send_photo(mod_id, profile.photo_file_id)
+    except Exception:
+        pass
 
     return profile, display_id
 

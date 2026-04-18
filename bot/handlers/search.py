@@ -1828,8 +1828,8 @@ async def ask_operator(callback: CallbackQuery, session: AsyncSession, state: FS
 
 @router.message(ContactStates.waiting_question, F.text)
 async def send_question(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
-    """Пользователь прислал текст вопроса — уведомляем всех модераторов."""
-    from bot.config import get_all_moderator_ids
+    """Пользователь прислал текст вопроса — адресный пуш модератору target-анкеты."""
+    from bot.services.moderator_routing import resolve_primary_moderator
 
     data = await state.get_data()
     profile_id = data.get("question_profile_id")
@@ -1863,13 +1863,11 @@ async def send_question(message: Message, session: AsyncSession, state: FSMConte
         )],
     ])
 
-    for mod_id in get_all_moderator_ids():
-        if not mod_id:
-            continue
-        try:
-            await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
+    mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else config.mod_tashkent_id
+    try:
+        await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("notify mod %s failed: %s", mod_id, _e)
 
     if lang == "uz":
         reply = (
@@ -1889,8 +1887,8 @@ async def send_question(message: Message, session: AsyncSession, state: FSMConte
 
 @router.callback_query(F.data.startswith("req_contact:"))
 async def request_contact(callback: CallbackQuery, session: AsyncSession, state: FSMContext, bot: Bot):
-    """Пользователь жмёт «📤 Запросить контакт» — создаём запись + уведомляем модераторов."""
-    from bot.config import get_all_moderator_ids
+    """Пользователь жмёт «📤 Запросить контакт» — адресный пуш модератору target-анкеты."""
+    from bot.services.moderator_routing import resolve_primary_moderator
     import datetime
 
     profile_id = int(callback.data.split(":")[1])
@@ -1952,13 +1950,11 @@ async def request_contact(callback: CallbackQuery, session: AsyncSession, state:
         )],
     ])
 
-    for mod_id in get_all_moderator_ids():
-        if not mod_id:
-            continue
-        try:
-            await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
+    mod_id = resolve_primary_moderator(profile)["telegram_id"]
+    try:
+        await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("notify mod %s failed: %s", mod_id, _e)
 
     if lang == "uz":
         text = (
@@ -2009,8 +2005,8 @@ async def send_screenshot_start(callback: CallbackQuery, state: FSMContext):
 
 @router.message(ContactStates.waiting_screenshot, F.photo)
 async def receive_screenshot(message: Message, session: AsyncSession, state: FSMContext, bot: Bot):
-    """Пользователь прислал скриншот — пересылаем всем операторам с кнопками."""
-    from bot.config import get_all_moderator_ids
+    """Пользователь прислал скриншот — адресный пуш модератору target-анкеты."""
+    from bot.services.moderator_routing import resolve_primary_moderator
     data = await state.get_data()
     profile_id = data.get("screenshot_profile_id")
     req_number = data.get("screenshot_req_number") or "—"
@@ -2037,13 +2033,11 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
         )],
     ])
 
-    for mod_id in get_all_moderator_ids():
-        if not mod_id:
-            continue
-        try:
-            await bot.send_photo(mod_id, photo_id, caption=mod_caption, reply_markup=mod_kb, parse_mode="HTML")
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
+    mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else config.mod_tashkent_id
+    try:
+        await bot.send_photo(mod_id, photo_id, caption=mod_caption, reply_markup=mod_kb, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("notify mod %s failed: %s", mod_id, _e)
 
     await message.answer(
         f"✅ Скриншот получен!\n"

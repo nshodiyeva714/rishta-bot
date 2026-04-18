@@ -1028,7 +1028,14 @@ async def mod_write_forward(message: Message, state: FSMContext, session: AsyncS
         [InlineKeyboardButton(text="↩️ Ответить", callback_data=f"modreply:{message.from_user.id}")],
     ])
 
-    for mod_id in get_all_moderator_ids():
+    # Вариант В: есть анкета → свой модератор, нет анкеты (гость) → всем
+    if profile:
+        from bot.services.moderator_routing import resolve_primary_moderator
+        target_ids = [resolve_primary_moderator(profile)["telegram_id"]]
+    else:
+        target_ids = get_all_moderator_ids()
+
+    for mod_id in target_ids:
         try:
             await bot.send_message(mod_id, header + (message.text or ""), reply_markup=reply_kb)
             if message.photo:

@@ -59,8 +59,9 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
         reply_markup=InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, show_back=False)),
     )
 
-    # Уведомляем всех модераторов
-    from bot.config import get_all_moderator_ids
+    # Адресный пуш: модератор обжалованной анкеты
+    from bot.services.moderator_routing import resolve_primary_moderator
+    from bot.config import config as _cfg
     profile = await session.get(Profile, profile_id)
     reason_labels = {
         "wrong_data": "❗ Данные не соответствуют",
@@ -75,10 +76,10 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
         f"От: @{callback.from_user.username or '—'} (ID: {callback.from_user.id})\n"
         f"Причина: {reason_labels.get(reason_value, reason_value)}"
     )
-    for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text)
-        except Exception:
-            pass
+    mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else _cfg.mod_tashkent_id
+    try:
+        await bot.send_message(mod_id, mod_text)
+    except Exception:
+        pass
 
     await callback.answer()

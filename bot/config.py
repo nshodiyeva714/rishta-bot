@@ -21,6 +21,15 @@ class Config:
     mod_samarkand_id: int = field(
         default_factory=lambda: int(os.environ.get("MOD_SAMARKAND_ID", "0")) or 6235004229
     )
+    mod_vodiy_id: int = field(
+        default_factory=lambda: int(os.environ.get("MOD_VODIY_ID", "0"))
+    )
+    mod_usa_id: int = field(
+        default_factory=lambda: int(os.environ.get("MOD_USA_ID", "0"))
+    )
+    moderator_vodiy: str = field(
+        default_factory=lambda: os.environ.get("MODERATOR_VODIY", "@rishta_manager_vodiy")
+    )
     main_moderator_id: int = field(
         default_factory=lambda: int(os.environ.get("MAIN_MODERATOR_ID", "0")) or 8400995899
     )
@@ -91,19 +100,26 @@ config = Config()
 
 
 def is_moderator(user_id: int) -> bool:
-    """Проверяет, является ли пользователь модератором."""
-    return user_id in (
+    """Проверяет, является ли пользователь модератором.
+
+    Учитывает всех настроенных модераторов (0 = не настроен, игнорируется).
+    """
+    mods = {m for m in (
         config.moderator_chat_id,
         config.mod_tashkent_id,
         config.mod_samarkand_id,
         config.main_moderator_id,
-    )
+        config.mod_vodiy_id,
+        config.mod_usa_id,
+    ) if m}
+    return user_id in mods
 
 
 # Usernames модераторов (для кнопок с живыми ссылками)
 MODERATOR_USERNAMES = {
     "tashkent": os.environ.get("MOD_TASHKENT_USERNAME", "rishta_manager_tashkent"),
     "samarkand": os.environ.get("MOD_SAMARKAND_USERNAME", "rishta_manager_samarkand"),
+    "vodiy": os.environ.get("MOD_VODIY_USERNAME", "rishta_manager_vodiy"),
     "usa": os.environ.get("MOD_USA_USERNAME", ""),
     "cis": os.environ.get("MOD_CIS_USERNAME", ""),
     "europe": os.environ.get("MOD_EUROPE_USERNAME", ""),
@@ -111,8 +127,15 @@ MODERATOR_USERNAMES = {
 
 
 def get_all_moderator_ids() -> list[int]:
-    """Все ID модераторов (для рассылки уведомлений)."""
-    ids = {config.moderator_chat_id, config.mod_tashkent_id, config.mod_samarkand_id, config.main_moderator_id}
+    """Все ID модераторов (для рассылки уведомлений). Фильтрует 0 (не настроен)."""
+    ids = {
+        config.moderator_chat_id,
+        config.mod_tashkent_id,
+        config.mod_samarkand_id,
+        config.main_moderator_id,
+        config.mod_vodiy_id,
+        config.mod_usa_id,
+    }
     return [mid for mid in ids if mid]
 
 

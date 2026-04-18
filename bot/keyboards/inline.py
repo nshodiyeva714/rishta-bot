@@ -1461,12 +1461,30 @@ def reminder_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def choose_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Выбор одного из двух модераторов."""
+    """Выбор модератора по региону. Водий/USA/СНГ/Европа добавляются,
+    если их username настроен (непустой).
+    """
     from bot.config import MODERATOR_USERNAMES
-    tash = MODERATOR_USERNAMES.get("tashkent", "rishta_manager_tashkent")
-    sam = MODERATOR_USERNAMES.get("samarkand", "rishta_manager_samarkand")
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"💬 @{tash}", url=f"https://t.me/{tash}")],
-        [InlineKeyboardButton(text=f"💬 @{sam}", url=f"https://t.me/{sam}")],
-        *nav_kb(lang, "back:menu"),
-    ])
+    # Ordered для стабильного отображения
+    regions: list[tuple[str, str]] = [
+        ("tashkent",  "Ташкент"),
+        ("samarkand", "Самарканд"),
+        ("vodiy",     "Водий"),
+        ("usa",       "США"),
+        ("cis",       "СНГ"),
+        ("europe",    "Европа"),
+    ]
+    rows = []
+    for key, label in regions:
+        username = MODERATOR_USERNAMES.get(key, "")
+        if not username:
+            continue
+        rows.append([InlineKeyboardButton(text=f"💬 {label} (@{username})",
+                                          url=f"https://t.me/{username}")])
+    # Fallback: если вообще ни один регион не настроен (маловероятно) — только Ташкент-дефолт
+    if not rows:
+        tash = "rishta_manager_tashkent"
+        rows.append([InlineKeyboardButton(text=f"💬 Ташкент (@{tash})",
+                                          url=f"https://t.me/{tash}")])
+    rows.extend(nav_kb(lang, "back:menu"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)

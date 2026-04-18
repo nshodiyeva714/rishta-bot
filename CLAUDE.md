@@ -13,8 +13,13 @@
 - **Стек:** Python 3.11, aiogram 3, SQLAlchemy async, PostgreSQL
 - **Хостинг:** Railway, auto-deploy по `git push origin main`
 - **GitHub:** https://github.com/nshodiyeva714/rishta-bot
-- **Moderators:** Ташкент (`@rishta_manager_tashkent`, ID `8400995899`)
-  и Самарканд (`@rishta_manager_samarkand`, ID `6235004229`)
+- **Moderators (4 региона):**
+  - **Ташкент** (`@rishta_manager_tashkent`, ID `8400995899`) — также главный
+  - **Самарканд** (`@rishta_manager_samarkand`, ID `6235004229`)
+  - **Водий** (username/ID через env `MOD_VODIY_USERNAME`/`MOD_VODIY_ID`;
+    если не настроен — fallback на Ташкент)
+  - **USA** (env `MOD_USA_USERNAME`/`MOD_USA_ID`;
+    если не настроен — fallback на Самарканд)
 
 ---
 
@@ -103,6 +108,66 @@ grep -n "from bot.states import" bot/handlers/xxx.py
 ### 6. `.claude/` в `.gitignore`
 Папка Claude-worktrees исключена из репо. Не пытайся добавить её
 `git add -A` — будет warning про embedded git repository.
+
+---
+
+## Маршрутизация заявок к модератору
+
+Реализовано в `bot/services/moderator_routing.py`:
+- `resolve_primary_moderator(profile)` → `{telegram_id, username, region, region_label}`
+- `resolve_control_copy_moderator(profile)` → Optional[int] (копия **только**
+  для VIP-заявок из USA → Ташкент)
+- `region_label_for_profile(profile)` → «Ташкент» / «Самарканд» / «Водий» / «США»
+
+### Правила маршрутизации по анкете
+
+- `residence_status == usa` → USA (fallback → Самарканд если USA не настроен)
+- `residence_status in (europe, cis, citizenship_other, other_country,
+  residence_permit)` → Ташкент
+- `residence_status == uzbekistan` → по `city_code`:
+  - `tashkent`, `tashkent_region`, `jizzakh`, `sirdarya` → Ташкент
+  - `samarkand`, `bukhara`, `navoi`, `kashkadarya`, `surkhandarya`,
+    `khorezm`, `karakalpakstan`, `nukus` → Самарканд
+  - `fergana`, `andijan`, `namangan` → Водий (fallback → Ташкент)
+- Неизвестный `city_code` / NULL `residence_status` → Ташкент (safety-net)
+
+### Где используется routing (адресные пуши)
+
+- `payment.py` — `choose_payment` (moderator contact), `payment_screenshot`
+  (оплата контакта), `_notify_mods_new_vip_request` (VIP-заявки)
+- `search.py` — `send_question` (вопрос модератору), `request_contact`
+  (запрос контакта), `receive_screenshot` (скриншот оплаты контакта)
+- `complaint.py` — `submit_complaint` (жалоба → модератор анкеты)
+- `meeting.py` — `meeting_time` (встреча → модератор target-анкеты)
+- `tariff.py` — `_save_profile` (новая анкета → модератор её региона)
+- `menu.py:mod_write_forward` — Вариант В: есть анкета → свой модератор,
+  нет (гость) → всем модераторам через `get_all_moderator_ids()`
+
+### Где НЕ используется routing (остаётся broadcast или guard)
+
+- `/ankety`, `/vip`, `/stats`, `/find`, `/requests` — **все** модераторы
+  видят **все** заявки (по Варианту Б — команда без разделения)
+- `is_moderator()` guard — работает для всех настроенных модераторов
+  (включая Vodiy/USA), /reset остаётся только у Ташкента захардкожено
+- `scheduler.daily_report` — глобальный отчёт всем модераторам
+
+### Копия для контроля
+
+Только VIP-заявки из USA → Ташкент получает копию **БЕЗ кнопок**
+(префикс «📋 КОПИЯ ДЛЯ КОНТРОЛЯ»). Для всех других событий копии нет.
+
+### ENV-переменные для регионов
+
+```
+MOD_TASHKENT_ID=8400995899
+MOD_TASHKENT_USERNAME=rishta_manager_tashkent
+MOD_SAMARKAND_ID=6235004229
+MOD_SAMARKAND_USERNAME=rishta_manager_samarkand
+MOD_VODIY_ID=<id>                    # если не задан → 0 → fallback на Ташкент
+MOD_VODIY_USERNAME=rishta_manager_vodiy
+MOD_USA_ID=<id>                      # если не задан → 0 → fallback на Самарканд
+MOD_USA_USERNAME=rishta_manager_usa
+```
 
 ---
 
