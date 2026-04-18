@@ -340,6 +340,13 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
 
     is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
     await _safe_edit(callback, full_text, reply_markup=my_profile_kb(profile.id, lang, is_active))
+
+    if profile.photo_file_id:
+        try:
+            await callback.message.answer_photo(profile.photo_file_id)
+        except Exception as _e:
+            logger.debug("my_applications send_photo failed: %s", _e)
+
     await callback.answer()
 
 
