@@ -886,6 +886,36 @@ T = {
             "To'lovdan so'ng skrinshot yuboring."
         ),
     },
+    "op_payment_requisites": {
+        "ru": (
+            "💁‍♀️ <b>Сообщение от оператора:</b>\n\n"
+            "📋 #{req_number}\n\n"
+            "Чтобы продолжить, оформите заявку\n"
+            "переводом 30 000 сум:\n\n"
+            "💳 <code>5614 6887 0899 8959</code>\n"
+            "👤 SHODIYEVA NASIBA\n\n"
+            "После оформления вам откроются:\n"
+            "📞 Телефон семьи\n"
+            "📱 Telegram родителей и кандидата\n"
+            "🏠 Адрес и геолокация\n"
+            "📸 Фото из анкеты\n\n"
+            "Пришлите скриншот перевода 👇"
+        ),
+        "uz": (
+            "💁‍♀️ <b>Operatordan xabar:</b>\n\n"
+            "📋 #{req_number}\n\n"
+            "Davom etish uchun 30 000 so'm\n"
+            "to'lovini amalga oshiring:\n\n"
+            "💳 <code>5614 6887 0899 8959</code>\n"
+            "👤 SHODIYEVA NASIBA\n\n"
+            "Rasmiylashtirishdan so'ng sizga ochiladi:\n"
+            "📞 Oila telefon raqami\n"
+            "📱 Ota-ona va nomzodning Telegram\n"
+            "🏠 Manzil va geolokatsiya\n"
+            "📸 Anketa surati\n\n"
+            "O'tkazma skrinshotini yuboring 👇"
+        ),
+    },
 
     # ── Step 14: Moderator payment notification ──
     "mod_payment_manual": {

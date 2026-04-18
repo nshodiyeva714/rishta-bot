@@ -1506,16 +1506,15 @@ async def op_send_requisites(callback: CallbackQuery, session: AsyncSession, bot
         )],
     ])
 
-    payment_text = (
-        f"💁‍♀️ <b>Сообщение от оператора:</b>\n\n"
-        f"📋 #{req_number}\n\n"
-        f"Для получения контакта\n"
-        f"переведите <b>{CONTACT_PRICE:,} сум</b>:\n\n"
-        f"💳 <code>{CARD_NUMBER_TXT}</code>\n"
-        f"👤 {CARD_OWNER_TXT}\n\n"
-        f"После оплаты отправьте\n"
-        f"скриншот сюда 👇"
-    )
+    # Язык адресата (получателя сообщения) — для двуязычного текста
+    try:
+        req_user = await session.get(User, user_id)
+        req_lang = req_user.language.value if req_user and req_user.language else "ru"
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+        req_lang = "ru"
+
+    payment_text = t("op_payment_requisites", req_lang, req_number=req_number)
 
     try:
         await bot.send_message(user_id, payment_text, reply_markup=kb, parse_mode="HTML")
