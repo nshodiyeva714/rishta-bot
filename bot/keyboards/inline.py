@@ -1479,12 +1479,12 @@ def choose_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         username = MODERATOR_USERNAMES.get(key, "")
         if not username:
             continue
-        rows.append([InlineKeyboardButton(text=f"💬 {label} (@{username})",
+        rows.append([InlineKeyboardButton(text=f"💬 @{username}",
                                           url=f"https://t.me/{username}")])
     # Fallback: если вообще ни один регион не настроен (маловероятно) — только Ташкент-дефолт
     if not rows:
         tash = "rishta_manager_tashkent"
-        rows.append([InlineKeyboardButton(text=f"💬 Ташкент (@{tash})",
+        rows.append([InlineKeyboardButton(text=f"💬 @{tash}",
                                           url=f"https://t.me/{tash}")])
     rows.extend(nav_kb(lang, "back:menu"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
