@@ -714,7 +714,6 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
             ("🇹🇯 Tojikiston",    "fval:region:tajikistan"),
             ("🇹🇲 Turkmaniston",  "fval:region:turkmenistan"),
             ("🌍 Yevropa",        "fval:region:europe"),
-            ("🌏 Boshqa",         "fval:region:other"),
             ("✅ Muhim emas",     "fval:region:any"),
         ]
         title = "🏡 Yashash joyi:"
@@ -728,7 +727,6 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
             ("🇹🇯 Таджикистан",   "fval:region:tajikistan"),
             ("🇹🇲 Туркменистан",  "fval:region:turkmenistan"),
             ("🌍 Европа",         "fval:region:europe"),
-            ("🌏 Другая страна",  "fval:region:other"),
             ("✅ Не важно",       "fval:region:any"),
         ]
         title = "🏡 Где проживает:"

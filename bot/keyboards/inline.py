@@ -494,7 +494,6 @@ def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
             ("🇹🇯 Tojikiston",    "city:tajikistan"),
             ("🇹🇲 Turkmaniston",  "city:turkmenistan"),
             ("🌍 Yevropa",        "city:europe"),
-            ("🌏 Boshqa mamlakat","city:other"),
         ]
     else:
         opts = [
@@ -506,7 +505,6 @@ def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
             ("🇹🇯 Таджикистан",   "city:tajikistan"),
             ("🇹🇲 Туркменистан",  "city:turkmenistan"),
             ("🌍 Европа",         "city:europe"),
-            ("🌏 Другая страна",  "city:other"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
