@@ -68,8 +68,10 @@ def _full_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t("btn_search_candidate", lang), callback_data="menu:search_sub")],
         [InlineKeyboardButton(text=t("btn_create_profile", lang), callback_data="menu:create_sub")],
         [InlineKeyboardButton(text=t("btn_my_applications", lang), callback_data="menu:my")],
-        [InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator")],
-        [InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about")],
+        [
+            InlineKeyboardButton(text=t("btn_contact_moderator", lang), callback_data="menu:moderator"),
+            InlineKeyboardButton(text=t("btn_about", lang), callback_data="menu:about"),
+        ],
     ])
 
 
