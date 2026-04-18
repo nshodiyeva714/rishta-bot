@@ -137,6 +137,20 @@ def build_card(data: dict, lang: str = "ru") -> str:
     elif ch == "no" and mar and mar != "never_married":
         lines.append("👶 Детей нет" if L == "ru" else "👶 Farzand yo'q")
 
+    # Телефон родителей
+    phone = data.get("parent_phone")
+    if phone:
+        lines.append(f"📞 {phone}")
+
+    # Telegram родителей и кандидата
+    parent_tg = data.get("parent_telegram")
+    if parent_tg:
+        lines.append(f"📱 {parent_tg}")
+
+    candidate_tg = data.get("candidate_telegram")
+    if candidate_tg:
+        lines.append(f"💬 {candidate_tg}")
+
     if not lines:
         return ""
 
