@@ -373,6 +373,16 @@ def back_step_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 
+def skip_back_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Этап 1: текстовый вопрос с [⏭ Пропустить] [← Назад] (back_step)."""
+    skip = "⏭ O'tkazib yuborish" if lang == "uz" else "⏭ Пропустить"
+    back = "← Orqaga" if lang == "uz" else "← Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=skip, callback_data="skip")],
+        [InlineKeyboardButton(text=back, callback_data="back_step")],
+    ])
+
+
 def work_choice_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     labels = {
         "ru": ["💼 Указать место работы", "⏭ Не важно / пропустить"],
@@ -1410,7 +1420,9 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
             ("🕌 Dindorlik", "edit:religiosity"),
             ("💍 Oilaviy holat", "edit:marital"),
             ("📸 Fotosurat", "edit:photo"),
-            ("📞 Telefon", "edit:phone"),
+            ("📞 Ota-onalar telefoni", "edit:phone"),
+            ("📱 Ota-onalar TG", "edit:parent_telegram"),
+            ("💬 Nomzod TG", "edit:candidate_telegram"),
         ]
         back_text = "🔙 Ortga"
     else:
@@ -1425,7 +1437,9 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
             ("🕌 Религиозность", "edit:religiosity"),
             ("💍 Семейное положение", "edit:marital"),
             ("📸 Фото", "edit:photo"),
-            ("📞 Телефон", "edit:phone"),
+            ("📞 Телефон родителей", "edit:phone"),
+            ("📱 TG родителей", "edit:parent_telegram"),
+            ("💬 TG кандидата", "edit:candidate_telegram"),
         ]
         back_text = "🔙 Назад"
     rows = [[InlineKeyboardButton(text=label, callback_data=f"{cd}:{profile_id}")] for label, cd in fields]

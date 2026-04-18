@@ -60,7 +60,7 @@ async def _get_profile(session: AsyncSession, profile_id: int, user_id: int):
     return None
 
 
-def ext_progress_bar(current: int, total: int = 9) -> str:
+def ext_progress_bar(current: int, total: int = 8) -> str:
     """Прогресс-бар для Этапа 2."""
     filled = round(current / total * 13)
     empty = 13 - filled
@@ -359,24 +359,6 @@ async def _ask_housing_parent(m_or_cb, state: FSMContext):
     await state.set_state(QuestionnaireStates.ext_housing_parent)
 
 
-async def _ask_parent_telegram(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _parent_tg_text(lang, card)
-    await _show_question(m_or_cb, state, text, reply_markup=skip_back_ext_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_parent_telegram)
-
-
-async def _ask_candidate_telegram(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    text = _candidate_tg_text(lang, card)
-    await _show_question(m_or_cb, state, text, reply_markup=skip_back_ext_kb(lang))
-    await state.set_state(QuestionnaireStates.ext_candidate_telegram)
-
-
 # ══════════════════════════════════════
 # BACK_MAP_EXT + handler back_ext_step
 # ══════════════════════════════════════
@@ -398,10 +380,7 @@ def _get_back_map_ext():
         QuestionnaireStates.ext_housing.state:            _ask_about,
         QuestionnaireStates.ext_housing_parent.state:     _ask_housing,
         # ext_car — conditional, см. handler ниже
-        QuestionnaireStates.ext_parent_phone.state:       _ask_car,
-        QuestionnaireStates.ext_parent_telegram.state:    _ask_parent_phone,
-        QuestionnaireStates.ext_candidate_telegram.state: _ask_parent_telegram,
-        QuestionnaireStates.ext_address.state:            _ask_candidate_telegram,
+        QuestionnaireStates.ext_address.state:            _ask_car,
         QuestionnaireStates.ext_address_text.state:       _ask_address,
         QuestionnaireStates.ext_location.state:           _ask_address,
         QuestionnaireStates.ext_address_link.state:       _ask_address,
@@ -715,164 +694,15 @@ async def _ask_car(m_or_cb, state: FSMContext):
 @router.callback_query(F.data.startswith("car:"), QuestionnaireStates.ext_car)
 async def ext_car(callback: CallbackQuery, state: FSMContext):
     await state.update_data(car=callback.data.replace("car:", ""))
-    await _ask_parent_phone(callback, state)
-    await callback.answer()
-
-
-# ══════════════════════════════════════
-# БЛОК 4: КОНТАКТЫ
-# ══════════════════════════════════════
-
-# ══════════════════════════════════════
-# Общие тексты о защите контактов
-# ══════════════════════════════════════
-
-_CONTACT_NOTICE_RU = (
-    "Ваши контакты будут переданы\n"
-    "только с вашего одобрения.\n"
-    "Модератор сначала свяжется\n"
-    "с вами и спросит разрешения. 🤝"
-)
-_CONTACT_NOTICE_UZ = (
-    "Kontaktlaringiz faqat sizning\n"
-    "roziligingiz bilan beriladi.\n"
-    "Moderator avval siz bilan\n"
-    "bog'lanib ruxsat so'raydi. 🤝"
-)
-
-_CONTACT_NOTICE_SHORT_RU = (
-    "Ваши контакты — только\n"
-    "с вашего одобрения. 🤝"
-)
-_CONTACT_NOTICE_SHORT_UZ = (
-    "Kontaktlaringiz faqat sizning\n"
-    "roziligingiz bilan beriladi. 🤝"
-)
-
-
-# ── 9a. Телефон родителей (с вступлением) ──
-async def _ask_parent_phone(m_or_cb, state: FSMContext):
-    lang = await _lang(state)
-    data = await state.get_data()
-    card = build_ext_card(data, lang)
-    bar = ext_progress_bar(9)
-
-    if lang == "uz":
-        body = (
-            f"📞 9/9-savol\n{bar}\n\n"
-            f"<b>Kontaktlar</b>\n\n"
-            f"{_CONTACT_NOTICE_UZ}\n\n"
-            f"Ota-onalar telefoni:\n"
-            f"Prefiks bilan yoki usiz kiriting:\n"
-            f"+998 90 123 45 67\n"
-            f"yoki shunchaki: 901234567"
-        )
-    else:
-        body = (
-            f"📞 Вопрос 9/9\n{bar}\n\n"
-            f"<b>Контактные данные</b>\n\n"
-            f"{_CONTACT_NOTICE_RU}\n\n"
-            f"Телефон родителей:\n"
-            f"Можно с префиксом или без:\n"
-            f"+998 90 123 45 67\n"
-            f"или просто: 901234567"
-        )
-
-    full_text = (card + SEP + body) if card else body
-    await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang), parse_mode="HTML")
-    await state.set_state(QuestionnaireStates.ext_parent_phone)
-
-
-def _parent_tg_text(lang: str, card: str = "") -> str:
-    if lang == "uz":
-        body = "📱 Ota-onalar Telegram:\n(@username)"
-    else:
-        body = "📱 Telegram родителей:\n(@username)"
-    return (card + SEP + body) if card else body
-
-
-@router.message(QuestionnaireStates.ext_parent_phone)
-async def ext_parent_phone(message: Message, state: FSMContext):
-    phone = message.text.strip()
-    digits = "".join(filter(str.isdigit, phone))
-    if len(digits) == 9:
-        phone = f"+998{digits}"
-    elif len(digits) == 12 and digits.startswith("998"):
-        phone = f"+{digits}"
-    await state.update_data(parent_phone=phone)
-
-    # Удаляем сообщение пользователя
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-    await _ask_parent_telegram(message, state)
-
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_phone)
-async def ext_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(parent_phone=None)
-    await _ask_parent_telegram(callback, state)
-    await callback.answer()
-
-
-# ── 9b. Telegram родителей ──
-def _candidate_tg_text(lang: str, card: str = "") -> str:
-    if lang == "uz":
-        body = "💬 Nomzod Telegram:\n(@username)"
-    else:
-        body = "💬 Telegram кандидата:\n(@username)"
-    return (card + SEP + body) if card else body
-
-
-@router.message(QuestionnaireStates.ext_parent_telegram)
-async def ext_parent_tg(message: Message, state: FSMContext):
-    tg = message.text.strip()
-    if not tg.startswith("@"):
-        tg = f"@{tg}"
-    await state.update_data(parent_telegram=tg)
-
-    # Удаляем сообщение пользователя
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-    await _ask_candidate_telegram(message, state)
-
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_parent_telegram)
-async def ext_parent_tg_skip(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(parent_telegram=None)
-    await _ask_candidate_telegram(callback, state)
-    await callback.answer()
-
-
-# ── 9c. Telegram кандидата ──
-@router.message(QuestionnaireStates.ext_candidate_telegram)
-async def ext_candidate_tg(message: Message, state: FSMContext):
-    tg = message.text.strip()
-    if not tg.startswith("@"):
-        tg = f"@{tg}"
-    await state.update_data(candidate_telegram=tg)
-
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-    await _ask_address(message, state)
-
-
-@router.callback_query(F.data == "skip", QuestionnaireStates.ext_candidate_telegram)
-async def ext_candidate_tg_skip(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(candidate_telegram=None)
     await _ask_address(callback, state)
     await callback.answer()
 
 
-# ── 9d. Адрес / Геолокация / Ссылка ──
+# ══════════════════════════════════════
+# БЛОК 4: АДРЕС
+# ══════════════════════════════════════
+
+# ── Адрес / Геолокация / Ссылка ──
 async def _ask_address(m_or_cb, state: FSMContext):
     lang = await _lang(state)
     data = await state.get_data()
