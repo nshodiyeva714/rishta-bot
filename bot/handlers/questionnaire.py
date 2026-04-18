@@ -37,8 +37,8 @@ SEP = "\n\n━━━━━━━━━━━━━\n\n"
 
 def progress_bar(current: int, total: int) -> str:
     """Прогресс-бар для вопросов анкеты."""
-    filled = round(current / total * 10)
-    empty = 10 - filled
+    filled = current
+    empty = total - filled
     bar = "▓" * filled + "░" * empty
     pct = round(current / total * 100)
     return f"{bar}  {pct}%"
