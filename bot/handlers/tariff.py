@@ -18,7 +18,7 @@ from bot.texts import t
 from bot.keyboards.inline import (
     req_age_kb, req_education_kb, req_residence_kb,
     req_residence_simple_kb, req_residence_regions_kb,
-    req_nationality_kb,
+    req_nationality_kb, req_nationality_more_kb,
     req_religiosity_kb, req_marital_kb, req_children_kb,
     req_car_kb, req_housing_kb, req_job_kb,
     skip_kb, confirm_profile_kb, main_menu_kb,
@@ -164,17 +164,50 @@ async def req_residence_region(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+async def _advance_after_req_nationality(callback_or_message, state: FSMContext, lang: str) -> None:
+    """После выбора/ввода национальности-требования — переход к религиозности."""
+    kb = add_nav(req_religiosity_kb(lang).inline_keyboard, lang, "back:menu", show_main=False)
+    if hasattr(callback_or_message, "message"):
+        await callback_or_message.message.edit_text(t("req_religiosity", lang), reply_markup=kb)
+    else:
+        await callback_or_message.answer(t("req_religiosity", lang), reply_markup=kb)
+    await state.set_state(RequirementStates.religiosity)
+
+
 @router.callback_query(F.data.startswith("reqnat:"), RequirementStates.nationality)
 async def req_nationality(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
-    await state.update_data(req_nationality=value)
     lang = await _lang(state)
-    await callback.message.edit_text(
-        t("req_religiosity", lang),
-        reply_markup=add_nav(req_religiosity_kb(lang).inline_keyboard, lang, "back:menu", show_main=False),
-    )
-    await state.set_state(RequirementStates.religiosity)
+
+    if value == "more":
+        await callback.message.edit_reply_markup(reply_markup=req_nationality_more_kb(lang))
+        await callback.answer()
+        return
+    if value == "back":
+        await callback.message.edit_reply_markup(reply_markup=req_nationality_kb(lang))
+        await callback.answer()
+        return
+    if value == "custom":
+        prompt = "✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:"
+        await callback.message.edit_text(prompt)
+        await state.set_state(RequirementStates.nationality_custom)
+        await callback.answer()
+        return
+
+    await state.update_data(req_nationality=value)
+    await _advance_after_req_nationality(callback, state, lang)
     await callback.answer()
+
+
+@router.message(RequirementStates.nationality_custom)
+async def req_nationality_custom(message: Message, state: FSMContext):
+    nat = (message.text or "").strip()[:50]
+    lang = await _lang(state)
+    if not nat:
+        await message.answer("✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:")
+        return
+    await state.update_data(req_nationality=nat)
+    await _advance_after_req_nationality(message, state, lang)
 
 
 @router.callback_query(F.data.startswith("reqrel:"), RequirementStates.religiosity)

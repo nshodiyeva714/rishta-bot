@@ -20,7 +20,7 @@ from bot.keyboards.inline import (
     quest_start_kb, contact_moderator_kb, vip_duration_kb,
     choose_moderator_kb, search_submenu_kb, create_submenu_kb,
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
-    edit_marital_kb, edit_nationality_kb, nav_kb, add_nav,
+    edit_marital_kb, edit_nationality_kb, edit_nationality_more_kb, nav_kb, add_nav,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -568,11 +568,42 @@ async def edit_nationality_save(callback: CallbackQuery, state: FSMContext, sess
     nat = callback.data.split(":")[1]
     data = await state.get_data()
     lang = data.get("lang", "ru")
+
+    if nat == "more":
+        await callback.message.edit_reply_markup(reply_markup=edit_nationality_more_kb(lang))
+        await callback.answer()
+        return
+    if nat == "back":
+        await callback.message.edit_reply_markup(reply_markup=edit_nationality_kb(lang))
+        await callback.answer()
+        return
+    if nat == "custom":
+        prompt = "✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:"
+        await _safe_edit(callback, prompt, reply_markup=back_kb(lang))
+        await state.set_state(EditProfileStates.nationality_custom)
+        await callback.answer()
+        return
+
     profile = await session.get(Profile, data["edit_profile_id"])
     if profile and profile.user_id == callback.from_user.id:
         profile.nationality = nat
         await session.commit()
     await _finish_edit(callback, state, session, lang)
+
+
+@router.message(EditProfileStates.nationality_custom)
+async def edit_nationality_custom(message: Message, state: FSMContext, session: AsyncSession):
+    nat = (message.text or "").strip()[:50]
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    if not nat:
+        await message.answer("✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:")
+        return
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == message.from_user.id:
+        profile.nationality = nat
+        await session.commit()
+    await _finish_edit(message, state, session, lang)
 
 
 # ── Город ──

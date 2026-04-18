@@ -14,6 +14,7 @@ class QuestionnaireStates(StatesGroup):
     q3_height = State()            # 2C. Рост (часть вопроса 2)
     q4_body_type = State()         # 4. Телосложение
     q12_nationality = State()      # 5. Национальность
+    q12_nationality_custom = State()  # 5a. Ввод своей национальности
     q6_city = State()              # 6. Страна (кнопки)
     q6_region = State()            # 6a. Область Узбекистана (кнопки)
     q6_district = State()          # 6b. Район (текст)
@@ -61,6 +62,7 @@ class RequirementStates(StatesGroup):
     residence = State()
     residence_city = State()
     nationality = State()
+    nationality_custom = State()
     religiosity = State()
     marital_status = State()
     children = State()
@@ -108,6 +110,7 @@ class EditProfileStates(StatesGroup):
     occupation = State()
     photo = State()
     phone = State()
+    nationality_custom = State()
 
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()

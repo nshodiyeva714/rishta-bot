@@ -226,17 +226,61 @@ def region_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return city_kb(lang)  # same cities as regions
 
 
+_NAT_MAIN_KEYS = ["uzbek", "russian", "tajik", "kazakh", "korean"]
+_NAT_MORE_KEYS = ["karakalpak", "tatar", "uyghur", "turkish", "kyrgyz", "turkmen"]
+
+
+def _nat_label(key: str, lang: str) -> str:
+    from bot.utils.helpers import nationality_label
+    return nationality_label(key, lang)
+
+
+def nationality_main_rows(lang: str, prefix: str, *, show_any: bool = False) -> list:
+    """5 национальностей + «🌍 Другая» (→ подменю) + опц. «✅ Не важно».
+
+    prefix задаёт scheme callback-ов: nat / editnat / reqnat / fval:nationality.
+    """
+    rows: list = []
+    pair: list = []
+    for key in _NAT_MAIN_KEYS:
+        pair.append(InlineKeyboardButton(text=_nat_label(key, lang), callback_data=f"{prefix}:{key}"))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    other_label = "🌍 Другая" if lang != "uz" else "🌍 Boshqa"
+    pair.append(InlineKeyboardButton(text=other_label, callback_data=f"{prefix}:more"))
+    rows.append(pair)
+    if show_any:
+        any_label = "✅ Не важно" if lang != "uz" else "✅ Muhim emas"
+        rows.append([InlineKeyboardButton(text=any_label, callback_data=f"{prefix}:any")])
+    return rows
+
+
+def nationality_more_rows(lang: str, prefix: str, *, show_custom: bool = True) -> list:
+    """6 национальностей подменю + опц. «✍️ Ввести свою» + «🔙 Назад» (→ главное)."""
+    rows: list = []
+    pair: list = []
+    for key in _NAT_MORE_KEYS:
+        pair.append(InlineKeyboardButton(text=_nat_label(key, lang), callback_data=f"{prefix}:{key}"))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    if pair:
+        rows.append(pair)
+    if show_custom:
+        custom = "✍️ Ввести свою" if lang != "uz" else "✍️ O'zingiz kiriting"
+        rows.append([InlineKeyboardButton(text=custom, callback_data=f"{prefix}:custom")])
+    back = "🔙 Назад" if lang != "uz" else "🔙 Orqaga"
+    rows.append([InlineKeyboardButton(text=back, callback_data=f"{prefix}:back")])
+    return rows
+
+
 def nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["🇺🇿 Узбек", "🇷🇺 Русский", "🇰🇷 Кореец", "🇹🇯 Таджик", "🇰🇿 Казах", "🌍 Другая"],
-        "uz": ["🇺🇿 O'zbek", "🇷🇺 Rus", "🇰🇷 Koreys", "🇹🇯 Tojik", "🇰🇿 Qozoq", "🌍 Boshqa"],
-    }
-    values = ["uzbek", "russian", "korean", "tajik", "kazakh", "other"]
-    rows = []
-    for i in range(0, len(values), 2):
-        row = [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=f"nat:{values[j]}") for j in range(i, min(i + 2, len(values)))]
-        rows.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return InlineKeyboardMarkup(inline_keyboard=nationality_main_rows(lang, "nat"))
+
+
+def nationality_more_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=nationality_more_rows(lang, "nat"))
 
 
 def family_position_kb(lang: str = "ru") -> InlineKeyboardMarkup:
@@ -666,16 +710,11 @@ def req_residence_regions_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def req_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    labels = {
-        "ru": ["🇺🇿 Узбечка", "🇷🇺 Русская", "🇰🇷 Кореянка", "🇹🇯 Таджичка", "🇰🇿 Казашка", "✅ Не важно"],
-        "uz": ["🇺🇿 O'zbek", "🇷🇺 Rus", "🇰🇷 Koreys", "🇹🇯 Tojik", "🇰🇿 Qozoq", "✅ Muhim emas"],
-    }
-    values = ["uzbek", "russian", "korean", "tajik", "kazakh", "any"]
-    rows = []
-    for i in range(0, len(values), 2):
-        row = [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=f"reqnat:{values[j]}") for j in range(i, min(i + 2, len(values)))]
-        rows.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return InlineKeyboardMarkup(inline_keyboard=nationality_main_rows(lang, "reqnat", show_any=True))
+
+
+def req_nationality_more_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=nationality_more_rows(lang, "reqnat"))
 
 
 def req_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
@@ -1253,16 +1292,11 @@ def edit_marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMar
 
 def edit_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура национальностей для редактирования (prefix editnat:)."""
-    labels = {
-        "ru": ["🇺🇿 Узбек", "🇷🇺 Русский", "🇰🇷 Кореец", "🇹🇯 Таджик", "🇰🇿 Казах", "🌍 Другая"],
-        "uz": ["🇺🇿 O'zbek", "🇷🇺 Rus", "🇰🇷 Koreys", "🇹🇯 Tojik", "🇰🇿 Qozoq", "🌍 Boshqa"],
-    }
-    values = ["uzbek", "russian", "korean", "tajik", "kazakh", "other"]
-    rows = []
-    for i in range(0, len(values), 2):
-        row = [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[j], callback_data=f"editnat:{values[j]}") for j in range(i, min(i + 2, len(values)))]
-        rows.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    return InlineKeyboardMarkup(inline_keyboard=nationality_main_rows(lang, "editnat"))
+
+
+def edit_nationality_more_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=nationality_more_rows(lang, "editnat"))
 
 
 def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:

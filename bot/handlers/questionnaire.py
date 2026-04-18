@@ -13,9 +13,9 @@ from aiogram.fsm.context import FSMContext
 
 from bot.states import QuestionnaireStates, TariffStates
 from bot.texts import t
-from bot.utils.helpers import occupation_label
+from bot.utils.helpers import occupation_label, nationality_label
 from bot.keyboards.inline import (
-    education_kb, nationality_kb, religiosity_kb,
+    education_kb, nationality_kb, nationality_more_kb, religiosity_kb,
     marital_kb, children_kb, photo_type_kb,
     confirm_age_kb, tariff_kb, skip_kb,
     back_step_kb, add_nav, body_type_kb, occupation_kb,
@@ -78,14 +78,9 @@ def build_card(data: dict, lang: str = "ru") -> str:
         lines.append(body_map[L].get(body, body))
 
     # Национальность
-    nat_map = {
-        "ru": {"uzbek": "Узбек", "russian": "Русский", "korean": "Кореец", "tajik": "Таджик", "kazakh": "Казах", "other": "Другая"},
-        "uz": {"uzbek": "O'zbek", "russian": "Rus", "korean": "Koreys", "tajik": "Tojik", "kazakh": "Qozoq", "other": "Boshqa"},
-    }
     nat = data.get("nationality")
     if nat:
-        nat_label = nat_map[L].get(nat, nat)
-        lines.append(f"{'Нац.' if L == 'ru' else 'Millat'}: {nat_label}")
+        lines.append(f"{'Нац.' if L == 'ru' else 'Millat'}: {nationality_label(nat, L)}")
 
     # Город + район
     city = data.get("city")
@@ -369,23 +364,59 @@ async def q4_body_type(callback: CallbackQuery, state: FSMContext):
 
 
 # ── 5. Национальность ──
-@router.callback_query(F.data.startswith("nat:"), QuestionnaireStates.q12_nationality)
-async def q5_nationality(callback: CallbackQuery, state: FSMContext):
-    value = callback.data.split(":")[1]
-    await state.update_data(nationality=value)
-    lang = await _lang(state)
+async def _advance_after_nationality(callback_or_message, state: FSMContext, lang: str) -> None:
+    """После выбора/ввода национальности — переход к шагу «Город»."""
     data = await state.get_data()
-    # → 6. Город (кнопки)
     bar = progress_bar(6, 10)
     q_text = t("q6_city", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    await callback.message.edit_text(
-        full_text,
-        reply_markup=add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
-    )
-    await state.update_data(last_bot_msg=callback.message.message_id)
+    kb = add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False)
+    if hasattr(callback_or_message, "message"):
+        await callback_or_message.message.edit_text(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=callback_or_message.message.message_id)
+    else:
+        sent = await callback_or_message.answer(full_text, reply_markup=kb)
+        await state.update_data(last_bot_msg=sent.message_id)
     await state.set_state(QuestionnaireStates.q6_city)
+
+
+@router.callback_query(F.data.startswith("nat:"), QuestionnaireStates.q12_nationality)
+async def q5_nationality(callback: CallbackQuery, state: FSMContext):
+    value = callback.data.split(":")[1]
+    lang = await _lang(state)
+
+    if value == "more":
+        await callback.message.edit_reply_markup(reply_markup=nationality_more_kb(lang))
+        await callback.answer()
+        return
+    if value == "back":
+        await callback.message.edit_reply_markup(
+            reply_markup=add_nav(nationality_kb(lang).inline_keyboard, lang, "back_step", show_main=False)
+        )
+        await callback.answer()
+        return
+    if value == "custom":
+        prompt = "✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:"
+        await callback.message.edit_text(prompt)
+        await state.update_data(last_bot_msg=callback.message.message_id)
+        await state.set_state(QuestionnaireStates.q12_nationality_custom)
+        await callback.answer()
+        return
+
+    await state.update_data(nationality=value)
+    await _advance_after_nationality(callback, state, lang)
     await callback.answer()
+
+
+@router.message(QuestionnaireStates.q12_nationality_custom)
+async def q5_nationality_custom(message: Message, state: FSMContext):
+    await _delete_old(message, state)
+    nat = (message.text or "").strip()[:50]
+    if not nat:
+        return
+    await state.update_data(nationality=nat)
+    lang = await _lang(state)
+    await _advance_after_nationality(message, state, lang)
 
 
 # ── 6. Страна/Область/Район — двухуровневая навигация ──

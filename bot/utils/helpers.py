@@ -49,6 +49,49 @@ def occupation_label(key, lang: str = "ru") -> str:
     return _OCCUPATION_LABELS[L].get(key, key)
 
 
+_NATIONALITY_LABELS = {
+    "ru": {
+        "uzbek":      "🇺🇿 Узбек",
+        "russian":    "🇷🇺 Русский",
+        "tajik":      "🇹🇯 Таджик",
+        "kazakh":     "🇰🇿 Казах",
+        "korean":     "🇰🇷 Кореец",
+        "karakalpak": "🌾 Каракалпак",
+        "tatar":      "Татарин",
+        "uyghur":     "Уйгур",
+        "turkish":    "Турок",
+        "kyrgyz":     "🇰🇬 Киргиз",
+        "turkmen":    "🇹🇲 Туркмен",
+        "other":      "🌍 Другая",
+    },
+    "uz": {
+        "uzbek":      "🇺🇿 O'zbek",
+        "russian":    "🇷🇺 Rus",
+        "tajik":      "🇹🇯 Tojik",
+        "kazakh":     "🇰🇿 Qozoq",
+        "korean":     "🇰🇷 Koreys",
+        "karakalpak": "🌾 Qoraqalpoq",
+        "tatar":      "Tatar",
+        "uyghur":     "Uyg'ur",
+        "turkish":    "Turk",
+        "kyrgyz":     "🇰🇬 Qirg'iz",
+        "turkmen":    "🇹🇲 Turkman",
+        "other":      "🌍 Boshqa",
+    },
+}
+
+
+def nationality_label(key, lang: str = "ru") -> str:
+    """Человекочитаемая метка национальности по ключу из БД.
+
+    None / "" → "—". Неизвестный ключ (свободный текстовый ввод / legacy) → key как есть.
+    """
+    if key is None or key == "" or key == "—":
+        return "—"
+    L = lang if lang in ("ru", "uz") else "ru"
+    return _NATIONALITY_LABELS[L].get(key, key)
+
+
 def age_text(age: int, lang: str = "ru") -> str:
     """Age with correct word form. UZ uses 'da', RU uses год/года/лет."""
     if lang == "uz":
@@ -234,17 +277,6 @@ def _scope_map(lang: str = "ru") -> dict:
     }
 
 
-def _nat_map(lang: str = "ru") -> dict:
-    return {
-        "uzbek": "🇺🇿 Узбек" if lang == "ru" else "🇺🇿 O'zbek",
-        "russian": "🇷🇺 Русский" if lang == "ru" else "🇷🇺 Rus",
-        "korean": "🇰🇷 Кореец" if lang == "ru" else "🇰🇷 Koreys",
-        "tajik": "🇹🇯 Таджик" if lang == "ru" else "🇹🇯 Tojik",
-        "kazakh": "🇰🇿 Казах" if lang == "ru" else "🇰🇿 Qozoq",
-        "other": "🌍 Другая" if lang == "ru" else "🌍 Boshqa",
-    }
-
-
 def _position_map(lang: str = "ru") -> dict:
     return {
         "oldest": "старший" if lang == "ru" else "katta",
@@ -292,7 +324,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
 
     car = _car_map(L).get(_ev(profile, "car"), "—")
     scope = _scope_map(L).get(_ev(profile, "search_scope"), "—")
-    nat = _nat_map(L).get(profile.nationality or "", profile.nationality or "—")
+    nat = nationality_label(profile.nationality, L)
     rel = _rel_map(L).get(_ev(profile, "religiosity"), "—")
     mar = _marital_map(is_son, L).get(_ev(profile, "marital_status"), "—")
     ch = _children_map(L).get(_ev(profile, "children_status"), "—")
@@ -468,8 +500,7 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
 
     # 3. Национальность (флаг уже в значении — без доп. иконки)
     if profile.nationality:
-        nat = _nat_map(L).get(profile.nationality, profile.nationality)
-        lines.append(nat)
+        lines.append(nationality_label(profile.nationality, L))
 
     # 4. 🏡 Город и район
     if profile.city:

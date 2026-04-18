@@ -18,6 +18,7 @@ from bot.keyboards.inline import (
     profile_card_kb, search_nav_kb, back_kb, back_main_kb, main_menu_kb,
     get_contact_kb, search_mode_kb, search_no_anketa_kb,
     search_filter_kb, filter_option_kb, nav_kb,
+    nationality_main_rows, nationality_more_rows,
 )
 from bot.utils.helpers import age_text, calculate_age, format_anketa_public, occupation_label
 from bot.config import config
@@ -783,20 +784,39 @@ async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
 # ── Фильтр: национальность ──
 
 
+_FILTER_NAT_PREFIX = "fval:nationality"
+
+
+def _filter_nat_main_kb(lang: str) -> InlineKeyboardMarkup:
+    rows = nationality_main_rows(lang, _FILTER_NAT_PREFIX, show_any=True)
+    rows.extend(nav_kb(lang, "filter:back"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _filter_nat_more_kb(lang: str) -> InlineKeyboardMarkup:
+    rows = nationality_more_rows(lang, _FILTER_NAT_PREFIX, show_custom=False)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 @router.callback_query(F.data == "filter:nationality")
 async def filter_nationality(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
-    options = [
-        ("Узбек" if lang == "ru" else "O'zbek", "fval:nationality:uzbek"),
-        ("Русский" if lang == "ru" else "Rus", "fval:nationality:russian"),
-        ("Кореец" if lang == "ru" else "Koreys", "fval:nationality:korean"),
-        ("Таджик" if lang == "ru" else "Tojik", "fval:nationality:tajik"),
-        ("Казах" if lang == "ru" else "Qozoq", "fval:nationality:kazakh"),
-        ("Другая" if lang == "ru" else "Boshqa", "fval:nationality:other"),
-        ("Не важно" if lang == "ru" else "Muhim emas", "fval:nationality:any"),
-    ]
     title = "Национальность:" if lang == "ru" else "Millat:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    await callback.message.edit_text(title, reply_markup=_filter_nat_main_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "fval:nationality:more")
+async def filter_nationality_more(callback: CallbackQuery, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    await callback.message.edit_reply_markup(reply_markup=_filter_nat_more_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "fval:nationality:back")
+async def filter_nationality_back(callback: CallbackQuery, session: AsyncSession):
+    lang = await get_lang(session, callback.from_user.id)
+    await callback.message.edit_reply_markup(reply_markup=_filter_nat_main_kb(lang))
     await callback.answer()
 
 
