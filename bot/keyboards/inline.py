@@ -1184,6 +1184,38 @@ def vip_mod_card_kb(req_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def vip_moderator_intro_kb(profile_id: int, days: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Путь Б — экран с реквизитами: задать вопрос / прислать скриншот / назад."""
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_vip_ask_question", lang),
+                              callback_data=f"vip_ask:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=t("btn_vip_send_screenshot", lang),
+                              callback_data=f"vip_ss_moderator:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=back,
+                              callback_data=f"vip:back_to_method:{profile_id}:{days}")],
+    ])
+
+
+def vip_after_reply_kb(profile_id: int, days: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """После ответа модератора — задать ещё / прислать скриншот / в меню."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t("btn_vip_ask_more", lang),
+                              callback_data=f"vip_ask:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=t("btn_vip_send_screenshot", lang),
+                              callback_data=f"vip_ss_moderator:{profile_id}:{days}")],
+        [InlineKeyboardButton(text=t("btn_vip_home", lang),
+                              callback_data="menu:main")],
+    ])
+
+
+def vip_mod_reply_kb(req_id: int) -> InlineKeyboardMarkup:
+    """Модератору: одна кнопка «💬 Ответить» под VIP-вопросом пользователя."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Ответить", callback_data=f"vipmod:reply:{req_id}")],
+    ])
+
+
 def mod_vip_duration_kb(profile_id: int) -> InlineKeyboardMarkup:
     """Выбор срока VIP модератором."""
     durations = [

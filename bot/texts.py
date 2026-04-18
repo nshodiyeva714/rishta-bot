@@ -1258,6 +1258,76 @@ T = {
     },
     "vip_method_self_label": {"ru": "Оплата самостоятельно (скриншот)"},
     "vip_method_moderator_label": {"ru": "Через модератора (напрямую)"},
+
+    # ── Путь Б (диалог с модератором) ──
+    "vip_moderator_intro": {
+        "ru": (
+            "💁‍♀️ <b>Связь с модератором</b>\n\n"
+            "Реквизиты для оплаты:\n"
+            "Карта: <code>5614 6887 0899 8959</code>\n"
+            "Получатель: SHODIYEVA NASIBA\n"
+            "Сумма: <b>{price}</b>\n\n"
+            "Если нужна помощь — задайте вопрос модератору\n"
+            "или пришлите скриншот оплаты."
+        ),
+        "uz": (
+            "💁‍♀️ <b>Moderator bilan aloqa</b>\n\n"
+            "To'lov rekvizitlari:\n"
+            "Karta: <code>5614 6887 0899 8959</code>\n"
+            "Qabul qiluvchi: SHODIYEVA NASIBA\n"
+            "Summa: <b>{price}</b>\n\n"
+            "Yordam kerak bo'lsa — moderatorga savol bering\n"
+            "yoki to'lov skrinshotini yuboring."
+        ),
+    },
+    "vip_ask_prompt": {
+        "ru": "✍️ Напишите ваш вопрос модератору одним сообщением.",
+        "uz": "✍️ Savolingizni moderatorga bitta xabarda yozing.",
+    },
+    "vip_question_sent": {
+        "ru": (
+            "✅ Вопрос отправлен (<b>{display_id}</b>).\n"
+            "Модератор ответит в ближайшее время."
+        ),
+        "uz": (
+            "✅ Savol yuborildi (<b>{display_id}</b>).\n"
+            "Moderator tez orada javob beradi."
+        ),
+    },
+    "vip_reply_received": {
+        "ru": (
+            "💁‍♀️ <b>Ответ модератора:</b>\n"
+            "🔖 {display_id}\n\n"
+            "{text}"
+        ),
+        "uz": (
+            "💁‍♀️ <b>Moderator javobi:</b>\n"
+            "🔖 {display_id}\n\n"
+            "{text}"
+        ),
+    },
+    "btn_vip_ask_question": {
+        "ru": "💬 Задать вопрос",
+        "uz": "💬 Savol berish",
+    },
+    "btn_vip_ask_more": {
+        "ru": "💬 Задать ещё",
+        "uz": "💬 Yana savol",
+    },
+    "btn_vip_home": {
+        "ru": "🏠 В меню",
+        "uz": "🏠 Menyuga",
+    },
+    "vip_new_question_mod": {
+        "ru": (
+            "⭐ <b>VIP-ВОПРОС {display_id}</b>\n\n"
+            "👤 {username_or_id}\n"
+            "🔖 Анкета: {profile_display_id}\n"
+            "📅 Срок: {days_label}\n"
+            "💰 Сумма: {price}\n\n"
+            "❓ Вопрос:\n{question}"
+        ),
+    },
 }
 
 

@@ -128,4 +128,10 @@ class ContactStates(StatesGroup):
 
 
 class VipPaymentStates(StatesGroup):
-    waiting_screenshot = State()  # юзер прислал выбор срока, жду скриншот оплаты
+    waiting_screenshot = State()  # Путь А — скриншот оплаты
+    waiting_question = State()  # Путь Б — текст вопроса модератору
+    waiting_screenshot_moderator = State()  # Путь Б — скриншот после разговора
+
+
+class VipModReplyStates(StatesGroup):
+    awaiting_reply = State()  # модератор пишет ответ на VIP-вопрос пользователя

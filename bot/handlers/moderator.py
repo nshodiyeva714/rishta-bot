@@ -15,12 +15,12 @@ from bot.db.models import (
     Favorite, ProfileType, ContactRequest, RequestStatus,
     VipRequest, VipRequestStatus, VipPaymentMethod,
 )
-from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates
+from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates, VipModReplyStates
 from bot.texts import t
 from bot.config import config, is_moderator
 from bot.keyboards.inline import (
     mod_review_kb, mod_found_kb, mod_vip_duration_kb,
-    vip_mod_list_kb, vip_mod_card_kb,
+    vip_mod_list_kb, vip_mod_card_kb, vip_after_reply_kb,
 )
 from bot.utils.helpers import format_full_anketa, occupation_label
 
@@ -2214,3 +2214,75 @@ async def vipmod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     await callback.answer("❌ Отклонено")
+
+
+# ── «💬 Ответить» на VIP-вопрос пользователя (Путь Б) ──
+@router.callback_query(F.data.startswith("vipmod:reply:"))
+async def vipmod_reply_start(callback: CallbackQuery, state: FSMContext):
+    """Модератор жмёт «💬 Ответить» под VIP-вопросом — ждём текст ответа."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        req_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    await state.update_data(vip_reply_req_id=req_id)
+    await state.set_state(VipModReplyStates.awaiting_reply)
+    try:
+        await callback.message.answer(f"💬 Введите ответ по VIP-заявке #{req_id}:")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.message(VipModReplyStates.awaiting_reply, F.text)
+async def vipmod_reply_send(message: Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    """Модератор прислал ответ — пересылаем пользователю и показываем after_reply_kb."""
+    if not is_moderator(message.from_user.id):
+        return
+
+    data = await state.get_data()
+    req_id = data.get("vip_reply_req_id")
+    if not req_id:
+        await state.set_state(None)
+        return
+
+    req = await session.get(VipRequest, req_id)
+    if not req:
+        await state.set_state(None)
+        await message.answer("⚠️ Заявка не найдена.")
+        return
+
+    # Язык пользователя
+    user_result = await session.execute(select(User).where(User.id == req.user_id))
+    user = user_result.scalar_one_or_none()
+    user_lang = user.language.value if user and user.language else "ru"
+
+    reply_text = (message.text or "").strip()
+    if not reply_text:
+        return
+
+    try:
+        await bot.send_message(
+            req.user_id,
+            t(
+                "vip_reply_received", user_lang,
+                display_id=req.display_id or "—",
+                text=reply_text,
+            ),
+            reply_markup=vip_after_reply_kb(req.profile_id, req.days, user_lang),
+        )
+        ok = True
+    except Exception as e:
+        logger.error(f"vipmod_reply_send to {req.user_id}: {e}")
+        ok = False
+
+    await message.answer(
+        f"✅ Ответ отправлен по {req.display_id or req_id}"
+        if ok else
+        f"⚠️ Не удалось отправить ответ по {req.display_id or req_id}"
+    )
+    await state.set_state(None)

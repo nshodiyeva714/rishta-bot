@@ -18,6 +18,7 @@ from bot.keyboards.inline import (
     mod_payment_kb, meeting_skip_kb, back_main_kb,
     main_menu_kb, nav_kb,
     vip_duration_kb, vip_method_kb, vip_pay_card_kb,
+    vip_moderator_intro_kb, vip_after_reply_kb, vip_mod_reply_kb,
     _vip_price_for, _fmt_price, VIP_DURATIONS,
 )
 from bot.config import config, get_all_moderator_ids
@@ -224,30 +225,40 @@ async def _generate_vip_display_id(session: AsyncSession) -> str:
     return f"VIP-{count + 1:03d}"
 
 
-async def _notify_mods_new_vip_request(bot: Bot, req: VipRequest, profile: Profile, username_or_id: str):
-    """Пуш всем модераторам о новой VIP-заявке."""
-    days_label_ru = _days_label(req.days, "ru")
-    price_str = _fmt_price(req.amount, "uzb")
-    method_label = (
-        t("vip_method_self_label", "ru")
-        if req.payment_method == VipPaymentMethod.SELF
-        else t("vip_method_moderator_label", "ru")
-    )
-    text = t(
-        "vip_new_request_mod", "ru",
-        display_id=req.display_id,
-        username_or_id=username_or_id,
-        profile_display_id=profile.display_id or "—",
-        days_label=days_label_ru,
-        price=price_str,
-        method_label=method_label,
-    )
+async def _notify_mods_new_vip_request(
+    bot: Bot, req: VipRequest, profile: Profile, username_or_id: str,
+    *, reply_kb=None, custom_text: str | None = None,
+):
+    """Пуш всем модераторам о новой VIP-заявке.
+
+    reply_kb — опциональная клавиатура (например, «💬 Ответить» для вопросов).
+    custom_text — если задан, используется вместо стандартного шаблона.
+    """
+    if custom_text is not None:
+        text = custom_text
+    else:
+        days_label_ru = _days_label(req.days, "ru")
+        price_str = _fmt_price(req.amount, "uzb")
+        method_label = (
+            t("vip_method_self_label", "ru")
+            if req.payment_method == VipPaymentMethod.SELF
+            else t("vip_method_moderator_label", "ru")
+        )
+        text = t(
+            "vip_new_request_mod", "ru",
+            display_id=req.display_id,
+            username_or_id=username_or_id,
+            profile_display_id=profile.display_id or "—",
+            days_label=days_label_ru,
+            price=price_str,
+            method_label=method_label,
+        )
     for mod_id in get_all_moderator_ids():
         try:
-            if req.payment_method == VipPaymentMethod.SELF and req.screenshot_file_id:
-                await bot.send_photo(mod_id, photo=req.screenshot_file_id, caption=text)
+            if req.screenshot_file_id:
+                await bot.send_photo(mod_id, photo=req.screenshot_file_id, caption=text, reply_markup=reply_kb)
             else:
-                await bot.send_message(mod_id, text)
+                await bot.send_message(mod_id, text, reply_markup=reply_kb)
         except Exception as _e:
             logger.debug("notify mod %s failed: %s", mod_id, _e)
 
@@ -428,9 +439,14 @@ async def vip_screenshot_invalid(message: Message, state: FSMContext, session: A
     await message.answer(t("vip_pay_card_prompt", lang))
 
 
-# ── «💁‍♀️ Связаться с модератором» (Путь Б) — создаём VipRequest сразу ──
+# ── «💁‍♀️ Связаться с модератором» (Путь Б) — показать intro с реквизитами ──
 @router.callback_query(F.data.startswith("vip_pay:moderator:"))
-async def vip_pay_moderator(callback: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot):
+async def vip_pay_moderator(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Показать реквизиты + кнопки [Задать вопрос / Скриншот / Назад].
+
+    VipRequest здесь НЕ создаётся — появится только когда юзер задаст
+    вопрос или пришлёт скриншот.
+    """
     parts = callback.data.split(":")
     try:
         profile_id = int(parts[2])
@@ -450,10 +466,74 @@ async def vip_pay_moderator(callback: CallbackQuery, state: FSMContext, session:
         await callback.answer("⚠️ Анкета не найдена", show_alert=True)
         return
 
+    await state.update_data(vip_profile_id=profile_id, vip_days=days, vip_amount=amount)
+
+    text = t("vip_moderator_intro", lang, price=price_str)
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=vip_moderator_intro_kb(profile_id, days, lang),
+        )
+    except Exception as _e:
+        logger.debug("edit_text failed: %s", _e)
+    await callback.answer()
+
+
+# ── «💬 Задать вопрос» ──
+@router.callback_query(F.data.startswith("vip_ask:"))
+async def vip_ask(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    parts = callback.data.split(":")
+    try:
+        profile_id = int(parts[1])
+        days = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(vip_profile_id=profile_id, vip_days=days)
+    await state.set_state(VipPaymentStates.waiting_question)
+    try:
+        await callback.message.edit_text(t("vip_ask_prompt", lang))
+    except Exception as _e:
+        logger.debug("edit_text failed: %s", _e)
+    await callback.answer()
+
+
+# ── Получение текста вопроса от юзера ──
+@router.message(VipPaymentStates.waiting_question, F.text)
+async def vip_receive_question(message: Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    data = await state.get_data()
+    profile_id = data.get("vip_profile_id")
+    days = data.get("vip_days")
+    amount = data.get("vip_amount")
+    lang = await get_lang(session, message.from_user.id)
+
+    if not (profile_id and days):
+        await state.clear()
+        await message.answer("⚠️ Контекст утерян. Начните заново через «Мои заявки».")
+        return
+
+    profile = await session.get(Profile, profile_id)
+    if not profile or profile.user_id != message.from_user.id:
+        await state.clear()
+        await message.answer("⚠️ Анкета не найдена.")
+        return
+
+    # Если amount не в FSM — вычислим по текущему региону
+    if not amount:
+        region = data.get("vip_region", "uzb")
+        amount = _vip_price_for(days, region)
+
+    question_text = (message.text or "").strip()[:2000]
+    if not question_text:
+        await message.answer(t("vip_ask_prompt", lang))
+        return
+
     display_id = await _generate_vip_display_id(session)
     req = VipRequest(
         profile_id=profile.id,
-        user_id=callback.from_user.id,
+        user_id=message.from_user.id,
         days=days,
         amount=amount,
         display_id=display_id,
@@ -465,23 +545,104 @@ async def vip_pay_moderator(callback: CallbackQuery, state: FSMContext, session:
     await session.commit()
     await session.refresh(req)
 
-    moderator = config.moderator_tashkent
-    text = t(
-        "vip_pay_moderator_text", lang,
+    # Пуш модераторам: шаблон vip_new_question_mod + кнопка «💬 Ответить»
+    username_or_id = f"@{message.from_user.username}" if message.from_user.username else f"ID:{message.from_user.id}"
+    days_label_ru = _days_label(req.days, "ru")
+    price_str = _fmt_price(req.amount, "uzb")
+    mod_text = t(
+        "vip_new_question_mod", "ru",
+        display_id=req.display_id,
+        username_or_id=username_or_id,
+        profile_display_id=profile.display_id or "—",
+        days_label=days_label_ru,
         price=price_str,
-        moderator=moderator,
-        display_id=profile.display_id or display_id,
+        question=question_text,
     )
+    await _notify_mods_new_vip_request(
+        bot, req, profile, username_or_id,
+        reply_kb=vip_mod_reply_kb(req.id),
+        custom_text=mod_text,
+    )
+
+    await message.answer(
+        t("vip_question_sent", lang, display_id=display_id),
+        reply_markup=vip_after_reply_kb(profile_id, days, lang),
+    )
+    await state.set_state(None)
+
+
+# ── «📤 Отправить скриншот» (из Пути Б) ──
+@router.callback_query(F.data.startswith("vip_ss_moderator:"))
+async def vip_ss_moderator_prompt(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    parts = callback.data.split(":")
     try:
-        await callback.message.edit_text(
-            text,
-            reply_markup=main_menu_kb(lang, callback.from_user.id),
-        )
+        profile_id = int(parts[1])
+        days = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(vip_profile_id=profile_id, vip_days=days)
+    await state.set_state(VipPaymentStates.waiting_screenshot_moderator)
+    try:
+        await callback.message.edit_text(t("vip_pay_card_prompt", lang))
     except Exception as _e:
         logger.debug("edit_text failed: %s", _e)
+    await callback.answer()
 
-    username_or_id = f"@{callback.from_user.username}" if callback.from_user.username else f"ID:{callback.from_user.id}"
+
+# ── Получение фото-скриншота (Путь Б) ──
+@router.message(VipPaymentStates.waiting_screenshot_moderator, F.photo)
+async def vip_receive_screenshot_moderator(message: Message, state: FSMContext, session: AsyncSession, bot: Bot):
+    data = await state.get_data()
+    profile_id = data.get("vip_profile_id")
+    days = data.get("vip_days")
+    amount = data.get("vip_amount")
+    lang = await get_lang(session, message.from_user.id)
+
+    if not (profile_id and days):
+        await state.clear()
+        await message.answer("⚠️ Контекст утерян. Начните заново через «Мои заявки».")
+        return
+
+    profile = await session.get(Profile, profile_id)
+    if not profile or profile.user_id != message.from_user.id:
+        await state.clear()
+        await message.answer("⚠️ Анкета не найдена.")
+        return
+
+    if not amount:
+        region = data.get("vip_region", "uzb")
+        amount = _vip_price_for(days, region)
+
+    file_id = message.photo[-1].file_id
+    display_id = await _generate_vip_display_id(session)
+    req = VipRequest(
+        profile_id=profile.id,
+        user_id=message.from_user.id,
+        days=days,
+        amount=amount,
+        display_id=display_id,
+        status=VipRequestStatus.PENDING,
+        payment_method=VipPaymentMethod.MODERATOR,
+        screenshot_file_id=file_id,
+    )
+    session.add(req)
+    await session.commit()
+    await session.refresh(req)
+
+    username_or_id = f"@{message.from_user.username}" if message.from_user.username else f"ID:{message.from_user.id}"
     await _notify_mods_new_vip_request(bot, req, profile, username_or_id)
 
+    await message.answer(
+        t("vip_request_sent", lang, display_id=display_id),
+        reply_markup=main_menu_kb(lang, message.from_user.id),
+    )
     await state.clear()
-    await callback.answer()
+
+
+@router.message(VipPaymentStates.waiting_screenshot_moderator)
+async def vip_receive_screenshot_moderator_invalid(message: Message, state: FSMContext, session: AsyncSession):
+    lang = await get_lang(session, message.from_user.id)
+    await message.answer(t("vip_pay_card_prompt", lang))
