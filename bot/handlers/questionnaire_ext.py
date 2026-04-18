@@ -59,7 +59,7 @@ async def _get_profile(session: AsyncSession, profile_id: int, user_id: int):
     return None
 
 
-def ext_progress_bar(current: int, total: int = 7) -> str:
+def ext_progress_bar(current: int, total: int = 8) -> str:
     """Прогресс-бар для Этапа 2."""
     filled = round(current / total * 13)
     empty = 13 - filled
@@ -152,29 +152,6 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     car = data.get("car")
     if car:
         lines.append(f"🚗 {car_map[L].get(car, car)}")
-
-    # Телефон
-    phone = data.get("parent_phone")
-    if phone:
-        lines.append(f"📞 {phone}")
-
-    # Telegram родителей и кандидата
-    parent_tg = data.get("parent_telegram")
-    if parent_tg:
-        lines.append(f"📱 {parent_tg}")
-
-    candidate_tg = data.get("candidate_telegram")
-    if candidate_tg:
-        lines.append(f"💬 {candidate_tg}")
-
-    # Адрес / геолокация
-    address = data.get("address")
-    if address:
-        lines.append(f"🏠 {address}")
-    else:
-        location_link = data.get("location_link")
-        if location_link:
-            lines.append(f"📍 {'Geolokatsiya' if L == 'uz' else 'Геолокация'}")
 
     if not lines:
         return ""
@@ -274,9 +251,9 @@ async def _ask_father(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(1)
     if lang == "uz":
-        q = f"👨‍💼 1/9-savol\n{bar}\n\nOtasi — nima bilan shug'ullanadi:"
+        q = f"👨‍💼 1/8-savol\n{bar}\n\nOtasi — nima bilan shug'ullanadi:"
     else:
-        q = f"👨‍💼 Вопрос 1/9\n{bar}\n\nОтец — чем занимается:"
+        q = f"👨‍💼 Вопрос 1/8\n{bar}\n\nОтец — чем занимается:"
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=back_ext_kb(lang))
     await state.set_state(QuestionnaireStates.ext_father)
 
@@ -286,9 +263,9 @@ async def _ask_mother(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(2)
     if lang == "uz":
-        q = f"👩‍💼 2/9-savol\n{bar}\n\nOnasi — nima bilan shug'ullanadi:"
+        q = f"👩‍💼 2/8-savol\n{bar}\n\nOnasi — nima bilan shug'ullanadi:"
     else:
-        q = f"👩‍💼 Вопрос 2/9\n{bar}\n\nМать — чем занимается:"
+        q = f"👩‍💼 Вопрос 2/8\n{bar}\n\nМать — чем занимается:"
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=back_ext_kb(lang))
     await state.set_state(QuestionnaireStates.ext_mother)
 
@@ -298,9 +275,9 @@ async def _ask_brothers(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(3)
     if lang == "uz":
-        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
+        q = f"👨‍👩‍👧‍👦 3/8-savol\n{bar}\n\nAka-uka va opa-singillar:"
     else:
-        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/8\n{bar}\n\nБратья и сёстры:"
     kb = add_nav(_brothers_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_brothers)
@@ -311,9 +288,9 @@ async def _ask_sisters(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(3)
     if lang == "uz":
-        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nAka-uka va opa-singillar:"
+        q = f"👨‍👩‍👧‍👦 3/8-savol\n{bar}\n\nAka-uka va opa-singillar:"
     else:
-        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nБратья и сёстры:"
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/8\n{bar}\n\nБратья и сёстры:"
     kb = add_nav(_sisters_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_sisters)
@@ -324,9 +301,9 @@ async def _ask_position(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(3)
     if lang == "uz":
-        q = f"👨‍👩‍👧‍👦 3/9-savol\n{bar}\n\nOiladagi o'rni:"
+        q = f"👨‍👩‍👧‍👦 3/8-savol\n{bar}\n\nOiladagi o'rni:"
     else:
-        q = f"👨‍👩‍👧‍👦 Вопрос 3/9\n{bar}\n\nМесто в семье:"
+        q = f"👨‍👩‍👧‍👦 Вопрос 3/8\n{bar}\n\nМесто в семье:"
     kb = add_nav(_position_kb(lang).inline_keyboard, lang, "back_ext_step", show_main=False)
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=kb)
     await state.set_state(QuestionnaireStates.ext_position)
@@ -337,9 +314,9 @@ async def _ask_character(m_or_cb, state: FSMContext):
     data = await state.get_data()
     bar = ext_progress_bar(4)
     if lang == "uz":
-        q = f"🌸 4/9-savol\n{bar}\n\nXarakter va qiziqishlar\n(ixtiyoriy):"
+        q = f"🌸 4/8-savol\n{bar}\n\nXarakter va qiziqishlar\n(ixtiyoriy):"
     else:
-        q = f"🌸 Вопрос 4/9\n{bar}\n\nХарактер и увлечения\n(необязательно):"
+        q = f"🌸 Вопрос 4/8\n{bar}\n\nХарактер и увлечения\n(необязательно):"
     await _show_question(m_or_cb, state, _with_card(data, lang, q), reply_markup=skip_back_ext_kb(lang))
     await state.set_state(QuestionnaireStates.ext_character)
 
@@ -526,9 +503,9 @@ async def _ask_health(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(5)
 
     if lang == "uz":
-        q_text = f"🌿 5/9-savol\n{bar}\n\nSog'lig'ining xususiyatlari\n(ixtiyoriy):"
+        q_text = f"🌿 5/8-savol\n{bar}\n\nSog'lig'ining xususiyatlari\n(ixtiyoriy):"
     else:
-        q_text = f"🌿 Вопрос 5/9\n{bar}\n\nОсобенности здоровья\n(необязательно):"
+        q_text = f"🌿 Вопрос 5/8\n{bar}\n\nОсобенности здоровья\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang))
@@ -559,9 +536,9 @@ async def _ask_about(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(6)
 
     if lang == "uz":
-        q_text = f"💭 6/9-savol\n{bar}\n\nO'zingiz va kutganlaringiz haqida\n(ixtiyoriy):"
+        q_text = f"💭 6/8-savol\n{bar}\n\nO'zingiz va kutganlaringiz haqida\n(ixtiyoriy):"
     else:
-        q_text = f"💭 Вопрос 6/9\n{bar}\n\nО себе и ожиданиях\n(необязательно):"
+        q_text = f"💭 Вопрос 6/8\n{bar}\n\nО себе и ожиданиях\n(необязательно):"
 
     full_text = _with_card(data, lang, q_text)
     await _show_question(m_or_cb, state, full_text, reply_markup=skip_back_ext_kb(lang))
@@ -592,7 +569,7 @@ async def _ask_housing(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(7)
 
     if lang == "uz":
-        q_text = f"🏡 7/9-savol\n{bar}\n\nTurar joy:"
+        q_text = f"🏡 7/8-savol\n{bar}\n\nTurar joy:"
         opts = [
             ("O'z uyi", "housing:own_house"),
             ("O'z kvartirasi", "housing:own_apartment"),
@@ -600,7 +577,7 @@ async def _ask_housing(m_or_cb, state: FSMContext):
             ("Ijara", "housing:rent"),
         ]
     else:
-        q_text = f"🏡 Вопрос 7/9\n{bar}\n\nЖильё:"
+        q_text = f"🏡 Вопрос 7/8\n{bar}\n\nЖильё:"
         opts = [
             ("Свой дом", "housing:own_house"),
             ("Своя квартира", "housing:own_apartment"),
@@ -663,14 +640,14 @@ async def _ask_car(m_or_cb, state: FSMContext):
     bar = ext_progress_bar(8)
 
     if lang == "uz":
-        q_text = f"🚘 8/9-savol\n{bar}\n\nAvtomobil:"
+        q_text = f"🚘 8/8-savol\n{bar}\n\nAvtomobil:"
         opts = [
             ("Shaxsiy", "car:own"),
             ("Oilaviy", "car:family"),
             ("Yo'q", "car:no"),
         ]
     else:
-        q_text = f"🚘 Вопрос 8/9\n{bar}\n\nАвтомобиль:"
+        q_text = f"🚘 Вопрос 8/8\n{bar}\n\nАвтомобиль:"
         opts = [
             ("Личный", "car:own"),
             ("Семейный", "car:family"),
