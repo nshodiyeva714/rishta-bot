@@ -821,7 +821,7 @@ async def _ask_parent_phone(message_or_callback, state: FSMContext):
     bar = progress_bar(11, 14)
     q_text = t("q_parent_phone", lang, bar=bar)
     full_text = _with_card(data, lang, q_text)
-    kb = back_step_kb(lang)
+    kb = skip_back_kb(lang)
 
     if hasattr(message_or_callback, "message"):
         try:
@@ -847,11 +847,18 @@ async def q11_parent_phone(message: Message, state: FSMContext):
     elif len(digits) == 12 and digits.startswith("998"):
         phone = f"+{digits}"
     else:
-        sent = await message.answer(t("q_phone_invalid", lang), reply_markup=back_step_kb(lang))
+        sent = await message.answer(t("q_phone_invalid", lang), reply_markup=skip_back_kb(lang))
         await state.update_data(last_bot_msg=sent.message_id)
         return
     await state.update_data(parent_phone=phone)
     await _ask_parent_telegram(message, state)
+
+
+@router.callback_query(F.data == "skip", QuestionnaireStates.q11_parent_phone)
+async def q11_parent_phone_skip(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(parent_phone=None)
+    await _ask_parent_telegram(callback, state)
+    await callback.answer()
 
 
 async def _ask_parent_telegram(message_or_callback, state: FSMContext):
@@ -913,22 +920,24 @@ async def _ask_candidate_telegram(message_or_callback, state: FSMContext):
     await state.set_state(QuestionnaireStates.q13_candidate_telegram)
 
 
-async def _validate_tg_and_finish(m_or_cb, state: FSMContext):
+async def _validate_contacts_and_continue(m_or_cb, state: FSMContext):
     lang = await _lang(state)
     data = await state.get_data()
-    if not data.get("parent_telegram") and not data.get("candidate_telegram"):
-        # хотя бы один TG обязателен — возврат на Q12
+    if (not data.get("parent_phone")
+            and not data.get("parent_telegram")
+            and not data.get("candidate_telegram")):
+        # хотя бы один контакт обязателен — возврат на Q11 (телефон)
         if hasattr(m_or_cb, "answer") and callable(getattr(m_or_cb, "answer", None)) and hasattr(m_or_cb, "id"):
             try:
-                await m_or_cb.answer(t("q_tg_at_least_one_required", lang), show_alert=True)
+                await m_or_cb.answer(t("q_at_least_one_contact", lang), show_alert=True)
             except Exception:
                 pass
         else:
             try:
-                await m_or_cb.answer(t("q_tg_at_least_one_required", lang))
+                await m_or_cb.answer(t("q_at_least_one_contact", lang))
             except Exception:
                 pass
-        await _ask_parent_telegram(m_or_cb, state)
+        await _ask_parent_phone(m_or_cb, state)
         return
     await _ask_address(m_or_cb, state)
 
@@ -949,13 +958,13 @@ async def q13_candidate_telegram(message: Message, state: FSMContext):
     if tg and not tg.startswith("@"):
         tg = f"@{tg}"
     await state.update_data(candidate_telegram=tg or None)
-    await _validate_tg_and_finish(message, state)
+    await _validate_contacts_and_continue(message, state)
 
 
 @router.callback_query(F.data == "skip", QuestionnaireStates.q13_candidate_telegram)
 async def q13_candidate_telegram_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(candidate_telegram=None)
-    await _validate_tg_and_finish(callback, state)
+    await _validate_contacts_and_continue(callback, state)
     await callback.answer()
 
 

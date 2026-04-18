@@ -419,6 +419,10 @@ T = {
         "ru": "Укажите хотя бы один Telegram — родителей или кандидата.",
         "uz": "Kamida bitta Telegram ko'rsating — ota-onaning yoki nomzodning.",
     },
+    "q_at_least_one_contact": {
+        "ru": "Укажите хотя бы один контакт — телефон или Telegram.",
+        "uz": "Kamida bitta kontakt ko'rsating — telefon yoki Telegram.",
+    },
     "q_phone_invalid": {
         "ru": "Неверный формат. Пример: +998 90 123 45 67 или 901234567.",
         "uz": "Format noto'g'ri. Masalan: +998 90 123 45 67 yoki 901234567.",
