@@ -1528,8 +1528,6 @@ def _format_edit_value(field: str, profile, lang: str) -> str:
     """Форматирует текущее значение поля для кнопки меню редактирования."""
     L = lang if lang in ("ru", "uz") else "ru"
     dash = t("edit_not_specified", L)
-    filled = t("edit_filled", L)
-    not_filled = t("edit_not_filled", L)
 
     if profile is None:
         return dash
@@ -1598,11 +1596,11 @@ def _format_edit_value(field: str, profile, lang: str) -> str:
             base = f"{b} бр. / {s} с." if L == "ru" else f"{b} a-u / {s} o-s"
         return _truncate(base)
     if field == "character":
-        return filled if (profile.character_hobbies or "").strip() else not_filled
+        return _truncate(profile.character_hobbies or dash)
     if field == "health":
-        return filled if (profile.health_notes or "").strip() else not_filled
+        return _truncate(profile.health_notes or dash)
     if field == "about":
-        return filled if (profile.ideal_family_life or "").strip() else not_filled
+        return _truncate(profile.ideal_family_life or dash)
     if field == "housing":
         h = _enum_value(profile.housing)
         label = _EDIT_HOUSING_LABELS.get(L, _EDIT_HOUSING_LABELS["ru"]).get(h, dash)
