@@ -443,7 +443,7 @@ async def profile_preview(callback: CallbackQuery, state: FSMContext):
 
     if lang == "uz":
         header = "👁 <b>Anketangiz shunday ko'rinadi:</b>\n\n"
-        footer = "\n\n🔒 Kontakt · manzil · foto — kimga ochishni o'zingiz hal qilasiz"
+        footer = "\n\n🔒 Kontakt · manzil · foto profil egasi roziligidan va moderator tasdig'idan so'ng ochiladi."
         buttons = [
             [InlineKeyboardButton(text="🚀 Moderatorga yuborish", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Anketani boyitish", callback_data="profile:enhance")],
@@ -451,7 +451,7 @@ async def profile_preview(callback: CallbackQuery, state: FSMContext):
         ]
     else:
         header = "👁 <b>Вот как выглядит ваша анкета:</b>\n\n"
-        footer = "\n\n🔒 Контакты · адрес · фото — вы решаете, кому их открыть"
+        footer = "\n\n🔒 Контакты · адрес · фото откроются после согласия автора и подтверждения модератора."
         buttons = [
             [InlineKeyboardButton(text="🚀 Отправить на публикацию", callback_data="profile:publish")],
             [InlineKeyboardButton(text="✨ Сделать анкету ярче", callback_data="profile:enhance")],
