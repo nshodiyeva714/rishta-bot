@@ -1184,6 +1184,10 @@ T = {
         "ru": "О себе и ожиданиях (до 500 символов):",
         "uz": "O'zingiz va kutganlaringiz haqida (500 belgigacha):",
     },
+    "edit_body_type_prompt": {
+        "ru": "Телосложение:",
+        "uz": "Bo'y-bast:",
+    },
     "edit_housing_prompt": {
         "ru": "Жильё:",
         "uz": "Turar joy:",
