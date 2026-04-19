@@ -64,7 +64,7 @@ T = {
     "btn_search_groom": {"ru": "👦 Ищем жениха", "uz": "👦 Kuyov qidiramiz"},
     "btn_post_daughter": {"ru": "👧 Разместить анкету дочери", "uz": "👧 Qiz anketasini joylashtirish"},
     "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
-    "btn_create_profile": {"ru": "💌 Создать анкету", "uz": "💌 Anketa yaratish"},
+    "btn_create_profile": {"ru": "🤲 Создать анкету", "uz": "🤲 Anketa yaratish"},
     "btn_profile_son": {"ru": "👦 Анкета сына", "uz": "👦 O'g'il anketasi"},
     "btn_profile_daughter": {"ru": "👧 Анкета дочери", "uz": "👧 Qiz anketasi"},
     "btn_my_applications": {"ru": "🗂 Мои заявки", "uz": "🗂 Mening arizalarim"},
