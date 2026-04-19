@@ -1200,6 +1200,59 @@ T = {
         "ru": "Адрес или геолокация:",
         "uz": "Manzil yoki geolokatsiya:",
     },
+    # ── Хаб редактирования (2 раздела) ──
+    "edit_hub_title": {
+        "ru": "Редактирование анкеты",
+        "uz": "Anketani tahrirlash",
+    },
+    "edit_hub_subtitle": {
+        "ru": "Выберите раздел:",
+        "uz": "Bo'limni tanlang:",
+    },
+    "edit_hub_candidate": {
+        "ru": "👤 О кандидате",
+        "uz": "👤 Nomzod haqida",
+    },
+    "edit_hub_candidate_desc": {
+        "ru": "Имя, фото, контакты, адрес",
+        "uz": "Ism, foto, kontakt, manzil",
+    },
+    "edit_hub_family": {
+        "ru": "👨‍👩‍👧 О семье",
+        "uz": "👨‍👩‍👧 Oila haqida",
+    },
+    "edit_hub_family_desc": {
+        "ru": "Родители, жильё, характер",
+        "uz": "Ota-ona, turar joy, xarakter",
+    },
+    "edit_section_candidate_title": {
+        "ru": "👤 О кандидате",
+        "uz": "👤 Nomzod haqida",
+    },
+    "edit_section_family_title": {
+        "ru": "👨‍👩‍👧 О семье",
+        "uz": "👨‍👩‍👧 Oila haqida",
+    },
+    "edit_not_specified": {
+        "ru": "—",
+        "uz": "—",
+    },
+    "edit_filled": {
+        "ru": "Заполнено",
+        "uz": "To'ldirilgan",
+    },
+    "edit_not_filled": {
+        "ru": "Не указано",
+        "uz": "Ko'rsatilmagan",
+    },
+    "edit_photo_uploaded": {
+        "ru": "Загружено",
+        "uz": "Yuklangan",
+    },
+    "edit_photo_not_uploaded": {
+        "ru": "Не указано",
+        "uz": "Ko'rsatilmagan",
+    },
     "edit_saved": {
         "ru": "Сохранено.",
         "uz": "Saqlandi.",
