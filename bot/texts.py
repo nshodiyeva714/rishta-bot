@@ -632,7 +632,7 @@ T = {
     "tariff": {
         "ru": (
             "⭐ <b>Тип размещения</b>\n\nВыберите тариф:\n\n"
-            "⭐ VIP анкета — 100,000 сум/мес\n"
+            "⭐ VIP анкета — 100 000 сум/мес\n"
             "   • Показывается первой в поиске\n"
             "   • Выделена значком ⭐\n"
             "   • Больше просмотров и обращений\n\n"
@@ -641,7 +641,7 @@ T = {
         ),
         "uz": (
             "⭐ <b>Joylashtirish turi</b>\n\nTarifni tanlang:\n\n"
-            "⭐ VIP anketa — 100,000 so'm/oy\n"
+            "⭐ VIP anketa — 100 000 so'm/oy\n"
             "   • Qidiruvda birinchi ko'rsatiladi\n"
             "   • ⭐ belgisi bilan ajratilgan\n"
             "   • Ko'proq ko'rishlar va murojaatlar\n\n"
@@ -882,17 +882,17 @@ T = {
         "ru": (
             "💳 <b>Получить контакт и адрес</b>\n\n"
             "Анкета: {display_id}\n\n"
-            "💰 Стоимость: 30,000 сум"
+            "💰 Стоимость: 30 000 сум"
         ),
         "uz": (
             "💳 <b>Kontakt va manzil olish</b>\n\n"
             "Anketa: {display_id}\n\n"
-            "💰 Narxi: 30,000 so'm"
+            "💰 Narxi: 30 000 so'm"
         ),
     },
     "payment_cis": {
-        "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: 30,000 сум",
-        "uz": "💳 <b>Kontakt va manzil olish</b>\n\nAnketa: {display_id}\n\n💰 Narxi: 30,000 so'm",
+        "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: 30 000 сум",
+        "uz": "💳 <b>Kontakt va manzil olish</b>\n\nAnketa: {display_id}\n\n💰 Narxi: 30 000 so'm",
     },
     "payment_intl": {
         "ru": "💳 <b>Получить контакт и адрес</b>\n\nАнкета: {display_id}\n\n💰 Стоимость: $15",

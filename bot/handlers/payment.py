@@ -185,7 +185,7 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
         username=message.from_user.username or "—",
         user_id=message.from_user.id,
         display_id=profile.display_id if profile else "—",
-        amount="30,000 сум",
+        amount="30 000 сум",
     )
     try:
         await bot.send_message(mod_id, mod_text, reply_markup=mod_payment_kb(payment.id))
