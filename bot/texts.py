@@ -67,7 +67,7 @@ T = {
     "btn_create_profile": {"ru": "🤲 Создать анкету", "uz": "🤲 Anketa yaratish"},
     "btn_profile_son": {"ru": "👦 Анкета сына", "uz": "👦 O'g'il anketasi"},
     "btn_profile_daughter": {"ru": "👧 Анкета дочери", "uz": "👧 Qiz anketasi"},
-    "btn_my_applications": {"ru": "🗂 Мои заявки", "uz": "🗂 Mening arizalarim"},
+    "btn_my_applications": {"ru": "👤 Моя страница", "uz": "👤 Mening sahifam"},
     "btn_contact_moderator": {"ru": "💁‍♀️ Модератор", "uz": "💁‍♀️ Moderator"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
     "submenu_search": {
