@@ -36,6 +36,9 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
+# Пагинация списка анкет в «Моя страница → Моя анкета»
+MY_PAGE_SIZE = 10
+
 
 async def get_lang(session: AsyncSession, user_id: int) -> str:
     result = await session.execute(select(User).where(User.id == user_id))
@@ -308,7 +311,13 @@ async def _render_profile_view(callback: CallbackQuery, state: FSMContext, sessi
 
     # ── Клавиатура: зависит от прав (owner / candidate-view) ──
     data = await state.get_data()
-    back_cb = "my:profile" if data.get("came_from_list") else "menu:my"
+    if data.get("came_from_list"):
+        list_offset = data.get("list_offset", 0)
+        # offset=0 → на первую страницу через my:profile (привычный путь);
+        # offset>0 → напрямую на mylist:{offset} чтобы не терять позицию
+        back_cb = f"mylist:{list_offset}" if list_offset > 0 else "my:profile"
+    else:
+        back_cb = "menu:my"
 
     if is_owner:
         is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
@@ -327,6 +336,47 @@ async def _render_profile_view(callback: CallbackQuery, state: FSMContext, sessi
             logger.debug("_render_profile_view send_photo failed: %s", _e)
 
 
+def _my_profiles_where(user_id: int, tg_handle: str | None):
+    """OR-условия для выборки анкет пользователя (свои + где он кандидат)."""
+    conditions = [Profile.user_id == user_id]
+    if tg_handle:
+        conditions.append(func.lower(Profile.candidate_telegram) == tg_handle)
+    return or_(*conditions), Profile.status != ProfileStatus.DELETED
+
+
+async def _render_my_list(callback: CallbackQuery, state: FSMContext, session: AsyncSession,
+                           lang: str, offset: int = 0):
+    """Общий рендер страницы списка анкет (OR user_id / candidate_telegram)."""
+    user_id = callback.from_user.id
+    username = callback.from_user.username
+    tg_handle = f"@{username}".lower() if username else None
+
+    where_clauses = _my_profiles_where(user_id, tg_handle)
+
+    # Count для пагинации
+    total_result = await session.execute(
+        select(func.count(Profile.id)).where(*where_clauses)
+    )
+    total = total_result.scalar() or 0
+
+    # Страница
+    page_result = await session.execute(
+        select(Profile).where(*where_clauses)
+        .order_by(Profile.created_at.desc())
+        .offset(offset).limit(MY_PAGE_SIZE)
+    )
+    profiles_page = list(page_result.scalars().all())
+
+    await _safe_edit(
+        callback,
+        t("my_profiles_list_title", lang),
+        reply_markup=my_profiles_list_kb(
+            profiles_page, lang,
+            offset=offset, total=total, page_size=MY_PAGE_SIZE,
+        ),
+    )
+
+
 @router.callback_query(F.data == "my:profile")
 async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Шаг 4 — «Моя анкета»: 0/1/2+ анкет (свои + те, где пользователь — кандидат)."""
@@ -336,21 +386,16 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
     username = callback.from_user.username
     tg_handle = f"@{username}".lower() if username else None
 
-    # OR-запрос: user_id совпадает ИЛИ candidate_telegram == @username (case-insensitive)
-    conditions = [Profile.user_id == user_id]
-    if tg_handle:
-        conditions.append(func.lower(Profile.candidate_telegram) == tg_handle)
+    where_clauses = _my_profiles_where(user_id, tg_handle)
 
-    result = await session.execute(
-        select(Profile).where(
-            or_(*conditions),
-            Profile.status != ProfileStatus.DELETED,
-        ).order_by(Profile.created_at.desc())
+    # Сначала count — чтобы решить какую ветку показать
+    total_result = await session.execute(
+        select(func.count(Profile.id)).where(*where_clauses)
     )
-    profiles = list(result.scalars().all())
+    total = total_result.scalar() or 0
 
     # ── 0 анкет ──
-    if not profiles:
+    if total == 0:
         if lang == "uz":
             text = (
                 "📋 Sizda hozircha anketa yo'q.\n\n"
@@ -367,27 +412,57 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
         return
 
     # ── 1 анкета: открываем сразу, без промежуточного списка ──
-    if len(profiles) == 1:
-        profile = profiles[0]
-        await state.update_data(came_from_list=False)
-        is_owner = profile.user_id == user_id
-        await _render_profile_view(callback, state, session, profile, lang, is_owner=is_owner)
+    if total == 1:
+        one_result = await session.execute(
+            select(Profile).where(*where_clauses).limit(1)
+        )
+        profile = one_result.scalar_one_or_none()
+        if profile:
+            await state.update_data(came_from_list=False)
+            is_owner = profile.user_id == user_id
+            await _render_profile_view(callback, state, session, profile, lang, is_owner=is_owner)
         await callback.answer()
         return
 
-    # ── 2+ анкет: список ──
-    await _safe_edit(
-        callback,
-        t("my_profiles_list_title", lang),
-        reply_markup=my_profiles_list_kb(profiles, lang),
-    )
+    # ── 2+ анкет: список с пагинацией (первая страница) ──
+    await _render_my_list(callback, state, session, lang, offset=0)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("mylist:"))
+async def my_list_page(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Навигация по страницам списка анкет."""
+    try:
+        offset = int(callback.data.split(":")[1])
+    except (IndexError, ValueError):
+        offset = 0
+    if offset < 0:
+        offset = 0
+    lang = await get_lang(session, callback.from_user.id)
+    await _render_my_list(callback, state, session, lang, offset=offset)
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("myprof:"))
 async def open_profile_from_list(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Открытие анкеты из списка (owner OR candidate-only view)."""
-    profile_id = int(callback.data.split(":")[1])
+    """Открытие анкеты из списка (owner OR candidate-only view).
+
+    Формат callback: myprof:{profile_id} или myprof:{profile_id}:{offset}.
+    offset используется для возврата на ту же страницу списка.
+    """
+    parts = callback.data.split(":")
+    try:
+        profile_id = int(parts[1])
+    except (IndexError, ValueError):
+        await callback.answer("❌")
+        return
+    try:
+        offset = int(parts[2]) if len(parts) >= 3 else 0
+    except ValueError:
+        offset = 0
+    if offset < 0:
+        offset = 0
+
     profile = await session.get(Profile, profile_id)
     if not profile or profile.status == ProfileStatus.DELETED:
         await callback.answer("⛔")
@@ -407,7 +482,7 @@ async def open_profile_from_list(callback: CallbackQuery, state: FSMContext, ses
         return
 
     lang = await get_lang(session, user_id)
-    await state.update_data(came_from_list=True)
+    await state.update_data(came_from_list=True, list_offset=offset)
     await _render_profile_view(callback, state, session, profile, lang, is_owner=is_owner)
     await callback.answer()
 
