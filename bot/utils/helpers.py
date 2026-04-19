@@ -393,8 +393,16 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     )
     if profile.district:
         text += f", {profile.district}"
-    # Адрес — введён вручную
-    text += f"\n9. {lb['address']}: {profile.address or addr_empty}\n"
+    # Адрес — введён вручную ИЛИ геолокация/ссылка на карту
+    if profile.address:
+        addr_line = profile.address
+    elif profile.location_link:
+        addr_line = f"🗺 {profile.location_link}"
+    elif profile.location_lat and profile.location_lon:
+        addr_line = f"🗺 https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
+    else:
+        addr_line = addr_empty
+    text += f"\n9. {lb['address']}: {addr_line}\n"
     text += f"10. {scope}\n"
     if profile.preferred_city:
         text += f"    {profile.preferred_city}\n"
