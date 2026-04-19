@@ -168,14 +168,14 @@ T = {
     # ── Step 5: Questionnaire intro ──
     "quest_son_intro": {
         "ru": (
-            "👦 <b>РАЗМЕСТИТЬ АНКЕТУ СЫНА</b>\n\n"
+            "📝 <b>РАЗМЕЩЕНИЕ АНКЕТЫ</b>\n\n"
             "Анкета будет проверена модератором перед публикацией.\n\n"
             "✅ Анкета видна всем пользователям\n"
             "✅ Контакт и адрес — по взаимному согласию\n"
             "📵 Фото защищены от скриншотов 🔒"
         ),
         "uz": (
-            "👦 <b>O'G'IL ANKETASINI JOYLASHTIRISH</b>\n\n"
+            "📝 <b>ANKETA JOYLASHTIRISH</b>\n\n"
             "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
             "✅ Kontakt va manzil — rozilik asosida beriladi\n"
@@ -184,14 +184,14 @@ T = {
     },
     "quest_daughter_intro": {
         "ru": (
-            "👧 <b>РАЗМЕСТИТЬ АНКЕТУ ДОЧЕРИ</b>\n\n"
+            "📝 <b>РАЗМЕЩЕНИЕ АНКЕТЫ</b>\n\n"
             "Анкета будет проверена модератором перед публикацией.\n\n"
             "✅ Анкета видна всем пользователям\n"
             "✅ Контакт и адрес — по взаимному согласию\n"
             "📵 Фото защищены от скриншотов 🔒"
         ),
         "uz": (
-            "👧 <b>QIZ ANKETASINI JOYLASHTIRISH</b>\n\n"
+            "📝 <b>ANKETA JOYLASHTIRISH</b>\n\n"
             "Anketa nashr etilishdan oldin moderator tomonidan tekshiriladi.\n\n"
             "✅ Anketa barcha foydalanuvchilarga ko'rinadi\n"
             "✅ Kontakt va manzil — rozilik asosida beriladi\n"
