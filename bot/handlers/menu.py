@@ -341,7 +341,9 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
 
     if profile.photo_file_id:
         try:
-            await callback.message.answer_photo(profile.photo_file_id)
+            sent_photo = await callback.message.answer_photo(profile.photo_file_id)
+            # Сохраняем id фото-сообщения — чтобы удалить при входе в редактирование
+            await state.update_data(my_profile_photo_msg_id=sent_photo.message_id)
         except Exception as _e:
             logger.debug("my_applications send_photo failed: %s", _e)
 
@@ -444,6 +446,10 @@ async def activate_profile(callback: CallbackQuery, state: FSMContext, session: 
 @router.callback_query(F.data.startswith("myedit:"))
 async def edit_profile_menu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Показать хаб редактирования — 2 раздела (О кандидате / О семье)."""
+    # Прочитать photo_msg_id ДО очистки state
+    prev_data = await state.get_data()
+    photo_msg_id = prev_data.get("my_profile_photo_msg_id")
+
     await state.clear()
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
@@ -452,6 +458,13 @@ async def edit_profile_menu(callback: CallbackQuery, state: FSMContext, session:
     if not profile or profile.user_id != callback.from_user.id:
         await callback.answer("⛔")
         return
+
+    # Удаляем фото из «Моя анкета» — оно мешает на экране редактирования
+    if photo_msg_id:
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, photo_msg_id)
+        except Exception:
+            pass
 
     await state.update_data(edit_profile_id=profile_id, lang=lang)
     title = t("edit_hub_title", lang) + "\n\n" + t("edit_hub_subtitle", lang)
