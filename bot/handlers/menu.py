@@ -1365,6 +1365,55 @@ async def edit_car_choose(callback: CallbackQuery, state: FSMContext, session: A
 
 
 # ══════════════════════════════════════
+# Телосложение (body_type — String, не enum!)
+# ══════════════════════════════════════
+
+_BODY_VALUES = {"slim", "average", "athletic", "full"}
+
+
+def _body_type_kb(lang: str) -> InlineKeyboardMarkup:
+    if lang == "uz":
+        opts = [
+            ("Ozg'in", "editbody:slim"),
+            ("O'rtacha", "editbody:average"),
+            ("Sportchilarga xos", "editbody:athletic"),
+            ("To'ladan kelgan", "editbody:full"),
+        ]
+    else:
+        opts = [
+            ("Стройное", "editbody:slim"),
+            ("Среднее", "editbody:average"),
+            ("Спортивное", "editbody:athletic"),
+            ("Плотное", "editbody:full"),
+        ]
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.callback_query(F.data.startswith("edit:body_type:"))
+async def edit_body_type_start(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    lang = await get_lang(session, callback.from_user.id)
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    await state.set_state(EditProfileStates.body_type)
+    await _safe_edit(callback, t("edit_body_type_prompt", lang), reply_markup=_body_type_kb(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editbody:"), EditProfileStates.body_type)
+async def edit_body_type_save(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("editbody:", "")
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id and value in _BODY_VALUES:
+        profile.body_type = value  # String column, не enum
+        await session.commit()
+    await _finish_edit(callback, state, session, lang)
+
+
+# ══════════════════════════════════════
 # Адрес (text / geolocation / link) — копия логики Q14
 # ══════════════════════════════════════
 

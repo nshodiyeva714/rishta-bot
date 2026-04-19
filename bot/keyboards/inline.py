@@ -1578,6 +1578,10 @@ def _format_edit_value(field: str, profile, lang: str) -> str:
         if w:
             return f"— / {w}"
         return dash
+    if field == "body_type":
+        bt = profile.body_type or ""
+        label = _EDIT_BODY_LABELS.get(L, _EDIT_BODY_LABELS["ru"]).get(bt)
+        return label if label else dash
     if field == "nationality":
         from bot.utils.helpers import nationality_label
         return _truncate(nationality_label(profile.nationality, L) if profile.nationality else dash)
@@ -1673,6 +1677,7 @@ def edit_candidate_kb(profile, lang: str = "ru") -> InlineKeyboardMarkup:
         ("👤 Ism", "name"),
         ("🗓 Tug'ilgan yili", "birth_year"),
         ("📏 Bo'yi / Vazni", "height_weight"),
+        ("🏃 Bo'y-bast", "body_type"),
         ("👥 Millat", "nationality"),
         ("🏙 Shahar", "city"),
         ("🎓 Ma'lumoti", "education"),
@@ -1689,6 +1694,7 @@ def edit_candidate_kb(profile, lang: str = "ru") -> InlineKeyboardMarkup:
         ("👤 Имя", "name"),
         ("🗓 Год рождения", "birth_year"),
         ("📏 Рост / Вес", "height_weight"),
+        ("🏃 Телосложение", "body_type"),
         ("👥 Национальность", "nationality"),
         ("🏙 Город", "city"),
         ("🎓 Образование", "education"),
