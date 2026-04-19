@@ -127,7 +127,7 @@ LABELS = {
     "ru": {
         "age_suffix": "лет",  # overridden by age_text()
         "cm": "см", "kg": "кг",
-        "edu": "Ma'lumoti",  # education label — same key, diff value
+        "edu": "Образование",
         "work": "Работа",
         "housing": "Жильё",
         "city": "Город/район",
