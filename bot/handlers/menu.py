@@ -27,6 +27,7 @@ from bot.keyboards.inline import (
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
     edit_marital_kb, edit_nationality_kb, edit_nationality_more_kb, nav_kb, add_nav,
     edit_hub_kb, edit_candidate_kb, edit_family_kb, back_to_section_kb,
+    children_kb,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -821,10 +822,45 @@ async def edit_marital_save(callback: CallbackQuery, state: FSMContext, session:
     data = await state.get_data()
     lang = data.get("lang", "ru")
     profile = await session.get(Profile, data["edit_profile_id"])
-    if profile and profile.user_id == callback.from_user.id:
-        profile.marital_status = MaritalStatus(val)
-        if val == "never_married":
-            profile.children_status = ChildrenStatus.NO
+    if not (profile and profile.user_id == callback.from_user.id):
+        await callback.answer("⛔")
+        return
+
+    profile.marital_status = MaritalStatus(val)
+
+    if val == "never_married":
+        # Не был(а) в браке → детей нет → финиш
+        profile.children_status = ChildrenStatus.NO
+        await session.commit()
+        await _finish_edit(callback, state, session, lang)
+        return
+
+    # divorced / widowed → подвопрос про детей
+    await session.commit()
+    is_son = profile.profile_type == ProfileType.SON
+    kb_orig = children_kb(lang, is_son, prefix="editchild")
+    rows = list(kb_orig.inline_keyboard) + [_back_editsec_row_local(lang)]
+    kb = InlineKeyboardMarkup(inline_keyboard=rows)
+    prompt = t("q_children", lang)
+    await _safe_edit(callback, prompt, reply_markup=kb)
+    await state.set_state(EditProfileStates.children)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("editchild:"), EditProfileStates.children)
+async def edit_children_save(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    value = callback.data.replace("editchild:", "")
+    mapping = {
+        "no": ChildrenStatus.NO,
+        "me": ChildrenStatus.YES_WITH_ME,
+        "ex": ChildrenStatus.YES_WITH_EX,
+    }
+    enum_val = mapping.get(value)
+    data = await state.get_data()
+    lang = data.get("lang", "ru")
+    profile = await session.get(Profile, data.get("edit_profile_id"))
+    if profile and profile.user_id == callback.from_user.id and enum_val:
+        profile.children_status = enum_val
         await session.commit()
     await _finish_edit(callback, state, session, lang)
 

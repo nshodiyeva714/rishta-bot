@@ -344,17 +344,26 @@ def marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
     ])
 
 
-def children_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Шаг 2: дети (2 кнопки, только если разведён/вдовец)."""
+def children_kb(lang: str = "ru", is_son: bool = False, prefix: str = "child") -> InlineKeyboardMarkup:
+    """Шаг 2: дети (3 кнопки, показывается если разведён/вдовец).
+
+    is_son — для RU gender-aware текста (для сына → «с бывшей супругой»,
+    для дочери → «с бывшим супругом»). UZ не зависит от пола.
+    prefix — cb-префикс («child» для анкеты, «editchild» для редактирования).
+    """
     if lang == "uz":
         opts = [
-            ("👶 Farzand yo'q", "child:no"),
-            ("👨\u200d👧 Farzand bor", "child:yes"),
+            ("👶 Bolalari yo'q", f"{prefix}:no"),
+            ("👨\u200d👧 Ha, men bilan yashashadi", f"{prefix}:me"),
+            ("👩\u200d👧 Ha, sobiq turmush o'rtog'im bilan yashashadi", f"{prefix}:ex"),
         ]
     else:
+        ex_label = "👩\u200d👧 Да, живут с бывшей супругой" if is_son \
+                   else "👩\u200d👧 Да, живут с бывшим супругом"
         opts = [
-            ("👶 Детей нет", "child:no"),
-            ("👨\u200d👧 Есть дети", "child:yes"),
+            ("👶 Детей нет", f"{prefix}:no"),
+            ("👨\u200d👧 Да, живут со мной", f"{prefix}:me"),
+            (ex_label, f"{prefix}:ex"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, callback_data=cd)] for label, cd in opts
