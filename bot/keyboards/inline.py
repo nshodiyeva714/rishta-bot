@@ -1352,6 +1352,19 @@ def complaint_reason_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMark
 
 # ── My applications keyboard ──
 
+def _back_editsec_row(lang: str):
+    """Row «← Назад» с callback back:editsec (возврат в раздел редактирования)."""
+    return [InlineKeyboardButton(
+        text=t("btn_back", lang),
+        callback_data="back:editsec",
+    )]
+
+
+def back_to_section_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Кнопка «Назад» на экране ввода значения — возврат в раздел редактирования."""
+    return InlineKeyboardMarkup(inline_keyboard=[_back_editsec_row(lang)])
+
+
 def edit_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура образования для редактирования (prefix editedu:)."""
     labels = {
@@ -1359,10 +1372,12 @@ def edit_education_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         "uz": ["O'rta", "O'rta maxsus", "Oliy", "Talaba"],
     }
     values = ["secondary", "vocational", "higher", "studying"]
-    return InlineKeyboardMarkup(inline_keyboard=[
+    rows = [
         [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editedu:{values[i]}")]
         for i in range(4)
-    ])
+    ]
+    rows.append(_back_editsec_row(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def edit_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
@@ -1372,10 +1387,12 @@ def edit_religiosity_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         "uz": ["🕌 Amaliyotchi", "Mo'tadil", "Dunyoviy"],
     }
     values = ["practicing", "moderate", "secular"]
-    return InlineKeyboardMarkup(inline_keyboard=[
+    rows = [
         [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editrel:{values[i]}")]
         for i in range(3)
-    ])
+    ]
+    rows.append(_back_editsec_row(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def edit_marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMarkup:
@@ -1391,19 +1408,25 @@ def edit_marital_kb(lang: str = "ru", is_male: bool = True) -> InlineKeyboardMar
             "uz": ["Hech turmushga chiqmagan", "Ajrashgan", "Beva"],
         }
     values = ["never_married", "divorced", "widowed"]
-    return InlineKeyboardMarkup(inline_keyboard=[
+    rows = [
         [InlineKeyboardButton(text=labels.get(lang, labels["ru"])[i], callback_data=f"editmar:{values[i]}")]
         for i in range(3)
-    ])
+    ]
+    rows.append(_back_editsec_row(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def edit_nationality_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Клавиатура национальностей для редактирования (prefix editnat:)."""
-    return InlineKeyboardMarkup(inline_keyboard=nationality_main_rows(lang, "editnat"))
+    rows = list(nationality_main_rows(lang, "editnat"))
+    rows.append(_back_editsec_row(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def edit_nationality_more_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=nationality_more_rows(lang, "editnat"))
+    rows = list(nationality_more_rows(lang, "editnat"))
+    rows.append(_back_editsec_row(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
