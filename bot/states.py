@@ -137,6 +137,7 @@ class EditProfileStates(StatesGroup):
     address_text = State()
     address_location = State()    # reply-kb геоточка
     address_link = State()
+    children = State()            # подвопрос после смены marital на divorced/widowed
 
 class ModeratorReplyStates(StatesGroup):
     awaiting_reply = State()

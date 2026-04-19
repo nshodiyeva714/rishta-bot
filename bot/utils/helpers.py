@@ -253,19 +253,27 @@ def _marital_map(is_male: bool, lang: str = "ru") -> dict:
     }
 
 
-def _children_map(lang: str = "ru") -> dict:
+def _children_map(lang: str = "ru", is_son: bool = False) -> dict:
+    """Map children_status → человеко-читаемый текст.
+
+    is_son учитывается для RU в значении «yes_with_ex»:
+    для сына — «с бывшей супругой», для дочери — «с бывшим супругом».
+    UZ gender-нейтрален.
+    """
     if lang == "ru":
+        ex_text = ("👩\u200d👧 Да, живут с бывшей супругой" if is_son
+                   else "👩\u200d👧 Да, живут с бывшим супругом")
         return {
             "no": "👶 Детей нет",
             "yes": "👨\u200d👧 Есть дети",
             "yes_with_me": "👨\u200d👧 Да, живут со мной",
-            "yes_with_ex": "👨\u200d👧 Да, живут с бывшим супругом",
+            "yes_with_ex": ex_text,
         }
     return {
-        "no": "👶 Farzand yo'q",
+        "no": "👶 Bolalari yo'q",
         "yes": "👨\u200d👧 Farzand bor",
-        "yes_with_me": "👨\u200d👧 Ha, men bilan yashaydi",
-        "yes_with_ex": "👨\u200d👧 Ha, sobiq turmush o'rtoq bilan yashaydi",
+        "yes_with_me": "👨\u200d👧 Ha, men bilan yashashadi",
+        "yes_with_ex": "👩\u200d👧 Ha, sobiq turmush o'rtog'im bilan yashashadi",
     }
 
 
@@ -327,7 +335,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     nat = nationality_label(profile.nationality, L)
     rel = _rel_map(L).get(_ev(profile, "religiosity"), "—")
     mar = _marital_map(is_son, L).get(_ev(profile, "marital_status"), "—")
-    ch = _children_map(L).get(_ev(profile, "children_status"), "—")
+    ch = _children_map(L, is_son).get(_ev(profile, "children_status"), "—")
 
     position = ""
     if profile.family_position:
@@ -545,7 +553,7 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         mar_line = mar_val
         ch_raw = _ev(profile, "children_status")
         if ch_raw and ch_raw != "no" and mar_raw != "never_married":
-            ch_val = _children_map(L).get(ch_raw, "")
+            ch_val = _children_map(L, is_son).get(ch_raw, "")
             if ch_val and ch_val != "—":
                 ch_label = lb.get("children", "Дети")
                 mar_line += f" · {ch_label}: {ch_val}"

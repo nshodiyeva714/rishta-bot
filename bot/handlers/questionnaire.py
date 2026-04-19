@@ -134,12 +134,17 @@ def build_card(data: dict, lang: str = "ru") -> str:
     if mar:
         lines.append(f"💍 {mar_map[L].get(mar, mar)}")
 
-    # Дети
+    # Дети (показываем только если marital != never_married)
     ch = data.get("children_status")
-    if ch and ch != "no" and mar and mar != "never_married":
-        lines.append("👶 Есть дети" if L == "ru" else "👶 Farzand bor")
-    elif ch == "no" and mar and mar != "never_married":
-        lines.append("👶 Детей нет" if L == "ru" else "👶 Farzand yo'q")
+    if mar and mar != "never_married" and ch:
+        if ch == "yes_with_me":
+            lines.append("👨\u200d👧 Есть дети (живут со мной)" if L == "ru"
+                         else "👨\u200d👧 Bolalari bor (men bilan)")
+        elif ch == "yes_with_ex":
+            lines.append("👩\u200d👧 Есть дети (с бывш. супруг.)" if L == "ru"
+                         else "👩\u200d👧 Bolalari bor (sobiq turmush o'rtog'im bilan)")
+        elif ch == "no":
+            lines.append("👶 Детей нет" if L == "ru" else "👶 Bolalari yo'q")
 
     # Телефон родителей
     phone = data.get("parent_phone")
@@ -788,12 +793,13 @@ async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
     else:
         # Разведён/а или Вдовец/Вдова → спросить про детей
         data = await state.get_data()
+        is_son = data.get("profile_type") == "son"
         card = build_card(data, lang)
         q_text = t("q_children", lang)
         full_text = (card + SEP + q_text) if card else q_text
         await callback.message.edit_text(
             full_text,
-            reply_markup=add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False),
+            reply_markup=add_nav(children_kb(lang, is_son).inline_keyboard, lang, "back_step", show_main=False),
         )
         await state.update_data(last_bot_msg=callback.message.message_id)
         await state.set_state(QuestionnaireStates.q_children)
@@ -804,7 +810,7 @@ async def q10_marital_status(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("child:"), QuestionnaireStates.q_children)
 async def q10_children(callback: CallbackQuery, state: FSMContext):
     value = callback.data.split(":")[1]
-    children_map = {"no": "no", "yes": "yes_with_me"}
+    children_map = {"no": "no", "me": "yes_with_me", "ex": "yes_with_ex"}
     await state.update_data(children_status=children_map.get(value, value))
     # → 11. Телефон родителей
     await _ask_parent_phone(callback, state)
@@ -1147,7 +1153,7 @@ async def back_step(callback: CallbackQuery, state: FSMContext):
     marital = data.get("marital_status")
     if marital and marital != "never_married":
         complete_back = ("q_children", QuestionnaireStates.q_children,
-                         lambda: add_nav(children_kb(lang).inline_keyboard, lang, "back_step", show_main=False))
+                         lambda: add_nav(children_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False))
     else:
         complete_back = ("q_marital_status", QuestionnaireStates.q_marital_status,
                          lambda: add_nav(marital_kb(lang, is_male).inline_keyboard, lang, "back_step", show_main=False))
