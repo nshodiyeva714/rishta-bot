@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from bot.db.models import ProfileType
 from bot.texts import t
 
 
@@ -1749,7 +1750,8 @@ def edit_family_kb(profile, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> InlineKeyboardMarkup:
+def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True,
+                  back_cb: str = "menu:my") -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
             text="✏️ Редактировать анкету" if lang == "ru" else "✏️ Anketani tahrirlash",
@@ -1774,8 +1776,34 @@ def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> 
         text="🗑 Удалить анкету" if lang == "ru" else "🗑 Anketani o'chirish",
         callback_data=f"mydelete:{profile_id}",
     )])
-    rows.extend(nav_kb(lang, "back:menu"))
+    rows.extend(nav_kb(lang, back_cb))
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _format_profile_button(profile) -> str:
+    """Подпись кнопки в списке «Мои анкеты»: #display_id · 👦/👧 Name, City."""
+    icon = "👦" if profile.profile_type == ProfileType.SON else "👧"
+    name = (profile.name or "—")[:30]
+    city = (profile.city or "").strip()
+    suffix = f"{name}, {city}" if city else name
+    did = profile.display_id or f"id{profile.id}"
+    return f"#{did} · {icon} {suffix}"
+
+
+def my_profiles_list_kb(profiles, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Список всех анкет пользователя (своих + где он кандидат)."""
+    rows = [
+        [InlineKeyboardButton(text=_format_profile_button(p), callback_data=f"myprof:{p.id}")]
+        for p in profiles
+    ]
+    rows.extend(nav_kb(lang, "menu:my"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def candidate_view_kb(lang: str = "ru", back_cb: str = "menu:my") -> InlineKeyboardMarkup:
+    """Клавиатура просмотра анкеты, где пользователь — кандидат (не владелец).
+    Только навигация, без actions."""
+    return InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, back_cb))
 
 
 # ── Reminder keyboard ──

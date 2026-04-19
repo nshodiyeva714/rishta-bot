@@ -9,7 +9,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
 )
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import (
@@ -27,7 +27,7 @@ from bot.keyboards.inline import (
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
     edit_marital_kb, edit_nationality_kb, edit_nationality_more_kb, nav_kb, add_nav,
     edit_hub_kb, edit_candidate_kb, edit_family_kb, back_to_section_kb,
-    children_kb,
+    children_kb, my_profiles_list_kb, candidate_view_kb,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -240,47 +240,17 @@ async def my_main(callback: CallbackQuery, state: FSMContext, session: AsyncSess
     await callback.answer()
 
 
-@router.callback_query(F.data == "my:profile")
-async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Шаг 4 — Моя анкета: статистика + полная анкета + управление."""
-    await state.clear()
-    lang = await get_lang(session, callback.from_user.id)
-    user_id = callback.from_user.id
-
-    result = await session.execute(
-        select(Profile).where(
-            Profile.user_id == user_id,
-            Profile.status != ProfileStatus.DELETED,
-        ).order_by(Profile.created_at.desc())
-    )
-    profile = result.scalars().first()
-
-    if not profile:
-        if lang == "uz":
-            text = (
-                "📋 Sizda hozircha anketa yo'q.\n\n"
-                "Anketa yaratib qidiruvni boshlang!"
-            )
-        else:
-            text = (
-                "📋 У вас пока нет анкеты.\n\n"
-                "Создайте анкету чтобы начать поиск!"
-            )
-        from bot.keyboards.inline import create_submenu_kb
-        await _safe_edit(callback, text, reply_markup=create_submenu_kb(lang))
-        await callback.answer()
-        return
-
+async def _render_profile_view(callback: CallbackQuery, state: FSMContext, session: AsyncSession,
+                                profile, lang: str, is_owner: bool = True):
+    """Общий рендер одной анкеты — используется как в owner-view, так и в candidate-view."""
     # ── Статистика ──
-    from sqlalchemy import func as sqlfunc
-
     fav_result = await session.execute(
-        select(sqlfunc.count(Favorite.id)).where(Favorite.profile_id == profile.id)
+        select(func.count(Favorite.id)).where(Favorite.profile_id == profile.id)
     )
     fav_count = fav_result.scalar() or 0
 
     req_result = await session.execute(
-        select(sqlfunc.count(ContactRequest.id)).where(
+        select(func.count(ContactRequest.id)).where(
             ContactRequest.target_profile_id == profile.id
         )
     )
@@ -330,24 +300,115 @@ async def my_applications(callback: CallbackQuery, state: FSMContext, session: A
 
     # ── Полная анкета ──
     anketa_text = format_full_anketa(profile, lang=lang)
-
     full_text = stats + "\n\n━━━━━━━━━━━━━━━\n\n" + anketa_text
 
     # Telegram ограничение — 4096 символов
     if len(full_text) > 4000:
         full_text = full_text[:3997] + "..."
 
-    is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
-    await _safe_edit(callback, full_text, reply_markup=my_profile_kb(profile.id, lang, is_active))
+    # ── Клавиатура: зависит от прав (owner / candidate-view) ──
+    data = await state.get_data()
+    back_cb = "my:profile" if data.get("came_from_list") else "menu:my"
 
+    if is_owner:
+        is_active = profile.status == ProfileStatus.PUBLISHED and profile.is_active
+        kb = my_profile_kb(profile.id, lang, is_active, back_cb=back_cb)
+    else:
+        kb = candidate_view_kb(lang, back_cb=back_cb)
+
+    await _safe_edit(callback, full_text, reply_markup=kb)
+
+    # Фото — отдельным сообщением, id сохраняется для удаления при входе в edit
     if profile.photo_file_id:
         try:
             sent_photo = await callback.message.answer_photo(profile.photo_file_id)
-            # Сохраняем id фото-сообщения — чтобы удалить при входе в редактирование
             await state.update_data(my_profile_photo_msg_id=sent_photo.message_id)
         except Exception as _e:
-            logger.debug("my_applications send_photo failed: %s", _e)
+            logger.debug("_render_profile_view send_photo failed: %s", _e)
 
+
+@router.callback_query(F.data == "my:profile")
+async def my_applications(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Шаг 4 — «Моя анкета»: 0/1/2+ анкет (свои + те, где пользователь — кандидат)."""
+    await state.clear()
+    lang = await get_lang(session, callback.from_user.id)
+    user_id = callback.from_user.id
+    username = callback.from_user.username
+    tg_handle = f"@{username}".lower() if username else None
+
+    # OR-запрос: user_id совпадает ИЛИ candidate_telegram == @username (case-insensitive)
+    conditions = [Profile.user_id == user_id]
+    if tg_handle:
+        conditions.append(func.lower(Profile.candidate_telegram) == tg_handle)
+
+    result = await session.execute(
+        select(Profile).where(
+            or_(*conditions),
+            Profile.status != ProfileStatus.DELETED,
+        ).order_by(Profile.created_at.desc())
+    )
+    profiles = list(result.scalars().all())
+
+    # ── 0 анкет ──
+    if not profiles:
+        if lang == "uz":
+            text = (
+                "📋 Sizda hozircha anketa yo'q.\n\n"
+                "Anketa yaratib qidiruvni boshlang!"
+            )
+        else:
+            text = (
+                "📋 У вас пока нет анкеты.\n\n"
+                "Создайте анкету чтобы начать поиск!"
+            )
+        from bot.keyboards.inline import create_submenu_kb
+        await _safe_edit(callback, text, reply_markup=create_submenu_kb(lang))
+        await callback.answer()
+        return
+
+    # ── 1 анкета: открываем сразу, без промежуточного списка ──
+    if len(profiles) == 1:
+        profile = profiles[0]
+        await state.update_data(came_from_list=False)
+        is_owner = profile.user_id == user_id
+        await _render_profile_view(callback, state, session, profile, lang, is_owner=is_owner)
+        await callback.answer()
+        return
+
+    # ── 2+ анкет: список ──
+    await _safe_edit(
+        callback,
+        t("my_profiles_list_title", lang),
+        reply_markup=my_profiles_list_kb(profiles, lang),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("myprof:"))
+async def open_profile_from_list(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Открытие анкеты из списка (owner OR candidate-only view)."""
+    profile_id = int(callback.data.split(":")[1])
+    profile = await session.get(Profile, profile_id)
+    if not profile or profile.status == ProfileStatus.DELETED:
+        await callback.answer("⛔")
+        return
+
+    user_id = callback.from_user.id
+    username = callback.from_user.username
+    tg_handle = f"@{username}".lower() if username else None
+
+    is_owner = (profile.user_id == user_id)
+    is_candidate = False
+    if not is_owner and tg_handle and profile.candidate_telegram:
+        is_candidate = (profile.candidate_telegram.lower() == tg_handle)
+
+    if not (is_owner or is_candidate):
+        await callback.answer("⛔")
+        return
+
+    lang = await get_lang(session, user_id)
+    await state.update_data(came_from_list=True)
+    await _render_profile_view(callback, state, session, profile, lang, is_owner=is_owner)
     await callback.answer()
 
 
