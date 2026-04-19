@@ -1233,6 +1233,10 @@ T = {
         "ru": "👨‍👩‍👧 О семье",
         "uz": "👨‍👩‍👧 Oila haqida",
     },
+    "my_profiles_list_title": {
+        "ru": "📋 <b>Мои анкеты:</b>",
+        "uz": "📋 <b>Anketalarim:</b>",
+    },
     "edit_not_specified": {
         "ru": "—",
         "uz": "—",
