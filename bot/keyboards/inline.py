@@ -1465,6 +1465,260 @@ def edit_profile_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+# ══════════════════════════════════════
+# Новое меню редактирования: хаб + 2 раздела
+# ══════════════════════════════════════
+
+# Локальные label-мапы для форматирования значений (не импортируем из tariff.py — cross-dep)
+_EDIT_BODY_LABELS = {
+    "ru": {"slim": "Стройное", "average": "Среднее", "athletic": "Спортивное", "full": "Плотное"},
+    "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
+}
+_EDIT_EDU_LABELS = {
+    "ru": {"secondary": "Среднее", "vocational": "Среднее спец.", "higher": "Высшее", "studying": "Студент/ка"},
+    "uz": {"secondary": "O'rta", "vocational": "O'rta maxsus", "higher": "Oliy", "studying": "Talaba"},
+}
+_EDIT_REL_LABELS = {
+    "ru": {"practicing": "Практикующий/ая", "moderate": "Умеренный/ая", "secular": "Светский/ая"},
+    "uz": {"practicing": "Amaliyotchi", "moderate": "Mo'tadil", "secular": "Dunyoviy"},
+}
+_EDIT_MAR_LABELS = {
+    "ru": {"never_married": "Не был(а) в браке", "divorced": "Разведён/а", "widowed": "Вдовец/Вдова"},
+    "uz": {"never_married": "Turmush qurmagan", "divorced": "Ajrashgan", "widowed": "Beva"},
+}
+_EDIT_HOUSING_LABELS = {
+    "ru": {"own_house": "Свой дом", "own_apartment": "Своя квартира",
+           "with_parents": "С родителями", "rent": "Аренда"},
+    "uz": {"own_house": "O'z uyi", "own_apartment": "O'z kvartirasi",
+           "with_parents": "Ota-ona bilan", "rent": "Ijara"},
+}
+_EDIT_PHOUSING_LABELS = {
+    "ru": {"house": "Дом", "apartment": "Квартира"},
+    "uz": {"house": "Uy", "apartment": "Kvartira"},
+}
+_EDIT_CAR_LABELS = {
+    "ru": {"personal": "Личный", "family": "Семейный", "none": "Нет"},
+    "uz": {"personal": "Shaxsiy", "family": "Oilaviy", "none": "Yo'q"},
+}
+_EDIT_FPOS_SHORT = {
+    "ru": {"oldest": "старший", "middle": "средний", "youngest": "младший", "only": "единств."},
+    "uz": {"oldest": "katta", "middle": "o'rta", "youngest": "kenja", "only": "yagona"},
+}
+
+
+def _enum_value(v):
+    """Вернуть .value для enum или сам объект."""
+    return v.value if hasattr(v, "value") else v
+
+
+def _truncate(s: str, limit: int = 25) -> str:
+    return s if len(s) <= limit else s[:limit - 3] + "..."
+
+
+def _mask_phone(phone: str) -> str:
+    """+998901234567 → +998**...67"""
+    if not phone:
+        return ""
+    if len(phone) < 4:
+        return phone
+    return phone[:4] + "**..." + phone[-2:]
+
+
+def _format_edit_value(field: str, profile, lang: str) -> str:
+    """Форматирует текущее значение поля для кнопки меню редактирования."""
+    L = lang if lang in ("ru", "uz") else "ru"
+    dash = t("edit_not_specified", L)
+    filled = t("edit_filled", L)
+    not_filled = t("edit_not_filled", L)
+
+    if profile is None:
+        return dash
+
+    if field == "name":
+        return _truncate(profile.name or dash)
+    if field == "birth_year":
+        return str(profile.birth_year) if profile.birth_year else dash
+    if field == "height_weight":
+        h, w = profile.height_cm, profile.weight_kg
+        if h and w:
+            return f"{h} / {w}"
+        if h:
+            return f"{h} / —"
+        if w:
+            return f"— / {w}"
+        return dash
+    if field == "nationality":
+        from bot.utils.helpers import nationality_label
+        return _truncate(nationality_label(profile.nationality, L) if profile.nationality else dash)
+    if field == "city":
+        city, district = profile.city, profile.district
+        if city and district:
+            return _truncate(f"{city}, {district}")
+        return _truncate(city or dash)
+    if field == "education":
+        edu = _enum_value(profile.education)
+        label = _EDIT_EDU_LABELS.get(L, _EDIT_EDU_LABELS["ru"]).get(edu, dash)
+        return _truncate(label)
+    if field == "occupation":
+        from bot.utils.helpers import occupation_label
+        return _truncate(occupation_label(profile.occupation, L) if profile.occupation else dash)
+    if field == "religiosity":
+        rel = _enum_value(profile.religiosity)
+        return _EDIT_REL_LABELS.get(L, _EDIT_REL_LABELS["ru"]).get(rel, dash)
+    if field == "marital":
+        mar = _enum_value(profile.marital_status)
+        return _EDIT_MAR_LABELS.get(L, _EDIT_MAR_LABELS["ru"]).get(mar, dash)
+    if field == "photo":
+        return t("edit_photo_uploaded", L) if profile.photo_file_id else t("edit_photo_not_uploaded", L)
+    if field == "phone":
+        return _mask_phone(profile.parent_phone) if profile.parent_phone else dash
+    if field == "parent_telegram":
+        return _truncate(profile.parent_telegram or dash)
+    if field == "candidate_telegram":
+        return _truncate(profile.candidate_telegram or dash)
+    if field == "address":
+        if profile.address:
+            return _truncate(profile.address)
+        if profile.location_link:
+            return "🗺 Карта" if L == "ru" else "🗺 Karta"
+        return dash
+    # ── Family ──
+    if field == "father":
+        return _truncate(profile.father_occupation or dash)
+    if field == "mother":
+        return _truncate(profile.mother_occupation or dash)
+    if field == "siblings":
+        b = profile.brothers_count if profile.brothers_count is not None else 0
+        s = profile.sisters_count if profile.sisters_count is not None else 0
+        pos = _enum_value(profile.family_position)
+        pos_short = _EDIT_FPOS_SHORT.get(L, _EDIT_FPOS_SHORT["ru"]).get(pos) if pos else None
+        if pos_short:
+            base = f"{b} бр. / {s} с. · {pos_short}" if L == "ru" else f"{b} a-u / {s} o-s · {pos_short}"
+        else:
+            base = f"{b} бр. / {s} с." if L == "ru" else f"{b} a-u / {s} o-s"
+        return _truncate(base)
+    if field == "character":
+        return filled if (profile.character_hobbies or "").strip() else not_filled
+    if field == "health":
+        return filled if (profile.health_notes or "").strip() else not_filled
+    if field == "about":
+        return filled if (profile.ideal_family_life or "").strip() else not_filled
+    if field == "housing":
+        h = _enum_value(profile.housing)
+        label = _EDIT_HOUSING_LABELS.get(L, _EDIT_HOUSING_LABELS["ru"]).get(h, dash)
+        if h == "with_parents" and profile.parent_housing_type:
+            ph = _enum_value(profile.parent_housing_type)
+            ph_label = _EDIT_PHOUSING_LABELS.get(L, _EDIT_PHOUSING_LABELS["ru"]).get(ph)
+            if ph_label:
+                label = f"{label} ({ph_label.lower()})"
+        return _truncate(label)
+    if field == "car":
+        c = _enum_value(profile.car)
+        return _EDIT_CAR_LABELS.get(L, _EDIT_CAR_LABELS["ru"]).get(c, dash)
+
+    return dash
+
+
+def edit_hub_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Хаб редактирования: 2 раздела + навигация."""
+    rows = [
+        [InlineKeyboardButton(
+            text=t("edit_hub_candidate", lang),
+            callback_data=f"editsec:candidate:{profile_id}",
+        )],
+        [InlineKeyboardButton(
+            text=t("edit_hub_family", lang),
+            callback_data=f"editsec:family:{profile_id}",
+        )],
+    ]
+    rows.extend(nav_kb(lang, "menu:my"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def edit_candidate_kb(profile, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Раздел «О кандидате» — 14 полей со значениями."""
+    pid = profile.id if profile else 0
+    fields_uz = [
+        ("👤 Ism", "name"),
+        ("🗓 Tug'ilgan yili", "birth_year"),
+        ("📏 Bo'yi / Vazni", "height_weight"),
+        ("👥 Millat", "nationality"),
+        ("🏙 Shahar", "city"),
+        ("🎓 Ma'lumoti", "education"),
+        ("💼 Ish", "occupation"),
+        ("🕌 Dindorlik", "religiosity"),
+        ("💍 Oilaviy holat", "marital"),
+        ("📸 Foto", "photo"),
+        ("📞 Ota-onalar telefoni", "phone"),
+        ("📱 Ota-onalar TG", "parent_telegram"),
+        ("💬 Nomzod TG", "candidate_telegram"),
+        ("🏠 Manzil", "address"),
+    ]
+    fields_ru = [
+        ("👤 Имя", "name"),
+        ("🗓 Год рождения", "birth_year"),
+        ("📏 Рост / Вес", "height_weight"),
+        ("👥 Национальность", "nationality"),
+        ("🏙 Город", "city"),
+        ("🎓 Образование", "education"),
+        ("💼 Работа", "occupation"),
+        ("🕌 Религиозность", "religiosity"),
+        ("💍 Семейное положение", "marital"),
+        ("📸 Фото", "photo"),
+        ("📞 Телефон родителей", "phone"),
+        ("📱 TG родителей", "parent_telegram"),
+        ("💬 TG кандидата", "candidate_telegram"),
+        ("🏠 Адрес", "address"),
+    ]
+    fields = fields_uz if lang == "uz" else fields_ru
+
+    rows = []
+    for label, field in fields:
+        value = _format_edit_value(field, profile, lang)
+        rows.append([InlineKeyboardButton(
+            text=f"{label}: {value}",
+            callback_data=f"edit:{field}:{pid}",
+        )])
+    rows.extend(nav_kb(lang, f"myedit:{pid}"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def edit_family_kb(profile, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Раздел «О семье» — 8 полей со значениями."""
+    pid = profile.id if profile else 0
+    fields_uz = [
+        ("👨‍💼 Otasi", "father"),
+        ("👩‍💼 Onasi", "mother"),
+        ("👨‍👩‍👧 Aka-uka / opa-singil", "siblings"),
+        ("🌸 Xarakter", "character"),
+        ("🌿 Sog'lig'i", "health"),
+        ("💭 O'zi haqida", "about"),
+        ("🏡 Turar joy", "housing"),
+        ("🚗 Avtomobil", "car"),
+    ]
+    fields_ru = [
+        ("👨‍💼 Отец", "father"),
+        ("👩‍💼 Мать", "mother"),
+        ("👨‍👩‍👧 Братья / сёстры", "siblings"),
+        ("🌸 Характер", "character"),
+        ("🌿 Здоровье", "health"),
+        ("💭 О себе", "about"),
+        ("🏡 Жильё", "housing"),
+        ("🚗 Автомобиль", "car"),
+    ]
+    fields = fields_uz if lang == "uz" else fields_ru
+
+    rows = []
+    for label, field in fields:
+        value = _format_edit_value(field, profile, lang)
+        rows.append([InlineKeyboardButton(
+            text=f"{label}: {value}",
+            callback_data=f"edit:{field}:{pid}",
+        )])
+    rows.extend(nav_kb(lang, f"myedit:{pid}"))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def my_profile_kb(profile_id: int, lang: str = "ru", is_active: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(

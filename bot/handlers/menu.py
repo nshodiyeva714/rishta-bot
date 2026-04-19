@@ -26,6 +26,7 @@ from bot.keyboards.inline import (
     choose_moderator_kb, search_submenu_kb, create_submenu_kb,
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
     edit_marital_kb, edit_nationality_kb, edit_nationality_more_kb, nav_kb, add_nav,
+    edit_hub_kb, edit_candidate_kb, edit_family_kb,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -442,7 +443,7 @@ async def activate_profile(callback: CallbackQuery, state: FSMContext, session: 
 
 @router.callback_query(F.data.startswith("myedit:"))
 async def edit_profile_menu(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Показать меню редактирования — список полей."""
+    """Показать хаб редактирования — 2 раздела (О кандидате / О семье)."""
     await state.clear()
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
@@ -452,8 +453,51 @@ async def edit_profile_menu(callback: CallbackQuery, state: FSMContext, session:
         await callback.answer("⛔")
         return
 
-    await state.update_data(edit_profile_id=profile_id)
-    await _safe_edit(callback, t("edit_menu_title", lang), reply_markup=edit_profile_kb(profile_id, lang))
+    await state.update_data(edit_profile_id=profile_id, lang=lang)
+    title = t("edit_hub_title", lang) + "\n\n" + t("edit_hub_subtitle", lang)
+    await _safe_edit(callback, title, reply_markup=edit_hub_kb(profile_id, lang))
+    await callback.answer()
+
+
+# ── Раздел: О кандидате ──
+@router.callback_query(F.data.startswith("editsec:candidate:"))
+async def edit_section_candidate(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    profile = await session.get(Profile, profile_id)
+    lang = await get_lang(session, callback.from_user.id)
+
+    if not profile or profile.user_id != callback.from_user.id:
+        await callback.answer("⛔")
+        return
+
+    await state.set_state(None)
+    await state.update_data(edit_profile_id=profile_id, edit_section="candidate", lang=lang)
+    await _safe_edit(
+        callback,
+        t("edit_section_candidate_title", lang),
+        reply_markup=edit_candidate_kb(profile, lang),
+    )
+    await callback.answer()
+
+
+# ── Раздел: О семье ──
+@router.callback_query(F.data.startswith("editsec:family:"))
+async def edit_section_family(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    profile_id = int(callback.data.split(":")[-1])
+    profile = await session.get(Profile, profile_id)
+    lang = await get_lang(session, callback.from_user.id)
+
+    if not profile or profile.user_id != callback.from_user.id:
+        await callback.answer("⛔")
+        return
+
+    await state.set_state(None)
+    await state.update_data(edit_profile_id=profile_id, edit_section="family", lang=lang)
+    await _safe_edit(
+        callback,
+        t("edit_section_family_title", lang),
+        reply_markup=edit_family_kb(profile, lang),
+    )
     await callback.answer()
 
 
@@ -464,6 +508,7 @@ async def _start_edit_field(callback: CallbackQuery, state: FSMContext, session:
     """Общая логика: показать промпт и перейти в FSM-состояние."""
     profile_id = int(callback.data.split(":")[-1])
     lang = await get_lang(session, callback.from_user.id)
+    # Merge: edit_section (если установлен при входе в раздел) сохраняется
     await state.update_data(edit_profile_id=profile_id, lang=lang)
     await state.set_state(field_state)
     await _safe_edit(callback, t(prompt_key, lang), reply_markup=back_kb(lang))
@@ -471,22 +516,32 @@ async def _start_edit_field(callback: CallbackQuery, state: FSMContext, session:
 
 
 async def _finish_edit(message_or_cb, state: FSMContext, session: AsyncSession, lang: str):
-    """Вернуться в меню редактирования после сохранения."""
+    """Вернуться в нужный раздел редактирования (candidate / family) после сохранения."""
     data = await state.get_data()
     profile_id = data.get("edit_profile_id")
-    await state.clear()
+    section = data.get("edit_section", "candidate")
+    # set_state(None) — НЕ state.clear(): data (edit_section, edit_profile_id) сохраняется
+    await state.set_state(None)
+
+    profile = await session.get(Profile, profile_id) if profile_id else None
+
+    if profile is None:
+        # Fallback: profile не найден — плоский список (legacy)
+        kb = edit_profile_kb(profile_id or 0, lang)
+        title = t("edit_menu_title", lang)
+    elif section == "family":
+        kb = edit_family_kb(profile, lang)
+        title = t("edit_section_family_title", lang)
+    else:
+        kb = edit_candidate_kb(profile, lang)
+        title = t("edit_section_candidate_title", lang)
+
+    saved_text = t("edit_saved", lang) + "\n\n" + title
 
     if isinstance(message_or_cb, Message):
-        await message_or_cb.answer(
-            t("edit_saved", lang) + "\n\n" + t("edit_menu_title", lang),
-            reply_markup=edit_profile_kb(profile_id, lang),
-        )
+        await message_or_cb.answer(saved_text, reply_markup=kb)
     else:
-        await _safe_edit(
-            message_or_cb,
-            t("edit_saved", lang) + "\n\n" + t("edit_menu_title", lang),
-            reply_markup=edit_profile_kb(profile_id, lang),
-        )
+        await _safe_edit(message_or_cb, saved_text, reply_markup=kb)
 
 
 # ── Имя ──
