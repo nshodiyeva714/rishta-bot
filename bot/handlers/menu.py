@@ -1033,15 +1033,24 @@ async def edit_phone_save(message: Message, state: FSMContext, session: AsyncSes
     data = await state.get_data()
     lang = data.get("lang", "ru")
     text = (message.text or "").strip()
-    # Нормализуем номер
     digits = re.sub(r"[^\d]", "", text)
-    if len(digits) == 9:
-        digits = "998" + digits
-    if len(digits) == 12 and digits.startswith("998"):
-        phone = "+" + digits
+
+    phone = None
+    if text.startswith("+"):
+        # Международный E.164
+        if 7 <= len(digits) <= 15:
+            phone = f"+{digits}"
     else:
+        # Без «+» — только UZ-шорткаты
+        if len(digits) == 9:
+            phone = f"+998{digits}"
+        elif len(digits) == 12 and digits.startswith("998"):
+            phone = f"+{digits}"
+
+    if phone is None:
         await message.answer(t("invalid_phone", lang))
         return
+
     profile = await session.get(Profile, data["edit_profile_id"])
     if profile and profile.user_id == message.from_user.id:
         profile.parent_phone = phone

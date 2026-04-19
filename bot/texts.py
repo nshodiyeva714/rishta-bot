@@ -389,10 +389,10 @@ T = {
             "только с вашего одобрения.\n"
             "Модератор сначала свяжется\n"
             "с вами и спросит разрешения. 🤝\n\n"
-            "Телефон родителей:\n"
-            "Можно с префиксом или без:\n"
-            "+998 90 123 45 67\n"
-            "или просто: 901234567"
+            "Телефон родителей:\n\n"
+            "🇺🇿 Узбекистан: +998 90 123 45 67 или 901234567\n"
+            "🌍 Другие страны: с кодом и знаком «+»\n"
+            "   Пример: +1 213 555 0123 (США)"
         ),
         "uz": (
             "📞 11/14-savol\n{bar}\n\n"
@@ -401,10 +401,10 @@ T = {
             "roziligingiz bilan beriladi.\n"
             "Moderator avval siz bilan\n"
             "bog'lanib ruxsat so'raydi. 🤝\n\n"
-            "Ota-onalar telefoni:\n"
-            "Prefiks bilan yoki usiz kiriting:\n"
-            "+998 90 123 45 67\n"
-            "yoki shunchaki: 901234567"
+            "Ota-onalar telefoni:\n\n"
+            "🇺🇿 O'zbekiston: +998 90 123 45 67 yoki 901234567\n"
+            "🌍 Boshqa davlatlar: kod va «+» bilan\n"
+            "   Masalan: +1 213 555 0123 (AQSh)"
         ),
     },
     "q_parent_telegram": {
@@ -424,8 +424,16 @@ T = {
         "uz": "Kamida bitta kontakt ko'rsating — telefon yoki Telegram.",
     },
     "q_phone_invalid": {
-        "ru": "Неверный формат. Пример: +998 90 123 45 67 или 901234567.",
-        "uz": "Format noto'g'ri. Masalan: +998 90 123 45 67 yoki 901234567.",
+        "ru": (
+            "⚠️ Неверный формат.\n\n"
+            "🇺🇿 Узбекистан: +998 90 123 45 67 или 901234567\n"
+            "🌍 Международный: с «+» (например +1, +7, +44)"
+        ),
+        "uz": (
+            "⚠️ Format noto'g'ri.\n\n"
+            "🇺🇿 O'zbekiston: +998 90 123 45 67 yoki 901234567\n"
+            "🌍 Xalqaro: «+» bilan (masalan +1, +7, +44)"
+        ),
     },
     "q_photo_optional": {
         "ru": "Фото (необязательно)\n\n🔒 Защищено от скриншотов",
@@ -1107,8 +1115,16 @@ T = {
         "uz": "To'g'ri tug'ilgan yilni kiriting (masalan: 1998).",
     },
     "invalid_phone": {
-        "ru": "Введите номер в формате +998XXXXXXXXX",
-        "uz": "Raqamni +998XXXXXXXXX formatda kiriting",
+        "ru": (
+            "⚠️ Неверный формат.\n\n"
+            "🇺🇿 Узбекистан: +998 90 123 45 67 или 901234567\n"
+            "🌍 Международный: с «+» (например +1, +7, +44)"
+        ),
+        "uz": (
+            "⚠️ Format noto'g'ri.\n\n"
+            "🇺🇿 O'zbekiston: +998 90 123 45 67 yoki 901234567\n"
+            "🌍 Xalqaro: «+» bilan (masalan +1, +7, +44)"
+        ),
     },
 
     # ── Edit profile ──
