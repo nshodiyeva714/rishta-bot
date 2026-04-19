@@ -848,14 +848,24 @@ async def q11_parent_phone(message: Message, state: FSMContext):
     lang = await _lang(state)
     raw = (message.text or "").strip()
     digits = "".join(c for c in raw if c.isdigit())
-    if len(digits) == 9:
-        phone = f"+998{digits}"
-    elif len(digits) == 12 and digits.startswith("998"):
-        phone = f"+{digits}"
+
+    phone = None
+    if raw.startswith("+"):
+        # Международный E.164: + и 7-15 цифр
+        if 7 <= len(digits) <= 15:
+            phone = f"+{digits}"
     else:
+        # Без «+» — только UZ-шорткаты (обратная совместимость)
+        if len(digits) == 9:
+            phone = f"+998{digits}"
+        elif len(digits) == 12 and digits.startswith("998"):
+            phone = f"+{digits}"
+
+    if phone is None:
         sent = await message.answer(t("q_phone_invalid", lang), reply_markup=skip_back_kb(lang))
         await state.update_data(last_bot_msg=sent.message_id)
         return
+
     await state.update_data(parent_phone=phone)
     await _ask_parent_telegram(message, state)
 
