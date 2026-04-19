@@ -24,7 +24,13 @@ from bot.keyboards.inline import (
     mod_review_kb, mod_found_kb, mod_vip_duration_kb,
     vip_mod_list_kb, vip_mod_card_kb, vip_after_reply_kb,
 )
-from bot.utils.helpers import format_full_anketa, occupation_label
+from bot.utils.helpers import (
+    education_label,
+    format_full_anketa,
+    marital_label,
+    occupation_label,
+    religiosity_label,
+)
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -1975,12 +1981,13 @@ async def view_request(callback: CallbackQuery, session: AsyncSession):
     import datetime
     if profile:
         age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
+        is_male = profile.profile_type == ProfileType.SON
         p_display = profile.display_id or "—"
         p_name = profile.name or "—"
         p_city = profile.city or "—"
-        p_edu = profile.education.value if profile.education else "—"
-        p_rel = profile.religiosity.value if profile.religiosity else "—"
-        p_mar = profile.marital_status.value if profile.marital_status else "—"
+        p_edu = education_label(profile.education.value if profile.education else None, "ru")
+        p_rel = religiosity_label(profile.religiosity.value if profile.religiosity else None, "ru")
+        p_mar = marital_label(profile.marital_status.value if profile.marital_status else None, is_male, "ru")
         p_occ = occupation_label(profile.occupation, "ru")
     else:
         age, p_display, p_name, p_city, p_edu, p_rel, p_mar, p_occ = ("?",) + ("—",) * 7

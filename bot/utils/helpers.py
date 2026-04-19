@@ -253,6 +253,42 @@ def _marital_map(is_male: bool, lang: str = "ru") -> dict:
     }
 
 
+# ── Публичные обёртки над enum-картами (аналог occupation_label) ──
+
+def education_label(code, lang: str = "ru") -> str:
+    """Человекочитаемая метка уровня образования.
+
+    None / "" / "—" → "—". Неизвестный код → "—".
+    """
+    if code is None or code == "" or code == "—":
+        return "—"
+    L = lang if lang in ("ru", "uz") else "ru"
+    return _edu_map(L).get(code, "—")
+
+
+def religiosity_label(code, lang: str = "ru") -> str:
+    """Человекочитаемая метка уровня религиозности.
+
+    None / "" / "—" → "—". Неизвестный код → "—".
+    """
+    if code is None or code == "" or code == "—":
+        return "—"
+    L = lang if lang in ("ru", "uz") else "ru"
+    return _rel_map(L).get(code, "—")
+
+
+def marital_label(code, is_male: bool, lang: str = "ru") -> str:
+    """Человекочитаемая метка семейного положения.
+
+    Учитывает пол (is_male) для корректной формы в RU и "never_married" в UZ.
+    None / "" / "—" → "—". Неизвестный код → "—".
+    """
+    if code is None or code == "" or code == "—":
+        return "—"
+    L = lang if lang in ("ru", "uz") else "ru"
+    return _marital_map(is_male, L).get(code, "—")
+
+
 def _children_map(lang: str = "ru", is_son: bool = False) -> dict:
     """Map children_status → человеко-читаемый текст.
 

@@ -20,7 +20,15 @@ from bot.keyboards.inline import (
     search_filter_kb, filter_option_kb, nav_kb,
     nationality_main_rows, nationality_more_rows,
 )
-from bot.utils.helpers import age_text, calculate_age, format_anketa_public, occupation_label
+from bot.utils.helpers import (
+    age_text,
+    calculate_age,
+    education_label,
+    format_anketa_public,
+    marital_label,
+    occupation_label,
+    religiosity_label,
+)
 from bot.config import config
 from bot.states import SearchStates, ContactStates
 
@@ -1928,9 +1936,10 @@ async def request_contact(callback: CallbackQuery, session: AsyncSession, state:
 
     # Карточка модератору
     age = (datetime.datetime.now().year - profile.birth_year) if profile.birth_year else "?"
-    edu_raw = profile.education.value if profile.education else "—"
-    rel_raw = profile.religiosity.value if profile.religiosity else "—"
-    mar_raw = profile.marital_status.value if profile.marital_status else "—"
+    is_male = profile.profile_type == ProfileType.SON
+    edu_raw = education_label(profile.education.value if profile.education else None, "ru")
+    rel_raw = religiosity_label(profile.religiosity.value if profile.religiosity else None, "ru")
+    mar_raw = marital_label(profile.marital_status.value if profile.marital_status else None, is_male, "ru")
     occ_raw = occupation_label(profile.occupation, "ru")
 
     mod_text = (
