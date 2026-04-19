@@ -86,7 +86,7 @@ async def story_text(message: Message, state: FSMContext, session: AsyncSession)
         fb.story = message.text.strip()
         await session.commit()
 
-    thanks = "Спасибо за вашу историю! Она будет опубликована анонимно в @Rishta_uz 🤲" if lang == "ru" else "Tarixingiz uchun rahmat! U @Rishta_uz da anonim ravishda nashr etiladi 🤲"
+    thanks = "Спасибо за вашу историю! Она будет опубликована анонимно в @Rishta_channel 🤲" if lang == "ru" else "Tarixingiz uchun rahmat! U @Rishta_channel da anonim ravishda nashr etiladi 🤲"
     from aiogram.types import InlineKeyboardMarkup
     await message.answer(
         thanks,
