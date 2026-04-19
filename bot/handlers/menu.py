@@ -26,7 +26,7 @@ from bot.keyboards.inline import (
     choose_moderator_kb, search_submenu_kb, create_submenu_kb,
     edit_profile_kb, edit_education_kb, edit_religiosity_kb,
     edit_marital_kb, edit_nationality_kb, edit_nationality_more_kb, nav_kb, add_nav,
-    edit_hub_kb, edit_candidate_kb, edit_family_kb,
+    edit_hub_kb, edit_candidate_kb, edit_family_kb, back_to_section_kb,
 )
 from bot.utils.helpers import age_text, calculate_age
 from bot.config import config, get_all_moderator_ids
@@ -501,6 +501,39 @@ async def edit_section_family(callback: CallbackQuery, state: FSMContext, sessio
     await callback.answer()
 
 
+# ── «Назад» с экрана ввода поля → возврат в раздел редактирования ──
+@router.callback_query(F.data == "back:editsec")
+async def back_to_edit_section(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+    profile_id = data.get("edit_profile_id")
+    section = data.get("edit_section", "candidate")
+    lang = data.get("lang") or await get_lang(session, callback.from_user.id)
+
+    if not profile_id:
+        # FSM data потеряна (рестарт бота) — в главное меню
+        await show_main_menu(callback, session)
+        await callback.answer()
+        return
+
+    profile = await session.get(Profile, profile_id)
+    if not profile or profile.user_id != callback.from_user.id:
+        await callback.answer("⛔")
+        return
+
+    await state.set_state(None)
+    await state.update_data(edit_profile_id=profile_id, edit_section=section, lang=lang)
+
+    if section == "family":
+        kb = edit_family_kb(profile, lang)
+        title = t("edit_section_family_title", lang)
+    else:
+        kb = edit_candidate_kb(profile, lang)
+        title = t("edit_section_candidate_title", lang)
+
+    await _safe_edit(callback, title, reply_markup=kb)
+    await callback.answer()
+
+
 # ─── Обработчики кнопок edit:field:profile_id ───
 
 async def _start_edit_field(callback: CallbackQuery, state: FSMContext, session: AsyncSession,
@@ -511,7 +544,7 @@ async def _start_edit_field(callback: CallbackQuery, state: FSMContext, session:
     # Merge: edit_section (если установлен при входе в раздел) сохраняется
     await state.update_data(edit_profile_id=profile_id, lang=lang)
     await state.set_state(field_state)
-    await _safe_edit(callback, t(prompt_key, lang), reply_markup=back_kb(lang))
+    await _safe_edit(callback, t(prompt_key, lang), reply_markup=back_to_section_kb(lang))
     await callback.answer()
 
 
@@ -638,7 +671,7 @@ async def edit_nationality_save(callback: CallbackQuery, state: FSMContext, sess
         return
     if nat == "custom":
         prompt = "✍️ Введите национальность:" if lang != "uz" else "✍️ Millatingizni kiriting:"
-        await _safe_edit(callback, prompt, reply_markup=back_kb(lang))
+        await _safe_edit(callback, prompt, reply_markup=back_to_section_kb(lang))
         await state.set_state(EditProfileStates.nationality_custom)
         await callback.answer()
         return
@@ -969,15 +1002,23 @@ async def edit_about_save(message: Message, state: FSMContext, session: AsyncSes
 # Братья / сёстры / место в семье (комбо из 3 экранов)
 # ══════════════════════════════════════
 
-def _siblings_count_kb(prefix: str) -> InlineKeyboardMarkup:
+def _back_editsec_row_local(lang: str):
+    """Row «← Назад» с callback back:editsec (локально в menu.py)."""
+    return [InlineKeyboardButton(text=t("btn_back", lang), callback_data="back:editsec")]
+
+
+def _siblings_count_kb(prefix: str, lang: str) -> InlineKeyboardMarkup:
     """0/1/2/3/4+ для братьев или сестёр. prefix = 'editbro' или 'editsis'."""
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="0", callback_data=f"{prefix}:0"),
-        InlineKeyboardButton(text="1", callback_data=f"{prefix}:1"),
-        InlineKeyboardButton(text="2", callback_data=f"{prefix}:2"),
-        InlineKeyboardButton(text="3", callback_data=f"{prefix}:3"),
-        InlineKeyboardButton(text="4+", callback_data=f"{prefix}:4"),
-    ]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="0", callback_data=f"{prefix}:0"),
+            InlineKeyboardButton(text="1", callback_data=f"{prefix}:1"),
+            InlineKeyboardButton(text="2", callback_data=f"{prefix}:2"),
+            InlineKeyboardButton(text="3", callback_data=f"{prefix}:3"),
+            InlineKeyboardButton(text="4+", callback_data=f"{prefix}:4"),
+        ],
+        _back_editsec_row_local(lang),
+    ])
 
 
 def _siblings_position_kb(lang: str) -> InlineKeyboardMarkup:
@@ -987,9 +1028,9 @@ def _siblings_position_kb(lang: str) -> InlineKeyboardMarkup:
     else:
         opts = [("Старший/ая", "editpos:oldest"), ("Средний/яя", "editpos:middle"),
                 ("Младший/ая", "editpos:youngest"), ("Единственный/ая", "editpos:only")]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 @router.callback_query(F.data.startswith("edit:siblings:"))
@@ -1001,7 +1042,7 @@ async def edit_siblings_start(callback: CallbackQuery, state: FSMContext, sessio
     await _safe_edit(
         callback,
         t("edit_siblings_brothers_prompt", lang),
-        reply_markup=_siblings_count_kb("editbro"),
+        reply_markup=_siblings_count_kb("editbro", lang),
     )
     await callback.answer()
 
@@ -1019,7 +1060,7 @@ async def edit_siblings_brothers(callback: CallbackQuery, state: FSMContext, ses
     await _safe_edit(
         callback,
         t("edit_siblings_sisters_prompt", lang),
-        reply_markup=_siblings_count_kb("editsis"),
+        reply_markup=_siblings_count_kb("editsis", lang),
     )
     await callback.answer()
 
@@ -1083,9 +1124,9 @@ def _housing_kb(lang: str) -> InlineKeyboardMarkup:
             ("С родителями", "edithouse:with_parents"),
             ("Аренда", "edithouse:rent"),
         ]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _housing_parent_kb(lang: str) -> InlineKeyboardMarkup:
@@ -1093,9 +1134,9 @@ def _housing_parent_kb(lang: str) -> InlineKeyboardMarkup:
         opts = [("Uy", "editphouse:house"), ("Kvartira", "editphouse:apartment")]
     else:
         opts = [("Дом", "editphouse:house"), ("Квартира", "editphouse:apartment")]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 _HOUSING_MAP = {
@@ -1178,9 +1219,9 @@ def _car_kb(lang: str) -> InlineKeyboardMarkup:
             ("Семейный", "editcar:family"),
             ("Нет", "editcar:none"),
         ]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 _CAR_MAP = {
@@ -1230,9 +1271,9 @@ def _address_choice_kb(lang: str) -> InlineKeyboardMarkup:
             ("📍 Отправить геолокацию", "editaddr:geo"),
             ("🗺 Ссылка на карту", "editaddr:link"),
         ]
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
-    ])
+    rows = [[InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts]
+    rows.append(_back_editsec_row_local(lang))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 @router.callback_query(F.data.startswith("edit:address:"))
@@ -1259,7 +1300,7 @@ async def edit_address_choose(callback: CallbackQuery, state: FSMContext, sessio
 
     if choice == "text":
         prompt = "Ko'cha/mahalla nomini kiriting:" if lang == "uz" else "Введите улицу/махаллю:"
-        sent = await callback.message.answer(prompt, reply_markup=back_kb(lang))
+        sent = await callback.message.answer(prompt, reply_markup=back_to_section_kb(lang))
         await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(EditProfileStates.address_text)
     elif choice == "geo":
@@ -1274,7 +1315,7 @@ async def edit_address_choose(callback: CallbackQuery, state: FSMContext, sessio
         await state.set_state(EditProfileStates.address_location)
     elif choice == "link":
         prompt = "🗺 Google Maps yoki 2GIS havolasini kiriting:" if lang == "uz" else "🗺 Вставьте ссылку Google Maps или 2GIS:"
-        sent = await callback.message.answer(prompt, reply_markup=back_kb(lang))
+        sent = await callback.message.answer(prompt, reply_markup=back_to_section_kb(lang))
         await state.update_data(last_bot_msg_id=sent.message_id)
         await state.set_state(EditProfileStates.address_link)
 
