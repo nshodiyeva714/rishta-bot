@@ -1796,12 +1796,45 @@ def _format_profile_button(profile) -> str:
     return f"#{did} · {icon} {suffix}"
 
 
-def my_profiles_list_kb(profiles, lang: str = "ru") -> InlineKeyboardMarkup:
-    """Список всех анкет пользователя (своих + где он кандидат)."""
-    rows = [
-        [InlineKeyboardButton(text=_format_profile_button(p), callback_data=f"myprof:{p.id}")]
-        for p in profiles
-    ]
+def my_profiles_list_kb(profiles_page, lang: str = "ru",
+                          offset: int = 0, total: int | None = None,
+                          page_size: int = 10) -> InlineKeyboardMarkup:
+    """Список анкет пользователя с пагинацией.
+
+    profiles_page — уже срезанный список для текущей страницы.
+    offset        — текущий offset (для callbacks myprof:{id}:{offset}).
+    total         — общее кол-во анкет (если None — nav-row скрыт).
+    page_size     — размер страницы (по умолчанию 10).
+    """
+    rows = []
+    for p in profiles_page:
+        rows.append([InlineKeyboardButton(
+            text=_format_profile_button(p),
+            callback_data=f"myprof:{p.id}:{offset}",
+        )])
+
+    # Пагинация — только если total > page_size
+    if total is not None and total > page_size:
+        current_page = offset // page_size + 1
+        total_pages = (total + page_size - 1) // page_size  # ceil
+
+        nav = []
+        if offset > 0:
+            nav.append(InlineKeyboardButton(
+                text="⬅ Пред" if lang == "ru" else "⬅ Oldingi",
+                callback_data=f"mylist:{max(0, offset - page_size)}",
+            ))
+        nav.append(InlineKeyboardButton(
+            text=f"{current_page}/{total_pages}",
+            callback_data="noop",
+        ))
+        if offset + page_size < total:
+            nav.append(InlineKeyboardButton(
+                text="След ➡" if lang == "ru" else "Keyingi ➡",
+                callback_data=f"mylist:{offset + page_size}",
+            ))
+        rows.append(nav)
+
     rows.extend(nav_kb(lang, "menu:my"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
