@@ -391,7 +391,7 @@ async def cmd_stats(message: Message, session: AsyncSession):
 
         f"💳 <b>Оплаты сегодня:</b>\n"
         f"• Количество: <b>{payments_today}</b>\n"
-        f"• Доход: <b>{income_today_sum:,} сум</b>\n\n"
+        f"• Доход: <b>{format(income_today_sum, ',').replace(',', ' ')} сум</b>\n\n"
 
         f"👁 Просмотров всего: <b>{views_total}</b>\n"
     )
@@ -2327,10 +2327,14 @@ async def vipmod_reply_send(message: Message, state: FSMContext, session: AsyncS
         logger.error(f"vipmod_reply_send to {req.user_id}: {e}")
         ok = False
 
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🔙 К списку VIP", callback_data="vipmod:list"),
+    ]])
     await message.answer(
         f"✅ Ответ отправлен по {req.display_id or req_id}"
         if ok else
-        f"⚠️ Не удалось отправить ответ по {req.display_id or req_id}"
+        f"⚠️ Не удалось отправить ответ по {req.display_id or req_id}",
+        reply_markup=back_kb,
     )
     await state.set_state(None)
 
