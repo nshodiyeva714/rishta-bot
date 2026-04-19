@@ -207,10 +207,10 @@ def _lb(lang: str) -> dict:
 
 def _edu_map(lang: str = "ru") -> dict:
     return {
-        "secondary": "📚 Среднее" if lang == "ru" else "📚 O'rta",
-        "vocational": "📋 Среднее спец." if lang == "ru" else "📋 O'rta maxsus",
-        "higher": "🎓 Высшее" if lang == "ru" else "🎓 Oliy",
-        "studying": "🏛 Студент/ка" if lang == "ru" else "🏛 Talaba",
+        "secondary": "Среднее" if lang == "ru" else "O'rta",
+        "vocational": "Среднее спец." if lang == "ru" else "O'rta maxsus",
+        "higher": "Высшее" if lang == "ru" else "Oliy",
+        "studying": "Студент/ка" if lang == "ru" else "Talaba",
     }
 
 
@@ -233,23 +233,23 @@ def _car_map(lang: str = "ru") -> dict:
 
 def _rel_map(lang: str = "ru") -> dict:
     return {
-        "practicing": "🕌 Практикующий/ая" if lang == "ru" else "🕌 Amaliyotchi",
-        "moderate": "☪️ Умеренный/ая" if lang == "ru" else "☪️ Mo'tadil",
-        "secular": "🌐 Светский/ая" if lang == "ru" else "🌐 Dunyoviy",
+        "practicing": "Практикующий/ая" if lang == "ru" else "Amaliyotchi",
+        "moderate": "Умеренный/ая" if lang == "ru" else "Mo'tadil",
+        "secular": "Светский/ая" if lang == "ru" else "Dunyoviy",
     }
 
 
 def _marital_map(is_male: bool, lang: str = "ru") -> dict:
     if lang == "ru":
         return {
-            "never_married": "💍 Не был женат" if is_male else "💍 Не была замужем",
-            "divorced": "💔 Разведён" if is_male else "💔 Разведена",
-            "widowed": "🕊 Вдовец" if is_male else "🕊 Вдова",
+            "never_married": "Не был женат" if is_male else "Не была замужем",
+            "divorced": "Разведён" if is_male else "Разведена",
+            "widowed": "Вдовец" if is_male else "Вдова",
         }
     return {
-        "never_married": "💍 Uylanmagan" if is_male else "💍 Turmush qurmagan",
-        "divorced": "💔 Ajrashgan",
-        "widowed": "🕊 Beva",
+        "never_married": "Uylanmagan" if is_male else "Turmush qurmagan",
+        "divorced": "Ajrashgan",
+        "widowed": "Beva",
     }
 
 
@@ -261,19 +261,19 @@ def _children_map(lang: str = "ru", is_son: bool = False) -> dict:
     UZ gender-нейтрален.
     """
     if lang == "ru":
-        ex_text = ("👩\u200d👧 Да, живут с бывшей супругой" if is_son
-                   else "👩\u200d👧 Да, живут с бывшим супругом")
+        ex_text = ("Да, живут с бывшей супругой" if is_son
+                   else "Да, живут с бывшим супругом")
         return {
-            "no": "👶 Детей нет",
-            "yes": "👨\u200d👧 Есть дети",
-            "yes_with_me": "👨\u200d👧 Да, живут со мной",
+            "no": "Детей нет",
+            "yes": "Есть дети",
+            "yes_with_me": "Да, живут со мной",
             "yes_with_ex": ex_text,
         }
     return {
-        "no": "👶 Bolalari yo'q",
-        "yes": "👨\u200d👧 Farzand bor",
-        "yes_with_me": "👨\u200d👧 Ha, men bilan yashashadi",
-        "yes_with_ex": "👩\u200d👧 Ha, sobiq turmush o'rtog'im bilan yashashadi",
+        "no": "Bolalari yo'q",
+        "yes": "Farzand bor",
+        "yes_with_me": "Ha, men bilan yashashadi",
+        "yes_with_ex": "Ha, sobiq turmush o'rtog'im bilan yashashadi",
     }
 
 
@@ -300,42 +300,58 @@ def _position_map(lang: str = "ru") -> dict:
 # ══════════════════════════════════════════════════════
 
 def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
-    """Полная анкета для модератора — все 25 полей.
-    Метки на card_lang (язык анкеты), данные пользователя — как есть.
+    """Полная анкета для модератора.
+
+    Формат:
+    - Уникальная эмодзи перед каждым полем (без нумерации).
+    - Обязательные поля (имя, возраст, рост, нац., город, образование,
+      семейное положение) — всегда показываются.
+    - Опциональные поля скрываются, если значение пустое.
+    - Футер (фото, контакты, VIP) — всегда показывается.
     """
     L = _get_card_lang(profile)
     lb = _lb(L)
     is_son = profile.profile_type == ProfileType.SON
-    icon = "👦" if is_son else "👧"
     type_label = ("Son" if is_son else "Daughter") if L == "uz" else ("Сын" if is_son else "Дочь")
 
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
     age_str = age_text(age, L) if isinstance(age, int) else str(age)
 
-    # Телосложение
+    # Телосложение (без эмодзи — метка 📏 уже есть перед строкой)
     body_type_map = {
-        "ru": {"slim": "🪶 Стройный", "average": "🍃 Среднее", "athletic": "🏃 Спортивный", "full": "🌳 Плотный"},
-        "uz": {"slim": "🪶 Ozg'in", "average": "🍃 O'rtacha", "athletic": "🏃 Sportchilarga xos", "full": "🌳 To'ladan kelgan"},
+        "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
+        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
     }
     bt = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
 
-    # Фиксированные значения — переводим
-    edu = _edu_map(L).get(_ev(profile, "education"), "—")
-    # university_info — введено вручную, добавляем как есть
+    # Фиксированные значения (из enum-map — они теперь без эмодзи)
+    edu_raw = _ev(profile, "education")
+    edu = _edu_map(L).get(edu_raw, "—")
     if profile.university_info:
         edu += f", {profile.university_info}"
 
-    housing = _housing_map(L).get(_ev(profile, "housing"), "—")
-    if profile.parent_housing_type:
+    housing_raw = _ev(profile, "housing")
+    housing = _housing_map(L).get(housing_raw, None)
+    if housing and profile.parent_housing_type:
         ph_map = {"house": "uy" if L == "uz" else "дом", "apartment": "kvartira" if L == "uz" else "квартира"}
         housing += f" ({ph_map.get(profile.parent_housing_type.value, '')})"
 
-    car = _car_map(L).get(_ev(profile, "car"), "—")
-    scope = _scope_map(L).get(_ev(profile, "search_scope"), "—")
-    nat = nationality_label(profile.nationality, L)
-    rel = _rel_map(L).get(_ev(profile, "religiosity"), "—")
-    mar = _marital_map(is_son, L).get(_ev(profile, "marital_status"), "—")
-    ch = _children_map(L, is_son).get(_ev(profile, "children_status"), "—")
+    car_raw = _ev(profile, "car")
+    car = _car_map(L).get(car_raw, None)
+
+    scope_raw = _ev(profile, "search_scope")
+    scope = _scope_map(L).get(scope_raw, None)
+
+    nat = nationality_label(profile.nationality, L) if profile.nationality else "—"
+
+    rel_raw = _ev(profile, "religiosity")
+    rel = _rel_map(L).get(rel_raw, None)
+
+    mar_raw = _ev(profile, "marital_status")
+    mar = _marital_map(is_son, L).get(mar_raw, "—")
+
+    ch_raw = _ev(profile, "children_status")
+    ch = _children_map(L, is_son).get(ch_raw, None) if ch_raw else None
 
     position = ""
     if profile.family_position:
@@ -345,7 +361,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     if position:
         siblings += f" ({position})"
 
-    # Геолокация
+    # Геолокация для футера
     loc = "ko'rsatilmagan" if L == "uz" else "не указана"
     if profile.location_link:
         loc = profile.location_link
@@ -364,86 +380,117 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     if profile.photo_file_id:
         photo_status += " ✅"
 
-    # Совместимость — введена вручную, показываем как есть
-    compat = ""
-    if profile.ideal_family_life or profile.important_qualities or profile.five_year_plans:
-        compat_header = "Moslik" if L == "uz" else "Совместимость"
-        compat = f"\n💬 <b>{compat_header}:</b>\n"
-        if profile.ideal_family_life:
-            compat += f"1️⃣ {profile.ideal_family_life}\n"
-        if profile.important_qualities:
-            compat += f"2️⃣ {profile.important_qualities}\n"
-        if profile.five_year_plans:
-            compat += f"3️⃣ {profile.five_year_plans}\n"
-
-    lang_badge = "🇺🇿 UZ" if L == "uz" else "🇷🇺 RU"
     header = "💁‍♀️ Yangi anketa tekshiruvga" if L == "uz" else "💁‍♀️ Новая анкета на проверку"
-    not_specified = "ko'rsatilmagan" if L == "uz" else "не указано"
     addr_empty = "ko'rsatilmagan" if L == "uz" else "не указан"
 
-    text = (
-        f"<b>{header}</b>\n"
-        f"{profile.display_id or '—'} · {type_label}\n\n"
-        # Имя — введено вручную
-        f"1. {profile.name or '—'}\n"
-        # Возраст — фиксированный формат
-        f"2. {age_str} ({profile.birth_year or '?'})\n"
-        f"3. {profile.height_cm or '?'} {lb['cm']}"
-        f"{(' / ' + str(profile.weight_kg) + ' ' + lb['kg']) if profile.weight_kg else ''}"
-        f"{(' / ' + bt) if bt else ''}\n"
-        f"4. {lb['edu']}: {edu}\n"
-        # Работа — введена вручную
-        f"5. {lb['work']}: {occupation_label(profile.occupation, L) if profile.occupation else not_specified}\n"
-        f"6. {lb['housing']}: {housing}\n"
-        f"7. {car}\n"
-        # Город — введён вручную
-        f"8. {lb['city']}: {profile.city or '—'}"
-    )
+    lines = [
+        f"<b>{header}</b>",
+        f"{profile.display_id or '—'} · {type_label}",
+        "",
+    ]
+
+    # ── Обязательные поля ──
+    lines.append(f"👤 {profile.name or '—'}")
+    lines.append(f"🎂 {age_str} ({profile.birth_year or '?'})")
+
+    # Рост / Вес / Телосложение — одна строка
+    hw_parts = [f"{profile.height_cm or '?'} {lb['cm']}"]
+    if profile.weight_kg:
+        hw_parts.append(f"{profile.weight_kg} {lb['kg']}")
+    if bt:
+        hw_parts.append(bt)
+    lines.append(f"📏 {' / '.join(hw_parts)}")
+
+    lines.append(f"🎓 {lb['edu']}: {edu}")
+
+    # ── Опциональные (скрываем пустые) ──
+    if profile.occupation:
+        lines.append(f"💼 {lb['work']}: {occupation_label(profile.occupation, L)}")
+
+    if housing:
+        lines.append(f"🏡 {lb['housing']}: {housing}")
+
+    if car:
+        lines.append(f"🚗 {car}")
+
+    # Город — обязательное
+    city_line = profile.city or "—"
     if profile.district:
-        text += f", {profile.district}"
-    # Адрес — введён вручную ИЛИ геолокация/ссылка на карту
-    if profile.address:
-        addr_line = profile.address
-    elif profile.location_link:
-        addr_line = f"🗺 {profile.location_link}"
-    elif profile.location_lat and profile.location_lon:
-        addr_line = f"🗺 https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
-    else:
-        addr_line = addr_empty
-    text += f"\n9. {lb['address']}: {addr_line}\n"
-    text += f"10. {scope}\n"
-    if profile.preferred_city:
-        text += f"    {profile.preferred_city}\n"
-    if profile.preferred_district:
-        text += f"    {profile.preferred_district}\n"
-    if profile.preferred_country:
-        text += f"    {profile.preferred_country}\n"
-    # Регион — введён вручную (выбор из кнопок)
-    text += f"11. {lb['region']}: {profile.family_region or '—'}\n"
-    text += f"12. {lb['nat']}: {nat}\n"
-    # Отец, Мать — введено вручную
-    text += f"13. {lb['father']}: {profile.father_occupation or '—'}\n"
-    text += f"14. {lb['mother']}: {profile.mother_occupation or '—'}\n"
-    text += f"15. {lb['family']}: {siblings}\n"
-    text += f"16. {lb['religion']}: {rel}\n"
-    text += f"17. {lb['marital']}: {mar}\n"
-    text += f"18. {lb['children']}: {ch}\n"
-    # Здоровье — введено вручную
-    text += f"19. {lb['health']}: {profile.health_notes or not_specified}\n"
-    # Характер — введён вручную
-    text += f"20. {lb['char']}: {profile.character_hobbies or not_specified}\n"
-    text += compat
-    text += (
-        f"━━━━━━━━━━━━━━━\n"
-        f"📸 {photo_status}\n"
-        f"📞 {lb['phone']}: {profile.parent_phone or addr_empty}\n"
-        f"📱 {lb['tg_parents']}: {profile.parent_telegram or addr_empty}\n"
-        f"💬 {lb['tg_child']}: {profile.candidate_telegram or addr_empty}\n"
-        f"📍 {lb['on_map']}: {loc}\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"⭐ VIP: {vip}\n"
-    )
-    return text
+        city_line += f", {profile.district}"
+    lines.append(f"🏙 {lb['city']}: {city_line}")
+
+    # Адрес (text или карта) — скрыть если нет ни одного
+    has_address = bool(profile.address or profile.location_link or (profile.location_lat and profile.location_lon))
+    if has_address:
+        if profile.address:
+            addr_line = profile.address
+        elif profile.location_link:
+            addr_line = f"🗺 {profile.location_link}"
+        else:
+            addr_line = f"🗺 https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
+        lines.append(f"🏠 {lb['address']}: {addr_line}")
+
+    if scope:
+        lines.append(f"🔍 {scope}")
+        if profile.preferred_city:
+            lines.append(f"    {profile.preferred_city}")
+        if profile.preferred_district:
+            lines.append(f"    {profile.preferred_district}")
+        if profile.preferred_country:
+            lines.append(f"    {profile.preferred_country}")
+
+    if profile.family_region:
+        lines.append(f"📍 {lb['region']}: {profile.family_region}")
+
+    # Национальность — обязательное
+    lines.append(f"👥 {lb['nat']}: {nat}")
+
+    if profile.father_occupation:
+        lines.append(f"👨‍💼 {lb['father']}: {profile.father_occupation}")
+    if profile.mother_occupation:
+        lines.append(f"👩‍💼 {lb['mother']}: {profile.mother_occupation}")
+
+    lines.append(f"👨‍👩‍👧 {lb['family']}: {siblings}")
+
+    if rel:
+        lines.append(f"🕌 {lb['religion']}: {rel}")
+
+    # Семейное положение — обязательное
+    lines.append(f"💍 {lb['marital']}: {mar}")
+
+    # Дети: показываем только если marital in (divorced, widowed)
+    if mar_raw in ("divorced", "widowed") and ch:
+        lines.append(f"👶 {lb['children']}: {ch}")
+
+    if profile.health_notes:
+        lines.append(f"🌿 {lb['health']}: {profile.health_notes}")
+
+    if profile.character_hobbies:
+        lines.append(f"🌸 {lb['char']}: {profile.character_hobbies}")
+
+    # Совместимость (блок скрывается целиком если все три пусты)
+    if profile.ideal_family_life or profile.important_qualities or profile.five_year_plans:
+        compat_header = "Moslik" if L == "uz" else "Совместимость"
+        lines.append("")
+        lines.append(f"💬 <b>{compat_header}:</b>")
+        if profile.ideal_family_life:
+            lines.append(f"1️⃣ {profile.ideal_family_life}")
+        if profile.important_qualities:
+            lines.append(f"2️⃣ {profile.important_qualities}")
+        if profile.five_year_plans:
+            lines.append(f"3️⃣ {profile.five_year_plans}")
+
+    # ── Футер (всегда показывается) ──
+    lines.append("━━━━━━━━━━━━━━━")
+    lines.append(f"📸 {photo_status}")
+    lines.append(f"📞 {lb['phone']}: {profile.parent_phone or addr_empty}")
+    lines.append(f"📱 {lb['tg_parents']}: {profile.parent_telegram or addr_empty}")
+    lines.append(f"💬 {lb['tg_child']}: {profile.candidate_telegram or addr_empty}")
+    lines.append(f"📍 {lb['on_map']}: {loc}")
+    lines.append("━━━━━━━━━━━━━━━")
+    lines.append(f"⭐ VIP: {vip}")
+
+    return "\n".join(lines)
 
 
 # ══════════════════════════════════════════════════════
@@ -525,16 +572,17 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
             city_part += f", {profile.district}"
         lines.append(f"🏡 {city_part}")
 
-    # 5. Образование (+ ВУЗ/курс) — иконка в значении
+    # 5. Образование (+ ВУЗ/курс)
     edu_raw = _ev(profile, "education")
     if edu_raw:
         edu_label = _edu_map(L).get(edu_raw, edu_raw)
         uni = profile.university_info
         if edu_raw == "studying" and uni:
-            edu_label = f"🏛 {uni}"
-        elif uni:
-            edu_label += f", {uni}"
-        lines.append(edu_label)
+            lines.append(f"🏛 {uni}")
+        else:
+            if uni:
+                edu_label += f", {uni}"
+            lines.append(f"🎓 {edu_label}")
 
     # 6. Занятость — иконка в значении
     if profile.occupation:
@@ -546,17 +594,17 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         rel_val = rel_plain.get(L, rel_plain["ru"]).get(rel_raw, rel_raw)
         lines.append(rel_val)
 
-    # 8. Семейное положение (+ дети) — иконка в значении
+    # 8. Семейное положение (+ дети)
     mar_raw = _ev(profile, "marital_status")
     if mar_raw:
         mar_val = _marital_map(is_son, L).get(mar_raw, mar_raw)
-        mar_line = mar_val
+        mar_line = f"💍 {mar_val}"
         ch_raw = _ev(profile, "children_status")
         if ch_raw and ch_raw != "no" and mar_raw != "never_married":
             ch_val = _children_map(L, is_son).get(ch_raw, "")
             if ch_val and ch_val != "—":
                 ch_label = lb.get("children", "Дети")
-                mar_line += f" · {ch_label}: {ch_val}"
+                mar_line += f" · 👶 {ch_label}: {ch_val}"
         lines.append(mar_line)
 
     # ── Этап 2 ──
