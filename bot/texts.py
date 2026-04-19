@@ -131,7 +131,7 @@ T = {
             "• Фотографии\n"
             "Обработка данных осуществляется в соответствии с ЗРУ-547.\n\n"
             "⚠️ Платформа 18+\n\n"
-            "📢 @Rishta_uz · 💬 @Rishta_chat"
+            "📢 @Rishta_channel"
         ),
         "uz": (
             "ℹ️ <b>RISHTA HAQIDA</b>\n\n"
@@ -155,7 +155,7 @@ T = {
             "• Fotosuratlar\n"
             "Ma'lumotlar QRQ-547 qonuniga muvofiq qayta ishlanadi.\n\n"
             "⚠️ Platforma 18+\n\n"
-            "📢 @Rishta_uz · 💬 @Rishta_chat"
+            "📢 @Rishta_channel"
         ),
     },
 

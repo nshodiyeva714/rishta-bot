@@ -195,7 +195,7 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"✅ Kontakt — rozilik asosida beriladi\n"
             f"✅ Moderator yordam beradi\n"
             f"🔒 Foto skrinshotdan himoyalangan\n\n"
-            f"📢 @Rishta_uz | 💬 @Rishta_chat"
+            f"📢 @Rishta_channel"
         )
     else:
         text = (
@@ -210,7 +210,7 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"✅ Контакт — по взаимному согласию\n"
             f"✅ Модератор сопровождает процесс\n"
             f"🔒 Фото защищены от скриншотов\n\n"
-            f"📢 @Rishta_uz | 💬 @Rishta_chat"
+            f"📢 @Rishta_channel"
         )
 
     await _safe_edit(callback, text, reply_markup=back_main_kb(lang))
