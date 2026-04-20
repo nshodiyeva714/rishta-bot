@@ -119,7 +119,7 @@ def is_moderator(user_id: int) -> bool:
 MODERATOR_USERNAMES = {
     "tashkent": os.environ.get("MOD_TASHKENT_USERNAME", "rishta_manager_tashkent"),
     "samarkand": os.environ.get("MOD_SAMARKAND_USERNAME", "rishta_manager_samarkand"),
-    "vodiy": os.environ.get("MOD_VODIY_USERNAME", "rishta_manager_tashkent"),
+    "vodiy": os.environ.get("MOD_VODIY_USERNAME", ""),
     "usa": os.environ.get("MOD_USA_USERNAME", ""),
     "cis": os.environ.get("MOD_CIS_USERNAME", ""),
     "europe": os.environ.get("MOD_EUROPE_USERNAME", ""),
