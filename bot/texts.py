@@ -201,8 +201,8 @@ T = {
 
     # ── Questions (Stage 1 — 10 questions with progress bar) ──
     "q1": {
-        "ru": "🪪 Вопрос 1/14\n{bar}\n\nИмя {child} (можно вымышленное):",
-        "uz": "🪪 1/14-savol\n{bar}\n\n{child}ning ismi (taxallus bo'lishi mumkin):",
+        "ru": "🪪 Вопрос 1/14\n{bar}\n\nИмя (можно вымышленное):",
+        "uz": "🪪 1/14-savol\n{bar}\n\nIsm (taxallus bo'lishi mumkin):",
     },
     "q2": {
         "ru": "🎂📏 Вопрос 2/14\n{bar}\n\nГод рождения (например: 1998):",
