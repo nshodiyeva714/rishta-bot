@@ -1651,7 +1651,15 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
             occ_str = occupation_label(requester_profile.occupation, target_lang)
             req_city = requester_profile.city or "—"
             if requester_profile.residence_status:
-                res_map = {"uzbekistan": "🇺🇿 Узбекистан", "cis": "🇷🇺 СНГ", "usa": "🇺🇸 США", "europe": "🌍 Европа"}
+                res_map = {
+                    "uzbekistan": "🇺🇿 Узбекистан",
+                    "cis": "🇷🇺 СНГ",
+                    "usa": "🇺🇸 США",
+                    "europe": "🌍 Европа",
+                    "other_country": "🌍 Другая страна",
+                    "residence_permit": "🌍 Другая страна",
+                    "citizenship_other": "🌍 Другая страна",
+                }
                 res_str = res_map.get(requester_profile.residence_status.value, "—")
 
         try:
@@ -1677,7 +1685,7 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
         res = requester_profile.residence_status.value
         if res == "cis":
             region = "🇷🇺 СНГ"
-            moderator = config.moderator_cis
+            moderator = config.moderator_tashkent
             hours = "08:00–00:00 (MSK)"
         elif res == "usa":
             region = "🇺🇸 США"
@@ -1685,8 +1693,12 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
             hours = "08:00–00:00 (EST)"
         elif res == "europe":
             region = "🌍 Европа"
-            moderator = config.moderator_europe
+            moderator = config.moderator_tashkent
             hours = "08:00–00:00 (CET)"
+        elif res in ("other_country", "residence_permit", "citizenship_other"):
+            region = "🌍 Другая страна"
+            moderator = config.moderator_tashkent
+            hours = "08:00–00:00 (UZT)"
 
     await callback.message.answer(
         t("contact_moderator", lang, region=region, moderator=moderator, hours=hours),
