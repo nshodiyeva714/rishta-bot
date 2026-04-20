@@ -95,7 +95,7 @@ def nationality_label(key, lang: str = "ru") -> str:
 def age_text(age: int, lang: str = "ru") -> str:
     """Age with correct word form. UZ uses 'da', RU uses год/года/лет."""
     if lang == "uz":
-        return f"{age} da"
+        return f"{age} yosh"
     if age % 10 == 1 and age % 100 != 11:
         return f"{age} год"
     elif age % 10 in (2, 3, 4) and age % 100 not in (12, 13, 14):
@@ -348,7 +348,7 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
     L = _get_card_lang(profile)
     lb = _lb(L)
     is_son = profile.profile_type == ProfileType.SON
-    type_label = ("Son" if is_son else "Daughter") if L == "uz" else ("Сын" if is_son else "Дочь")
+    type_label = ("Yigit" if is_son else "Qiz") if L == "uz" else ("Сын" if is_son else "Дочь")
 
     age = calculate_age(profile.birth_year) if profile.birth_year else "?"
     age_str = age_text(age, L) if isinstance(age, int) else str(age)
@@ -461,9 +461,10 @@ def format_full_anketa(profile: Profile, lang: str = "ru") -> str:
         if profile.address:
             addr_line = profile.address
         elif profile.location_link:
-            addr_line = f"🗺 {profile.location_link}"
+            addr_line = f'<a href="{profile.location_link}">🗺 {lb["on_map"]}</a>'
         else:
-            addr_line = f"🗺 https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
+            _map_url = f"https://maps.google.com/?q={profile.location_lat},{profile.location_lon}"
+            addr_line = f'<a href="{_map_url}">🗺 {lb["on_map"]}</a>'
         lines.append(f"🏠 {lb['address']}: {addr_line}")
 
     if scope:
