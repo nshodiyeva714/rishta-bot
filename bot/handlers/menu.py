@@ -58,6 +58,32 @@ async def _safe_edit(callback: CallbackQuery, text: str, reply_markup=None):
         await callback.message.answer(text, reply_markup=reply_markup)
 
 
+def _soft_delete_profile(profile: Profile) -> None:
+    """Soft-delete: status=DELETED + обнуление PII для приватности.
+
+    Оставляем demographic data (возраст, рост, образование и т.п.) и счётчики
+    (views_count, requests_count) для статистики и аудита.
+    Удаляем всё, что однозначно связывает анкету с конкретным человеком:
+    фото, контакты, адрес, геолокацию, медицинские заметки.
+    """
+    profile.status = ProfileStatus.DELETED
+    profile.is_active = False
+    # PII: фото
+    profile.photo_file_id = None
+    profile.photo_type = PhotoType.NONE
+    # PII: контакты
+    profile.parent_phone = None
+    profile.parent_telegram = None
+    profile.candidate_telegram = None
+    # PII: адрес и геолокация
+    profile.address = None
+    profile.location_lat = None
+    profile.location_lon = None
+    profile.location_link = None
+    # Медицинская информация
+    profile.health_notes = None
+
+
 async def show_main_menu(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     await _safe_edit(
@@ -1713,8 +1739,7 @@ async def delete_execute(callback: CallbackQuery, session: AsyncSession):
     profile_id = int(callback.data.split(":")[1])
     profile = await session.get(Profile, profile_id)
     if profile and profile.user_id == callback.from_user.id:
-        profile.status = ProfileStatus.DELETED
-        profile.is_active = False
+        _soft_delete_profile(profile)
         await session.commit()
     lang = await get_lang(session, callback.from_user.id)
     text = "✅ Анкета удалена." if lang == "ru" else "✅ Anketa o'chirildi."
@@ -1744,8 +1769,7 @@ async def handle_reminder(callback: CallbackQuery, session: AsyncSession):
         await session.commit()
         await callback.answer("⏸ Анкета на паузе" if lang == "ru" else "⏸ Anketa pauzada")
     elif action == "delete":
-        profile.status = ProfileStatus.DELETED
-        profile.is_active = False
+        _soft_delete_profile(profile)
         await session.commit()
         await callback.answer("🗑 Анкета удалена" if lang == "ru" else "🗑 Anketa o'chirildi")
     elif action == "edit":
