@@ -99,7 +99,7 @@ def search_submenu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t("btn_search_bride", lang), callback_data="menu:search_bride")],
         [InlineKeyboardButton(text=t("btn_search_groom", lang), callback_data="menu:search_groom")],
-        *nav_kb(lang, "back:menu"),
+        *nav_kb(lang, "back:menu", show_main=False),
     ])
 
 
