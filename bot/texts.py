@@ -62,7 +62,7 @@ T = {
     },
     "btn_search_bride": {"ru": "👩 Невесту сыну", "uz": "👩 O'g'ilga kelin"},
     "btn_search_groom": {"ru": "👨 Жениха дочке", "uz": "👨 Qizga kuyov"},
-    "btn_search_candidate": {"ru": "🔍 Найти кандидата", "uz": "🔍 Nomzod qidirish"},
+    "btn_search_candidate": {"ru": "💫 Найти кандидата", "uz": "💫 Nomzod qidirish"},
     "btn_create_profile": {"ru": "🤲 Создать анкету", "uz": "🤲 Anketa yaratish"},
     "btn_profile_son": {"ru": "👨 Мужская анкета", "uz": "👨 Yigitning anketasi"},
     "btn_profile_daughter": {"ru": "👩 Женская анкета", "uz": "👩 Qizning anketasi"},
