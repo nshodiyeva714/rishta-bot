@@ -31,6 +31,9 @@ from bot.utils.helpers import (
     occupation_label,
     religiosity_label,
 )
+from bot.utils.safe_send import (
+    safe_send_message, safe_send_photo, safe_send_document, safe_send_voice,
+)
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -429,21 +432,23 @@ async def mod_publish(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     await session.commit()
 
     # Уведомляем пользователя
+    lang = "ru"
     try:
-        lang = "ru"  # По умолчанию; можно достать из User
         from sqlalchemy import select
         from bot.db.models import User
         result = await session.execute(select(User).where(User.id == profile.user_id))
         user = result.scalar_one_or_none()
         if user and user.language:
             lang = user.language.value
-
-        await bot.send_message(
-            profile.user_id,
-            t("mod_profile_published", lang, display_id=profile.display_id),
-        )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+
+    await safe_send_message(
+        bot,
+        profile.user_id,
+        t("mod_profile_published", lang, display_id=profile.display_id),
+        label="mod_profile_published",
+    )
     await callback.message.edit_text(
         callback.message.text + "\n\n✅ ОПУБЛИКОВАНО",
     )
@@ -466,21 +471,23 @@ async def mod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     profile.status = ProfileStatus.REJECTED
     await session.commit()
 
+    lang = "ru"
     try:
-        lang = "ru"
         from sqlalchemy import select
         from bot.db.models import User
         result = await session.execute(select(User).where(User.id == profile.user_id))
         user = result.scalar_one_or_none()
         if user and user.language:
             lang = user.language.value
-
-        await bot.send_message(
-            profile.user_id,
-            t("mod_profile_rejected", lang, display_id=profile.display_id),
-        )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+
+    await safe_send_message(
+        bot,
+        profile.user_id,
+        t("mod_profile_rejected", lang, display_id=profile.display_id),
+        label="mod_profile_rejected",
+    )
     await callback.message.edit_text(
         callback.message.text + "\n\n❌ ОТКЛОНЕНО",
     )
@@ -505,14 +512,13 @@ async def mod_reject_photo(callback: CallbackQuery, session: AsyncSession, bot: 
     profile.photo_type = PhotoType.NONE
     await session.commit()
 
-    try:
-        await bot.send_message(
-            profile.user_id,
-            "📸 Модератор отклонил фото в анкете " + (profile.display_id or "") +
-            ". Пожалуйста, загрузите другое фото через «Редактировать анкету».",
-        )
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
+    await safe_send_message(
+        bot,
+        profile.user_id,
+        "📸 Модератор отклонил фото в анкете " + (profile.display_id or "") +
+        ". Пожалуйста, загрузите другое фото через «Редактировать анкету».",
+        label="mod_reject_photo",
+    )
     await callback.message.edit_text(
         callback.message.text + "\n\n📸 ФОТО ОТКЛОНЕНО",
     )
@@ -543,24 +549,25 @@ async def mod_pause(callback: CallbackQuery, session: AsyncSession, bot: Bot):
 
     # Уведомить владельца
     if profile.user_id:
+        owner_lang = "ru"
         try:
             owner = await session.get(User, profile.user_id)
             owner_lang = owner.language.value if owner and owner.language else "ru"
-            if owner_lang == "uz":
-                msg = (
-                    f"⏸ <b>Anketangiz to'xtatildi</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Moderator bilan bog'laning."
-                )
-            else:
-                msg = (
-                    f"⏸ <b>Ваша анкета приостановлена</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Свяжитесь с модератором."
-                )
-            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
+        if owner_lang == "uz":
+            msg = (
+                f"⏸ <b>Anketangiz to'xtatildi</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Moderator bilan bog'laning."
+            )
+        else:
+            msg = (
+                f"⏸ <b>Ваша анкета приостановлена</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Свяжитесь с модератором."
+            )
+        await safe_send_message(bot, profile.user_id, msg, parse_mode="HTML", label="mod_pause_notify")
     try:
         await callback.message.edit_reply_markup(
             reply_markup=mod_review_kb(profile_id, is_paused=True)
@@ -596,21 +603,22 @@ async def mod_activate(callback: CallbackQuery, session: AsyncSession, bot: Bot)
         try:
             owner = await session.get(User, profile.user_id)
             owner_lang = owner.language.value if owner and owner.language else "ru"
-            if owner_lang == "uz":
-                msg = (
-                    f"✅ <b>Anketangiz faollashtirildi!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Endi anketangiz qidirishda ko'rinadi. 🤲"
-                )
-            else:
-                msg = (
-                    f"✅ <b>Ваша анкета активирована!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Теперь анкета снова видна в поиске. 🤲"
-                )
-            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
+            owner_lang = "ru"
+        if owner_lang == "uz":
+            msg = (
+                f"✅ <b>Anketangiz faollashtirildi!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Endi anketangiz qidirishda ko'rinadi. 🤲"
+            )
+        else:
+            msg = (
+                f"✅ <b>Ваша анкета активирована!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Теперь анкета снова видна в поиске. 🤲"
+            )
+        await safe_send_message(bot, profile.user_id, msg, parse_mode="HTML", label="mod_activate_notify")
     try:
         await callback.message.edit_reply_markup(
             reply_markup=mod_review_kb(profile_id, is_paused=False)
@@ -762,27 +770,28 @@ async def mod_edit_save(message: Message, session: AsyncSession, state: FSMConte
 
     # Уведомление владельцу
     if profile.user_id:
+        owner_lang = "ru"
         try:
             owner = await session.get(User, profile.user_id)
             owner_lang = owner.language.value if owner and owner.language else "ru"
-            display_id = profile.display_id or "—"
-            if owner_lang == "uz":
-                msg = (
-                    f"✏️ <b>Anketangiz tahrirlandi</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Moderator anketangizni\n"
-                    f"to'g'riladi. 🤝"
-                )
-            else:
-                msg = (
-                    f"✏️ <b>Ваша анкета отредактирована</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Модератор исправил данные\n"
-                    f"в вашей анкете. 🤝"
-                )
-            await bot.send_message(profile.user_id, msg, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
+        display_id = profile.display_id or "—"
+        if owner_lang == "uz":
+            msg = (
+                f"✏️ <b>Anketangiz tahrirlandi</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Moderator anketangizni\n"
+                f"to'g'riladi. 🤝"
+            )
+        else:
+            msg = (
+                f"✏️ <b>Ваша анкета отредактирована</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Модератор исправил данные\n"
+                f"в вашей анкете. 🤝"
+            )
+        await safe_send_message(bot, profile.user_id, msg, parse_mode="HTML", label="mod_edit_notify")
 
 
 # ── Подтверждение оплаты модератором ──
@@ -831,13 +840,12 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
     payment.status = PaymentStatus.REJECTED
     await session.commit()
 
-    try:
-        await bot.send_message(
-            payment.user_id,
-            "❌ Оплата отклонена модератором. Свяжитесь с модератором для уточнения.",
-        )
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
+    await safe_send_message(
+        bot,
+        payment.user_id,
+        "❌ Оплата отклонена модератором. Свяжитесь с модератором для уточнения.",
+        label="mod_reject_payment_notify",
+    )
     await callback.message.edit_text(
         callback.message.text + "\n\n❌ ОПЛАТА ОТКЛОНЕНА",
     )
@@ -874,18 +882,23 @@ async def mod_reply_send(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         return
 
-    try:
-        header = "💬 <b>Ответ от модератора:</b>\n\n"
-        await bot.send_message(user_id, header + (message.text or ""))
-        if message.photo:
-            await bot.send_photo(user_id, message.photo[-1].file_id)
-        if message.document:
-            await bot.send_document(user_id, message.document.file_id)
-        if message.voice:
-            await bot.send_voice(user_id, message.voice.file_id)
+    header = "💬 <b>Ответ от модератора:</b>\n\n"
+    # Каждый send — отдельный safe-вызов: падение одного не блокирует остальные
+    text_ok = await safe_send_message(
+        bot, user_id, header + (message.text or ""),
+        label="modreply_forward_text",
+    )
+    if message.photo:
+        await safe_send_photo(bot, user_id, message.photo[-1].file_id, label="modreply_forward_photo")
+    if message.document:
+        await safe_send_document(bot, user_id, message.document.file_id, label="modreply_forward_document")
+    if message.voice:
+        await safe_send_voice(bot, user_id, message.voice.file_id, label="modreply_forward_voice")
+
+    if text_ok:
         await message.answer(f"✅ Ответ отправлен пользователю (ID: {user_id})")
-    except Exception as e:
-        await message.answer(f"❌ Ошибка отправки: {e}")
+    else:
+        await message.answer(f"⚠️ Не удалось отправить ответ пользователю (ID: {user_id})")
 
     await state.clear()
 
@@ -1045,15 +1058,12 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
             f"⏸ Анкета <b>{display_id}</b> поставлена на паузу.",
         )
         if owner_id:
-            try:
-                msg = (
-                    f"⏸ Sizning anketangiz <b>{display_id}</b> moderator tomonidan pauzaga qo'yildi."
-                    if owner_lang == "uz" else
-                    f"⏸ Ваша анкета <b>{display_id}</b> поставлена на паузу модератором."
-                )
-                await bot.send_message(owner_id, msg)
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
+            msg = (
+                f"⏸ Sizning anketangiz <b>{display_id}</b> moderator tomonidan pauzaga qo'yildi."
+                if owner_lang == "uz" else
+                f"⏸ Ваша анкета <b>{display_id}</b> поставлена на паузу модератором."
+            )
+            await safe_send_message(bot, owner_id, msg, label="mod_manage_pause_notify")
     elif action == "activate":
         profile.status = ProfileStatus.PUBLISHED
         profile.is_active = True
@@ -1065,15 +1075,12 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
             f"🟢 Анкета <b>{display_id}</b> активирована.",
         )
         if owner_id:
-            try:
-                msg = (
-                    f"🟢 Sizning anketangiz <b>{display_id}</b> yana faol!"
-                    if owner_lang == "uz" else
-                    f"🟢 Ваша анкета <b>{display_id}</b> снова активна!"
-                )
-                await bot.send_message(owner_id, msg)
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
+            msg = (
+                f"🟢 Sizning anketangiz <b>{display_id}</b> yana faol!"
+                if owner_lang == "uz" else
+                f"🟢 Ваша анкета <b>{display_id}</b> снова активна!"
+            )
+            await safe_send_message(bot, owner_id, msg, label="mod_manage_activate_notify")
     elif action == "block":
         profile.status = ProfileStatus.REJECTED
         profile.is_active = False
@@ -1083,15 +1090,12 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
             f"❌ Анкета <b>{display_id}</b> заблокирована.",
         )
         if owner_id:
-            try:
-                msg = (
-                    f"❌ Sizning anketangiz <b>{display_id}</b> moderator tomonidan bloklandi."
-                    if owner_lang == "uz" else
-                    f"❌ Ваша анкета <b>{display_id}</b> заблокирована модератором."
-                )
-                await bot.send_message(owner_id, msg)
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
+            msg = (
+                f"❌ Sizning anketangiz <b>{display_id}</b> moderator tomonidan bloklandi."
+                if owner_lang == "uz" else
+                f"❌ Ваша анкета <b>{display_id}</b> заблокирована модератором."
+            )
+            await safe_send_message(bot, owner_id, msg, label="mod_manage_block_notify")
     elif action == "vip_add":
         # Показать выбор срока VIP
         await callback.message.edit_text(
@@ -1110,15 +1114,12 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
             f"⭐ VIP статус снят с анкеты <b>{display_id}</b>.",
         )
         if owner_id:
-            try:
-                msg = (
-                    f"ℹ️ <b>{display_id}</b> anketangizning VIP maqomi olib tashlandi."
-                    if owner_lang == "uz" else
-                    f"ℹ️ VIP статус анкеты <b>{display_id}</b> снят."
-                )
-                await bot.send_message(owner_id, msg)
-            except Exception as _e:
-                logger.debug("ignored: %s", _e)
+            msg = (
+                f"ℹ️ <b>{display_id}</b> anketangizning VIP maqomi olib tashlandi."
+                if owner_lang == "uz" else
+                f"ℹ️ VIP статус анкеты <b>{display_id}</b> снят."
+            )
+            await safe_send_message(bot, owner_id, msg, label="mod_manage_vip_remove_notify")
     await callback.answer()
 
 
@@ -1195,10 +1196,7 @@ async def mod_vip_set_duration(callback: CallbackQuery, session: AsyncSession, b
                 f"Срок: {days_label}\n"
                 f"Действует до: {vip_until} 🎉"
             )
-        try:
-            await bot.send_message(profile.user_id, msg)
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
+        await safe_send_message(bot, profile.user_id, msg, label="mod_vip_granted_notify")
     await callback.answer()
 
 
@@ -1225,13 +1223,18 @@ async def mod_publish_vip(callback: CallbackQuery, session: AsyncSession, bot: B
     await session.commit()
 
     # Уведомляем пользователя о публикации
+    lang = "ru"
     try:
         result = await session.execute(select(User).where(User.id == profile.user_id))
         user = result.scalar_one_or_none()
         lang = user.language.value if user and user.language else "ru"
-        await bot.send_message(profile.user_id, t("mod_profile_published", lang, display_id=profile.display_id))
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+    await safe_send_message(
+        bot, profile.user_id,
+        t("mod_profile_published", lang, display_id=profile.display_id),
+        label="mod_publish_vip_notify",
+    )
     # Показываем выбор срока VIP
     await callback.message.edit_text(
         f"✅ Анкета <b>{profile.display_id}</b> опубликована!\n\n"
@@ -1461,21 +1464,18 @@ async def op_reply_send(message: Message, state: FSMContext, bot: Bot):
         [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_profile:{profile_id}")],
     ])
 
-    try:
-        await bot.send_message(
-            user_id,
-            (
-                f"💁‍♀️ <b>Ответ оператора:</b>\n\n"
-                f"📋 #{req_number}\n\n"
-                f"{message.text}"
-            ),
-            reply_markup=reply_kb,
-            parse_mode="HTML",
-        )
-        sent = True
-    except Exception as e:
-        logger.error(f"op_reply_send to {user_id}: {e}")
-        sent = False
+    sent = await safe_send_message(
+        bot,
+        user_id,
+        (
+            f"💁‍♀️ <b>Ответ оператора:</b>\n\n"
+            f"📋 #{req_number}\n\n"
+            f"{message.text}"
+        ),
+        reply_markup=reply_kb,
+        parse_mode="HTML",
+        label="op_reply_send",
+    )
 
     await message.answer(
         f"✅ Ответ отправлен!\n📋 #{req_number}"
@@ -1522,12 +1522,10 @@ async def op_send_requisites(callback: CallbackQuery, session: AsyncSession, bot
 
     payment_text = t("op_payment_requisites", req_lang, req_number=req_number)
 
-    try:
-        await bot.send_message(user_id, payment_text, reply_markup=kb, parse_mode="HTML")
-        sent = True
-    except Exception as e:
-        logger.error(f"op_send_req to {user_id}: {e}")
-        sent = False
+    sent = await safe_send_message(
+        bot, user_id, payment_text, reply_markup=kb, parse_mode="HTML",
+        label="op_send_req",
+    )
 
     try:
         await callback.message.answer(
@@ -1561,20 +1559,19 @@ async def op_reject_request(callback: CallbackQuery, session: AsyncSession, bot:
         [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-    try:
-        await bot.send_message(
-            user_id,
-            (
-                f"❌ Запрос отклонён.\n\n"
-                f"📋 #{req_number}\n\n"
-                f"Попробуйте найти другого\n"
-                f"кандидата. 🤲"
-            ),
-            reply_markup=reject_kb,
-            parse_mode="HTML",
-        )
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
+    await safe_send_message(
+        bot,
+        user_id,
+        (
+            f"❌ Запрос отклонён.\n\n"
+            f"📋 #{req_number}\n\n"
+            f"Попробуйте найти другого\n"
+            f"кандидата. 🤲"
+        ),
+        reply_markup=reject_kb,
+        parse_mode="HTML",
+        label="op_reject_request",
+    )
 
     try:
         from sqlalchemy import update
@@ -1688,10 +1685,10 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
     kb_for_photo = after_kb if has_photo and not has_loc else None
     kb_for_loc = after_kb if has_loc else None
 
-    try:
-        await bot.send_message(user_id, user_msg, reply_markup=kb_for_text, parse_mode="HTML")
-    except Exception as e:
-        logger.error(f"confirm_pay send contact: {e}")
+    await safe_send_message(
+        bot, user_id, user_msg, reply_markup=kb_for_text, parse_mode="HTML",
+        label="confirm_pay_contact",
+    )
 
     # Фото из анкеты (если есть) — с caption по photo_type
     if has_photo:
@@ -1700,14 +1697,12 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             PhotoType.CLOSED_FACE:  "contact_photo_closed",
             PhotoType.SILHOUETTE:   "contact_photo_silhouette",
         }.get(profile.photo_type, "contact_photo_regular")
-        try:
-            await bot.send_photo(
-                user_id, profile.photo_file_id,
-                caption=t(_caption_key, req_lang),
-                reply_markup=kb_for_photo,
-            )
-        except Exception as _e:
-            logger.debug("send_photo failed: %s", _e)
+        await safe_send_photo(
+            bot, user_id, profile.photo_file_id,
+            caption=t(_caption_key, req_lang),
+            reply_markup=kb_for_photo,
+            label="confirm_pay_photo",
+        )
 
     # Геоточка (если есть) — всегда последняя
     if has_loc:
@@ -1722,26 +1717,27 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             logger.debug("send_location failed: %s", _e)
 
     if profile.user_id and profile.user_id != user_id:
+        owner_lang = "ru"
         try:
             owner = await session.get(User, profile.user_id)
             owner_lang = owner.language.value if owner and owner.language else "ru"
-            if owner_lang == "uz":
-                owner_msg = (
-                    f"💌 <b>Sizning kontaktingiz ulashildi!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Jiddiy oila anketangizga qiziqdi.\n"
-                    f"Qo'ng'iroqni kuting! 🤝"
-                )
-            else:
-                owner_msg = (
-                    f"💌 <b>Вашим контактом поделились!</b>\n\n"
-                    f"🔖 {display_id}\n\n"
-                    f"Серьёзная семья заинтересовалась.\n"
-                    f"Ждите звонка! 🤝"
-                )
-            await bot.send_message(profile.user_id, owner_msg, parse_mode="HTML")
         except Exception as _e:
             logger.debug("ignored: %s", _e)
+        if owner_lang == "uz":
+            owner_msg = (
+                f"💌 <b>Sizning kontaktingiz ulashildi!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Jiddiy oila anketangizga qiziqdi.\n"
+                f"Qo'ng'iroqni kuting! 🤝"
+            )
+        else:
+            owner_msg = (
+                f"💌 <b>Вашим контактом поделились!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Серьёзная семья заинтересовалась.\n"
+                f"Ждите звонка! 🤝"
+            )
+        await safe_send_message(bot, profile.user_id, owner_msg, parse_mode="HTML", label="confirm_pay_owner_notify")
 
     try:
         from sqlalchemy import update
@@ -1806,20 +1802,19 @@ async def reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bo
         )],
     ])
 
-    try:
-        await bot.send_message(
-            user_id,
-            (
-                f"❌ Оплата не подтверждена.\n\n"
-                f"📋 #{req_number}\n\n"
-                f"Проверьте правильность\n"
-                f"реквизитов и попробуйте снова."
-            ),
-            reply_markup=retry_kb,
-            parse_mode="HTML",
-        )
-    except Exception as _e:
-        logger.debug("ignored: %s", _e)
+    await safe_send_message(
+        bot,
+        user_id,
+        (
+            f"❌ Оплата не подтверждена.\n\n"
+            f"📋 #{req_number}\n\n"
+            f"Проверьте правильность\n"
+            f"реквизитов и попробуйте снова."
+        ),
+        reply_markup=retry_kb,
+        parse_mode="HTML",
+        label="reject_payment_user",
+    )
 
     try:
         mark = f"\n\n❌ Оплата #{req_number} не подтверждена"
@@ -2202,17 +2197,16 @@ async def vipmod_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bo
     user = user_result.scalar_one_or_none()
     user_lang = user.language.value if user and user.language else "ru"
 
-    try:
-        await bot.send_message(
-            req.user_id,
-            t(
-                "vip_confirmed_user", user_lang,
-                display_id=profile.display_id or "—",
-                expires_at=profile.vip_expires_at.strftime("%d.%m.%Y"),
-            ),
-        )
-    except Exception as _e:
-        logger.debug("notify user %s failed: %s", req.user_id, _e)
+    await safe_send_message(
+        bot,
+        req.user_id,
+        t(
+            "vip_confirmed_user", user_lang,
+            display_id=profile.display_id or "—",
+            expires_at=profile.vip_expires_at.strftime("%d.%m.%Y"),
+        ),
+        label="vip_confirmed_user",
+    )
 
     try:
         await callback.message.edit_text(
@@ -2248,17 +2242,16 @@ async def vipmod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot
     user = user_result.scalar_one_or_none()
     user_lang = user.language.value if user and user.language else "ru"
 
-    try:
-        await bot.send_message(
-            req.user_id,
-            t(
-                "vip_rejected_user", user_lang,
-                display_id=req.display_id or "—",
-                moderator=config.moderator_tashkent,
-            ),
-        )
-    except Exception as _e:
-        logger.debug("notify user %s failed: %s", req.user_id, _e)
+    await safe_send_message(
+        bot,
+        req.user_id,
+        t(
+            "vip_rejected_user", user_lang,
+            display_id=req.display_id or "—",
+            moderator=config.moderator_tashkent,
+        ),
+        label="vip_rejected_user",
+    )
 
     try:
         await callback.message.edit_text(
@@ -2319,20 +2312,17 @@ async def vipmod_reply_send(message: Message, state: FSMContext, session: AsyncS
     if not reply_text:
         return
 
-    try:
-        await bot.send_message(
-            req.user_id,
-            t(
-                "vip_reply_received", user_lang,
-                display_id=req.display_id or "—",
-                text=reply_text,
-            ),
-            reply_markup=vip_after_reply_kb(req.profile_id, req.days, user_lang),
-        )
-        ok = True
-    except Exception as e:
-        logger.error(f"vipmod_reply_send to {req.user_id}: {e}")
-        ok = False
+    ok = await safe_send_message(
+        bot,
+        req.user_id,
+        t(
+            "vip_reply_received", user_lang,
+            display_id=req.display_id or "—",
+            text=reply_text,
+        ),
+        reply_markup=vip_after_reply_kb(req.profile_id, req.days, user_lang),
+        label="vip_reply_received",
+    )
 
     back_kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="🔙 К списку VIP", callback_data="vipmod:list"),

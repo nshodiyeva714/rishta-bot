@@ -23,6 +23,7 @@ from bot.keyboards.inline import (
 )
 from bot.config import config, get_all_moderator_ids
 from bot.utils.helpers import format_anketa_private
+from bot.utils.safe_send import safe_send_message, safe_send_photo
 from sqlalchemy import func
 import logging
 logger = logging.getLogger(__name__)
@@ -55,21 +56,20 @@ async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, pr
             f"Пусть эта встреча станет\n"
             f"началом счастья! 🤲"
         )
-    await bot.send_message(user_id, confirm_text)
+    await safe_send_message(bot, user_id, confirm_text, label="deliver_contact_confirm")
 
     # Контакты и адрес
     private_text = format_anketa_private(profile, lang)
-    await bot.send_message(user_id, private_text)
+    await safe_send_message(bot, user_id, private_text, label="deliver_contact_private")
 
     # Фото если есть
     if profile.photo_file_id:
-        try:
-            await bot.send_photo(user_id, profile.photo_file_id,
-                caption="📸 Фото кандидата\n🔒 Защищено от скриншотов" if lang == "ru"
-                else "📸 Nomzodning fotosurati\n🔒 Skrinshotdan himoyalangan"
-            )
-        except Exception:
-            pass
+        await safe_send_photo(
+            bot, user_id, profile.photo_file_id,
+            caption="📸 Фото кандидата\n🔒 Защищено от скриншотов" if lang == "ru"
+            else "📸 Nomzodning fotosurati\n🔒 Skrinshotdan himoyalangan",
+            label="deliver_contact_photo",
+        )
 
     # Предупреждение
     warn_text = (
@@ -83,13 +83,15 @@ async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, pr
         "Omad! Hammasi yaxshi bo'lsin 🤲\n\n"
         "<i>14 kundan so'ng natija haqida so'raymiz 😊</i>"
     )
-    await bot.send_message(user_id, warn_text)
+    await safe_send_message(bot, user_id, warn_text, label="deliver_contact_warn")
 
     # Предлагаем запланировать встречу (Шаг 16)
-    await bot.send_message(
+    await safe_send_message(
+        bot,
         user_id,
         t("meeting_date", lang),
         reply_markup=meeting_skip_kb(lang),
+        label="deliver_contact_meeting_prompt",
     )
 
     # Обновляем статус запроса
@@ -187,11 +189,8 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
         display_id=profile.display_id if profile else "—",
         amount="30 000 сум",
     )
-    try:
-        await bot.send_message(mod_id, mod_text, reply_markup=mod_payment_kb(payment.id))
-        await bot.send_photo(mod_id, photo.file_id)
-    except Exception as _e:
-        logger.debug("notify mod %s failed: %s", mod_id, _e)
+    await safe_send_message(bot, mod_id, mod_text, reply_markup=mod_payment_kb(payment.id), label="payment_manual_to_mod")
+    await safe_send_photo(bot, mod_id, photo.file_id, label="payment_manual_photo_to_mod")
 
     from aiogram.types import InlineKeyboardMarkup
     await message.answer(
@@ -268,24 +267,18 @@ async def _notify_mods_new_vip_request(
     copy_id = resolve_control_copy_moderator(profile)
 
     # Primary — с reply_kb
-    try:
-        if req.screenshot_file_id:
-            await bot.send_photo(primary_id, photo=req.screenshot_file_id, caption=text, reply_markup=reply_kb)
-        else:
-            await bot.send_message(primary_id, text, reply_markup=reply_kb)
-    except Exception as _e:
-        logger.debug("notify primary mod %s failed: %s", primary_id, _e)
+    if req.screenshot_file_id:
+        await safe_send_photo(bot, primary_id, req.screenshot_file_id, caption=text, reply_markup=reply_kb, label="vip_request_primary_photo")
+    else:
+        await safe_send_message(bot, primary_id, text, reply_markup=reply_kb, label="vip_request_primary_text")
 
     # Копия для контроля (только USA → Ташкент) — без кнопок
     if copy_id and copy_id != primary_id:
         copy_prefix = "📋 КОПИЯ ДЛЯ КОНТРОЛЯ\n\n"
-        try:
-            if req.screenshot_file_id:
-                await bot.send_photo(copy_id, photo=req.screenshot_file_id, caption=copy_prefix + text)
-            else:
-                await bot.send_message(copy_id, copy_prefix + text)
-        except Exception as _e:
-            logger.debug("notify copy mod %s failed: %s", copy_id, _e)
+        if req.screenshot_file_id:
+            await safe_send_photo(bot, copy_id, req.screenshot_file_id, caption=copy_prefix + text, label="vip_request_copy_photo")
+        else:
+            await safe_send_message(bot, copy_id, copy_prefix + text, label="vip_request_copy_text")
 
 
 # ── vip_dur:N — пользователь выбрал срок (глобальный, без state) ──

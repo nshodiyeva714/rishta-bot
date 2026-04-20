@@ -13,6 +13,7 @@ from bot.states import MeetingStates
 from bot.texts import t
 from bot.keyboards.inline import main_menu_kb, meeting_skip_kb, nav_kb
 from bot.config import config
+from bot.utils.safe_send import safe_send_message
 
 router = Router()
 
@@ -126,10 +127,7 @@ async def meeting_time(message: Message, state: FSMContext, session: AsyncSessio
     from bot.services.moderator_routing import resolve_primary_moderator
     from bot.config import config as _cfg
     mod_id = resolve_primary_moderator(target_profile)["telegram_id"] if target_profile else _cfg.mod_tashkent_id
-    try:
-        await bot.send_message(mod_id, mod_text)
-    except Exception:
-        pass
+    await safe_send_message(bot, mod_id, mod_text, label="meeting_to_mod")
 
     from aiogram.types import InlineKeyboardMarkup
     await message.answer(

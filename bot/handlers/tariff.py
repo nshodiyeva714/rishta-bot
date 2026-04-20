@@ -27,6 +27,7 @@ from bot.keyboards.inline import (
     housing_kb, add_nav, nav_kb, back_kb,
 )
 from bot.utils.helpers import generate_display_id, age_text, calculate_age, format_full_anketa, occupation_label
+from bot.utils.safe_send import safe_send_message, safe_send_photo
 from bot.config import config
 
 router = Router()
@@ -757,12 +758,9 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
     from bot.services.moderator_routing import resolve_primary_moderator
     mod_id = resolve_primary_moderator(profile)["telegram_id"]
     mod_text = format_full_anketa(profile, lang="ru")
-    try:
-        await bot.send_message(mod_id, mod_text, reply_markup=mod_review_kb(profile.id))
-        if profile.photo_file_id:
-            await bot.send_photo(mod_id, profile.photo_file_id)
-    except Exception:
-        pass
+    await safe_send_message(bot, mod_id, mod_text, reply_markup=mod_review_kb(profile.id), label="new_profile_to_mod")
+    if profile.photo_file_id:
+        await safe_send_photo(bot, mod_id, profile.photo_file_id, label="new_profile_photo_to_mod")
 
     return profile, display_id
 

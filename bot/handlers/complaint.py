@@ -9,6 +9,7 @@ from bot.db.models import User, Complaint, ComplaintReason, Profile
 from bot.texts import t
 from bot.keyboards.inline import nav_kb, add_nav
 from bot.config import config
+from bot.utils.safe_send import safe_send_message
 
 router = Router()
 
@@ -77,9 +78,6 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
         f"Причина: {reason_labels.get(reason_value, reason_value)}"
     )
     mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else _cfg.mod_tashkent_id
-    try:
-        await bot.send_message(mod_id, mod_text)
-    except Exception:
-        pass
+    await safe_send_message(bot, mod_id, mod_text, label="complaint_to_mod")
 
     await callback.answer()

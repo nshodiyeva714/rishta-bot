@@ -20,6 +20,7 @@ from bot.keyboards.inline import (
     main_menu_kb,
 )
 from bot.config import config, is_moderator
+from bot.utils.safe_send import safe_send_message
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -47,11 +48,9 @@ async def send_24h_reminder(bot: Bot, user_id: int, lang: str) -> None:
                 "Загляните — возможно найдёте\n"
                 "достойного кандидата! 💍"
             )
-        await bot.send_message(user_id, msg, parse_mode="HTML")
+        await safe_send_message(bot, user_id, msg, parse_mode="HTML", label="24h_reminder")
     except asyncio.CancelledError:
         raise
-    except Exception as e:
-        logger.error(f"Ошибка 24h-напоминания для {user_id}: {e}")
     finally:
         _REMINDER_SCHEDULED.discard(user_id)
 

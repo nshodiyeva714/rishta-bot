@@ -29,6 +29,7 @@ from bot.utils.helpers import (
     occupation_label,
     religiosity_label,
 )
+from bot.utils.safe_send import safe_send_message, safe_send_photo
 from bot.config import config
 from bot.states import SearchStates, ContactStates
 
@@ -69,10 +70,7 @@ async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, 
             f"Просмотров: <b>{views}</b>\n\n"
             f"Ваша анкета работает! 🤲"
         )
-    try:
-        await bot.send_message(profile.user_id, text, parse_mode="HTML")
-    except Exception as e:
-        logger.error(f"Ошибка уведомления о просмотре: {e}")
+    await safe_send_message(bot, profile.user_id, text, parse_mode="HTML", label="notify_owner_view")
 
 
 async def _notify_owner_favorite(bot: Bot, session: AsyncSession, profile: Profile, user_id: int):
@@ -97,10 +95,7 @@ async def _notify_owner_favorite(bot: Bot, session: AsyncSession, profile: Profi
             f"🔖 {display_id}\n\n"
             f"Хороший знак — семья заинтересовалась! 😊"
         )
-    try:
-        await bot.send_message(profile.user_id, text)
-    except Exception as e:
-        logger.error(f"Ошибка уведомления об избранном: {e}")
+    await safe_send_message(bot, profile.user_id, text, label="notify_owner_favorite")
 
 
 async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile: Profile):
@@ -127,10 +122,7 @@ async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile
             f"Семья запросила ваши контакты.\n"
             f"Модератор свяжется с вами в ближайшее время 🤝"
         )
-    try:
-        await bot.send_message(profile.user_id, text)
-    except Exception as e:
-        logger.error(f"Ошибка уведомления о запросе контакта: {e}")
+    await safe_send_message(bot, profile.user_id, text, label="notify_owner_contact_request")
 
 PROFILES_PER_PAGE = 1  # Показывать по одной анкете
 
@@ -1662,21 +1654,20 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
                 }
                 res_str = res_map.get(requester_profile.residence_status.value, "—")
 
-        try:
-            await bot.send_message(
-                target_profile.user_id,
-                t("notify_interest", target_lang,
-                    display_id=target_profile.display_id,
-                    city=req_city,
-                    age=age_str,
-                    education=edu_str,
-                    occupation=occ_str,
-                    requester_city=req_city,
-                    residence=res_str,
-                ),
-            )
-        except Exception as _e:
-            logger.debug("ignored: %s", _e)
+        await safe_send_message(
+            bot,
+            target_profile.user_id,
+            t("notify_interest", target_lang,
+                display_id=target_profile.display_id,
+                city=req_city,
+                age=age_str,
+                education=edu_str,
+                occupation=occ_str,
+                requester_city=req_city,
+                residence=res_str,
+            ),
+            label="notify_interest",
+        )
     region = "🇺🇿 Узбекистан"
     moderator = config.moderator_tashkent
     hours = "08:00–00:00 (UZT)"
@@ -1892,10 +1883,7 @@ async def send_question(message: Message, session: AsyncSession, state: FSMConte
     ])
 
     mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else config.mod_tashkent_id
-    try:
-        await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
-    except Exception as _e:
-        logger.debug("notify mod %s failed: %s", mod_id, _e)
+    await safe_send_message(bot, mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML", label="search_question_to_mod")
 
     if lang == "uz":
         reply = (
@@ -1980,10 +1968,7 @@ async def request_contact(callback: CallbackQuery, session: AsyncSession, state:
     ])
 
     mod_id = resolve_primary_moderator(profile)["telegram_id"]
-    try:
-        await bot.send_message(mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML")
-    except Exception as _e:
-        logger.debug("notify mod %s failed: %s", mod_id, _e)
+    await safe_send_message(bot, mod_id, mod_text, reply_markup=mod_kb, parse_mode="HTML", label="contact_request_to_mod")
 
     if lang == "uz":
         text = (
@@ -2063,10 +2048,7 @@ async def receive_screenshot(message: Message, session: AsyncSession, state: FSM
     ])
 
     mod_id = resolve_primary_moderator(profile)["telegram_id"] if profile else config.mod_tashkent_id
-    try:
-        await bot.send_photo(mod_id, photo_id, caption=mod_caption, reply_markup=mod_kb, parse_mode="HTML")
-    except Exception as _e:
-        logger.debug("notify mod %s failed: %s", mod_id, _e)
+    await safe_send_photo(bot, mod_id, photo_id, caption=mod_caption, reply_markup=mod_kb, parse_mode="HTML", label="payment_screenshot_to_mod")
 
     await message.answer(
         f"✅ Скриншот получен!\n"
