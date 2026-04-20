@@ -1886,5 +1886,5 @@ def choose_moderator_kb(lang: str = "ru") -> InlineKeyboardMarkup:
         tash = "rishta_manager_tashkent"
         rows.append([InlineKeyboardButton(text=f"💬 @{tash}",
                                           url=f"https://t.me/{tash}")])
-    rows.extend(nav_kb(lang, "back:menu"))
+    rows.extend(nav_kb(lang, "back:menu", show_main=False))
     return InlineKeyboardMarkup(inline_keyboard=rows)

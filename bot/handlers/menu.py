@@ -246,7 +246,11 @@ async def about_platform(callback: CallbackQuery, state: FSMContext, session: As
             f"📢 @Rishta_channel"
         )
 
-    await _safe_edit(callback, text, reply_markup=back_main_kb(lang))
+    # Только «Назад» — кнопка «Меню» дублирует, т.к. Назад ведёт в то же место
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=nav_kb(lang, "back:menu", show_main=False)
+    )
+    await _safe_edit(callback, text, reply_markup=kb)
     await callback.answer()
 
 
