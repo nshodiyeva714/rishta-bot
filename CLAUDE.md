@@ -379,6 +379,46 @@ profile.education = "higher"
 edu_raw = profile.education.value if profile.education else "—"
 ```
 
+Для **человекочитаемых меток** (ru/uz) используй публичные функции
+из `bot/utils/helpers.py` — они уже подключены к внутренним словарям
+и обрабатывают `None` / `""` / `"—"` → `"—"`:
+
+```python
+from bot.utils.helpers import (
+    occupation_label,      # occupation → "Работает" / "Ishlaydi" / ...
+    nationality_label,     # nationality → "🇺🇿 Узбек" / "🇺🇿 O'zbek" / ...
+    education_label,       # "higher" → "Высшее" / "Oliy"
+    religiosity_label,     # "secular" → "Светский/ая" / "Dunyoviy"
+    marital_label,         # "never_married" + is_male → "Не был женат" / "Не была замужем" / "Uylanmagan" / "Turmush qurmagan"
+)
+
+edu = education_label(profile.education.value if profile.education else None, "ru")
+mar = marital_label(profile.marital_status.value if profile.marital_status else None,
+                    profile.profile_type == ProfileType.SON, "ru")
+```
+
+**Не импортируй** `_edu_map` / `_rel_map` / `_marital_map` напрямую — они приватные
+(подчёркивание), обёртки выше покрывают все кейсы. Используются в
+`format_full_anketa`, `search.py:request_contact`, `moderator.py:view_request`.
+
+---
+
+## Утилиты форматирования
+
+`bot/utils/helpers.py`:
+
+- `age_text(age, lang)` — «30 лет» / «30 yosh» (грамматически корректно)
+- `calculate_age(birth_year)` — возраст по году рождения
+- `format_full_anketa(profile, lang)` — полная карточка анкеты
+  для модератора (HTML-теги `<b>`, `<a>`). Шлётся через `Bot` с
+  глобальным `ParseMode.HTML` ([bot/__main__.py:109](bot/__main__.py))
+  — явный `parse_mode="HTML"` в `send_message`/`edit_text` **не нужен**.
+- `format_anketa_public(profile, lang)` — короткая карточка для поиска
+
+**UZ-метки:** тип анкеты — `Yigit` (сын) / `Qiz` (дочь); возраст — `{N} yosh`.
+Карта — кликабельная HTML-ссылка с текстом «На карте» / «Xaritada»
+(ключ `lb['on_map']` в `LABELS`).
+
 ---
 
 ## Seed-скрипт
