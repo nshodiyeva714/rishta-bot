@@ -70,12 +70,12 @@ T = {
     "btn_contact_moderator": {"ru": "💁‍♀️ Модератор", "uz": "💁‍♀️ Moderator"},
     "btn_about": {"ru": "ℹ️ О платформе", "uz": "ℹ️ Platforma haqida"},
     "submenu_search": {
-        "ru": "🔍 <b>Найти кандидата</b>\n\nКого ищете?",
-        "uz": "🔍 <b>Nomzod qidirish</b>\n\nKimni qidiryapsiz?",
+        "ru": "Кого ищете?",
+        "uz": "Kimni qidiryapsiz?",
     },
     "submenu_create": {
-        "ru": "📝 <b>Создать анкету</b>\n\nЧью анкету хотите создать?",
-        "uz": "📝 <b>Anketa yaratish</b>\n\nKimning anketasini yaratmoqchisiz?",
+        "ru": "Чью анкету хотите создать?",
+        "uz": "Kimning anketasini yaratmoqchisiz?",
     },
     "user_feedback_prompt": {
         "ru": (
