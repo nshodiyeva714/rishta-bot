@@ -256,14 +256,14 @@ async def my_main(callback: CallbackQuery, state: FSMContext, session: AsyncSess
     await state.clear()
     lang = await get_lang(session, callback.from_user.id)
     if lang == "uz":
-        text = "🗂 <b>Mening arizalarim:</b>"
+        text = "Nimani ochmoqchisiz?"
         buttons = [
             [InlineKeyboardButton(text="📋 Mening anketam", callback_data="my:profile")],
             [InlineKeyboardButton(text="❤️ Sevimli anketalar", callback_data="my:favorites")],
             [InlineKeyboardButton(text="🔙 Orqaga", callback_data="menu:main")],
         ]
     else:
-        text = "🗂 <b>Мои заявки:</b>"
+        text = "Что открыть?"
         buttons = [
             [InlineKeyboardButton(text="📋 Моя анкета", callback_data="my:profile")],
             [InlineKeyboardButton(text="❤️ Избранные анкеты", callback_data="my:favorites")],
