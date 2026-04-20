@@ -280,7 +280,7 @@ async def q3_height(message: Message, state: FSMContext):
     await _delete_old(message, state)
     lang = await _lang(state)
     text = message.text.strip()
-    if not text.isdigit() or not (100 <= int(text) <= 250):
+    if not text.isdigit() or not (140 <= int(text) <= 220):
         err = ("⚠️ Bo'yni to'g'ri kiriting (140–220 sm)" if lang == "uz"
                else "⚠️ Введите корректный рост (140–220 см)")
         sent = await message.answer(err)
