@@ -72,51 +72,6 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
-
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # 🗑 ONE-TIME MIGRATION — REMOVE IN FOLLOW-UP COMMIT
-        # Retroactive PII cleanup for past DELETED profiles.
-        # Mirrors _soft_delete_profile() in bot/handlers/menu.py.
-        # Idempotent: WHERE clause skips rows already cleaned.
-        # After logs confirm it ran (cleaned N → next restart shows 0),
-        # delete this block and keep only the _soft_delete_profile path.
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        try:
-            result = await conn.execute(text("""
-                UPDATE profiles
-                SET photo_file_id = NULL,
-                    photo_type = 'none',
-                    parent_phone = NULL,
-                    parent_telegram = NULL,
-                    candidate_telegram = NULL,
-                    address = NULL,
-                    location_lat = NULL,
-                    location_lon = NULL,
-                    location_link = NULL,
-                    health_notes = NULL
-                WHERE status = 'deleted'
-                  AND (
-                    photo_file_id IS NOT NULL OR
-                    parent_phone IS NOT NULL OR
-                    parent_telegram IS NOT NULL OR
-                    candidate_telegram IS NOT NULL OR
-                    address IS NOT NULL OR
-                    location_lat IS NOT NULL OR
-                    location_lon IS NOT NULL OR
-                    location_link IS NOT NULL OR
-                    health_notes IS NOT NULL OR
-                    photo_type IS DISTINCT FROM 'none'
-                  )
-            """))
-            cleaned = result.rowcount if result.rowcount is not None else -1
-            if cleaned > 0:
-                logger.info(f"[PII-cleanup] cleaned {cleaned} past DELETED profiles")
-            elif cleaned == 0:
-                logger.info("[PII-cleanup] nothing to clean (idempotent no-op)")
-            else:
-                logger.info("[PII-cleanup] executed (rowcount unavailable)")
-        except Exception as e:
-            logger.error(f"[PII-cleanup] skipped: {e}")
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей
