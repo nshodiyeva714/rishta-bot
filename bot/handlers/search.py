@@ -350,14 +350,14 @@ async def search_start(callback: CallbackQuery, session: AsyncSession, state: FS
             buttons = [
                 [InlineKeyboardButton(text="👦 Kuyov qidiryapman", callback_data="search_guest:son")],
                 [InlineKeyboardButton(text="👧 Kelin qidiryapman", callback_data="search_guest:daughter")],
-                [InlineKeyboardButton(text="← Orqaga", callback_data="back:menu")],
+                [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back:menu")],
             ]
         else:
             text = "🔍 Кого вы ищете?"
             buttons = [
                 [InlineKeyboardButton(text="👦 Ищу жениха", callback_data="search_guest:son")],
                 [InlineKeyboardButton(text="👧 Ищу невесту", callback_data="search_guest:daughter")],
-                [InlineKeyboardButton(text="← Назад", callback_data="back:menu")],
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back:menu")],
             ]
         await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await callback.answer()

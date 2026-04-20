@@ -12,7 +12,7 @@ def nav_kb(lang: str = "ru", back_cb: str = "back:menu",
     row = []
     if show_back:
         row.append(InlineKeyboardButton(
-            text="← Orqaga" if lang == "uz" else "← Назад",
+            text="🔙 Orqaga" if lang == "uz" else "🔙 Назад",
             callback_data=back_cb,
         ))
     if show_main:
@@ -37,9 +37,9 @@ def back_main_kb(lang: str = "ru", back_cb: str = "back:menu") -> InlineKeyboard
 
 
 def skip_back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Этап 2: текстовый вопрос с [⏭ Пропустить] [← Назад] (back_ext_step)."""
+    """Этап 2: текстовый вопрос с [⏭ Пропустить] [🔙 Назад] (back_ext_step)."""
     skip = "⏭ O'tkazib yuborish" if lang == "uz" else "⏭ Пропустить"
-    back = "← Orqaga" if lang == "uz" else "← Назад"
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=skip, callback_data="skip")],
         [InlineKeyboardButton(text=back, callback_data="back_ext_step")],
@@ -47,8 +47,8 @@ def skip_back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Этап 2: обязательный текстовый вопрос (без skip) с [← Назад]."""
-    back = "← Orqaga" if lang == "uz" else "← Назад"
+    """Этап 2: обязательный текстовый вопрос (без skip) с [🔙 Назад]."""
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=back, callback_data="back_ext_step")],
     ])
@@ -384,9 +384,9 @@ def back_step_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 
 def skip_back_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Этап 1: текстовый вопрос с [⏭ Пропустить] [← Назад] (back_step)."""
+    """Этап 1: текстовый вопрос с [⏭ Пропустить] [🔙 Назад] (back_step)."""
     skip = "⏭ O'tkazib yuborish" if lang == "uz" else "⏭ Пропустить"
-    back = "← Orqaga" if lang == "uz" else "← Назад"
+    back = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=skip, callback_data="skip")],
         [InlineKeyboardButton(text=back, callback_data="back_step")],
@@ -520,7 +520,7 @@ def anketa_finish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def enhance_or_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """После описания Этапа 2: дополнить сейчас или опубликовать."""
-    back_text = "← Orqaga" if lang == "uz" else "← Назад"
+    back_text = "🔙 Orqaga" if lang == "uz" else "🔙 Назад"
     if lang == "uz":
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✏️ Hozir to'ldirish", callback_data="ext:start")],
@@ -1104,7 +1104,7 @@ def search_filter_kb(lang: str = "ru", filters: dict | None = None) -> InlineKey
     )])
 
     buttons.append([InlineKeyboardButton(
-        text="← Orqaga" if is_uz else "← Назад",
+        text="🔙 Orqaga" if is_uz else "🔙 Назад",
         callback_data="menu:main",
     )])
 

@@ -693,7 +693,7 @@ async def _show_ext_complete(m_or_cb, state: FSMContext):
         )
         buttons = [
             [InlineKeyboardButton(text="🚀 Nashr etish", callback_data="profile:confirm")],
-            [InlineKeyboardButton(text="← Orqaga", callback_data="ext:back")],
+            [InlineKeyboardButton(text="🔙 Orqaga", callback_data="ext:back")],
         ]
     else:
         text = (
@@ -703,7 +703,7 @@ async def _show_ext_complete(m_or_cb, state: FSMContext):
         )
         buttons = [
             [InlineKeyboardButton(text="🚀 Опубликовать", callback_data="profile:confirm")],
-            [InlineKeyboardButton(text="← Назад", callback_data="ext:back")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="ext:back")],
         ]
 
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
