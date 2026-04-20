@@ -27,20 +27,11 @@ class Config:
     mod_usa_id: int = field(
         default_factory=lambda: int(os.environ.get("MOD_USA_ID", "0"))
     )
-    moderator_vodiy: str = field(
-        default_factory=lambda: os.environ.get("MODERATOR_VODIY", "@rishta_manager_vodiy")
-    )
     main_moderator_id: int = field(
         default_factory=lambda: int(os.environ.get("MAIN_MODERATOR_ID", "0")) or 8400995899
     )
     moderator_usa: str = field(
         default_factory=lambda: os.environ.get("MODERATOR_USA", "@rishta_manager_usa")
-    )
-    moderator_cis: str = field(
-        default_factory=lambda: os.environ.get("MODERATOR_CIS", "@rishta_manager_cis")
-    )
-    moderator_europe: str = field(
-        default_factory=lambda: os.environ.get("MODERATOR_EUROPE", "@rishta_manager_europe")
     )
     payme_token: str = field(default_factory=lambda: os.environ.get("PAYME_TOKEN", ""))
     click_token: str = field(default_factory=lambda: os.environ.get("CLICK_TOKEN", ""))

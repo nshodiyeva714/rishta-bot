@@ -61,7 +61,7 @@ python -m bot
    - `BOT_TOKEN` — токен от @BotFather
    - `DATABASE_URL` — см. шаг 2
    - `MODERATOR_CHAT_ID` — id чата модератора для уведомлений
-   - `MODERATOR_TASHKENT`, `MODERATOR_USA`, `MODERATOR_CIS`, `MODERATOR_EUROPE`
+   - `MODERATOR_TASHKENT`, `MODERATOR_USA`
    - (опц.) `PAYME_TOKEN`, `CLICK_TOKEN`, `STRIPE_SECRET_KEY`
 5. Railway сам прочитает `Procfile` (`worker: python -m bot`)
    и запустит long polling
@@ -77,8 +77,6 @@ python -m bot
 | `MODERATOR_CHAT_ID`  | Chat id для уведомлений модератору               |
 | `MODERATOR_TASHKENT` | @username модератора по UZ                       |
 | `MODERATOR_USA`      | @username модератора по US                       |
-| `MODERATOR_CIS`      | @username модератора по СНГ                      |
-| `MODERATOR_EUROPE`   | @username модератора по Европе                   |
 | `PAYME_TOKEN`        | Payme merchant token (опционально)               |
 | `CLICK_TOKEN`        | Click merchant token (опционально)               |
 | `STRIPE_SECRET_KEY`  | Stripe secret key (опционально)                  |
