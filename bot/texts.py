@@ -57,8 +57,8 @@ T = {
 
     # ── Step 2: Main menu ──
     "main_menu": {
-        "ru": "Главное меню",
-        "uz": "Bosh menyu",
+        "ru": "Что хотите сделать?",
+        "uz": "Nima qilmoqchisiz?",
     },
     "btn_search_bride": {"ru": "👩 Невесту сыну", "uz": "👩 O'g'ilga kelin"},
     "btn_search_groom": {"ru": "👨 Жениха дочке", "uz": "👨 Qizga kuyov"},
