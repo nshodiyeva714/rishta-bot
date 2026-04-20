@@ -835,13 +835,13 @@ T = {
         "uz": "⚠️ Noto'g'ri format. Masalan: 20-30",
     },
 
-    # ── Step 11: Notification to girl's family ──
+    # ── Step 11: Notification to profile owner ──
     "notify_interest": {
         "ru": (
             "🔔 <b>Новый интерес к вашей анкете!</b>\n"
             "🔖 {display_id}\n\n"
-            "Семья из {city} заинтересовалась анкетой вашей дочери.\n\n"
-            "О женихе:\n"
+            "Семья из {city} заинтересовалась вашей анкетой.\n\n"
+            "О кандидате:\n"
             "• Возраст: {age}\n"
             "• Образование: {education}\n"
             "• Работа: {occupation}\n"
@@ -852,8 +852,8 @@ T = {
         "uz": (
             "🔔 <b>Anketangizga yangi qiziqish!</b>\n"
             "🔖 {display_id}\n\n"
-            "{city}dan oila qizingizning anketasiga qiziqish bildirdi.\n\n"
-            "Kuyov haqida:\n"
+            "{city}dan oila sizning anketangizga qiziqish bildirdi.\n\n"
+            "Nomzod haqida:\n"
             "• Yoshi: {age}\n"
             "• Ma'lumoti: {education}\n"
             "• Ish: {occupation}\n"
