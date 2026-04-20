@@ -16,6 +16,7 @@ from bot.db.models import (
 )
 from bot.texts import t
 from bot.keyboards.inline import feedback_kb, reminder_kb
+from bot.utils.safe_send import safe_send_message
 
 logger = logging.getLogger(__name__)
 
@@ -142,10 +143,7 @@ async def daily_report(bot: Bot):
     )
 
     for mid in mod_ids:
-        try:
-            await bot.send_message(mid, report_text)
-        except Exception as e:
-            logger.error(f"Ошибка отправки дневного отчёта mod {mid}: {e}")
+        await safe_send_message(bot, mid, report_text, label="daily_report")
 
 
 async def send_30day_reminders(bot: Bot):
@@ -169,15 +167,15 @@ async def send_30day_reminders(bot: Bot):
             user = user_result.scalar_one_or_none()
             lang = user.language.value if user and user.language else "ru"
 
-            try:
-                await bot.send_message(
-                    profile.user_id,
-                    t("reminder_30d", lang, display_id=profile.display_id or "—"),
-                    reply_markup=reminder_kb(profile.id, lang),
-                )
+            delivered = await safe_send_message(
+                bot,
+                profile.user_id,
+                t("reminder_30d", lang, display_id=profile.display_id or "—"),
+                reply_markup=reminder_kb(profile.id, lang),
+                label="reminder_30d",
+            )
+            if delivered:
                 profile.last_reminder_at = datetime.now()
-            except Exception as e:
-                logger.error(f"Ошибка отправки напоминания {profile.display_id}: {e}")
 
         await session.commit()
 
@@ -217,14 +215,13 @@ async def send_14day_feedback(bot: Bot):
             user = user_result.scalar_one_or_none()
             lang = user.language.value if user and user.language else "ru"
 
-            try:
-                await bot.send_message(
-                    payment.user_id,
-                    t("feedback_ask", lang, display_id=profile.display_id or "—"),
-                    reply_markup=feedback_kb(profile.id, lang),
-                )
-            except Exception as e:
-                logger.error(f"Ошибка отправки запроса обратной связи: {e}")
+            await safe_send_message(
+                bot,
+                payment.user_id,
+                t("feedback_ask", lang, display_id=profile.display_id or "—"),
+                reply_markup=feedback_kb(profile.id, lang),
+                label="feedback_ask_14d",
+            )
 
 
 async def check_vip_expiry(bot: Bot):
@@ -267,10 +264,7 @@ async def check_vip_expiry(bot: Bot):
                     f"Для продления: «Мои заявки» → «Перейти на VIP»."
                 )
 
-            try:
-                await bot.send_message(profile.user_id, msg)
-            except Exception:
-                pass
+            await safe_send_message(bot, profile.user_id, msg, label="vip_expired")
 
             logger.info(f"⭐ VIP expired: {display_id}")
 
@@ -297,15 +291,15 @@ def schedule_extend_invite(bot: Bot, user_id: int, profile_id: int, display_id: 
                 callback_data="extend:skip",
             )],
         ])
-        try:
-            await bot.send_message(
-                user_id,
-                t("extend_invite", lang, display_id=display_id),
-                reply_markup=kb,
-            )
+        delivered = await safe_send_message(
+            bot,
+            user_id,
+            t("extend_invite", lang, display_id=display_id),
+            reply_markup=kb,
+            label="extend_invite",
+        )
+        if delivered:
             logger.info(f"📩 Extend invite sent to {user_id} for {display_id}")
-        except Exception as e:
-            logger.error(f"Ошибка отправки extend invite: {e}")
 
     _scheduler.add_job(
         _send_invite,

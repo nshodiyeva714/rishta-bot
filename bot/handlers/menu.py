@@ -18,6 +18,10 @@ from bot.db.models import (
     FamilyPosition, Housing, ParentHousing, CarStatus,
 )
 from bot.utils.helpers import format_full_anketa, format_anketa_public
+from bot.utils.safe_send import (
+    safe_send_message, safe_send_photo, safe_send_document,
+    safe_send_voice, safe_send_video,
+)
 from bot.states import ModeratorContactStates, FeedbackSuggestionStates, EditProfileStates
 from bot.texts import t
 from bot.keyboards.inline import (
@@ -1899,18 +1903,31 @@ async def mod_write_forward(message: Message, state: FSMContext, session: AsyncS
         target_ids = get_all_moderator_ids()
 
     for mod_id in target_ids:
-        try:
-            await bot.send_message(mod_id, header + (message.text or ""), reply_markup=reply_kb)
-            if message.photo:
-                await bot.send_photo(mod_id, message.photo[-1].file_id)
-            if message.document:
-                await bot.send_document(mod_id, message.document.file_id)
-            if message.voice:
-                await bot.send_voice(mod_id, message.voice.file_id)
-            if message.video:
-                await bot.send_video(mod_id, message.video.file_id)
-        except Exception:
-            pass
+        # Каждый send — отдельный safe-вызов: падение одного не блокирует остальные
+        await safe_send_message(
+            bot, mod_id, header + (message.text or ""),
+            reply_markup=reply_kb, label="mod_write_forward_text",
+        )
+        if message.photo:
+            await safe_send_photo(
+                bot, mod_id, message.photo[-1].file_id,
+                label="mod_write_forward_photo",
+            )
+        if message.document:
+            await safe_send_document(
+                bot, mod_id, message.document.file_id,
+                label="mod_write_forward_document",
+            )
+        if message.voice:
+            await safe_send_voice(
+                bot, mod_id, message.voice.file_id,
+                label="mod_write_forward_voice",
+            )
+        if message.video:
+            await safe_send_video(
+                bot, mod_id, message.video.file_id,
+                label="mod_write_forward_video",
+            )
 
     ok = "✅ Сообщение отправлено модератору. Ожидайте ответа." if lang == "ru" else "✅ Xabar moderatorga yuborildi. Javobni kuting."
     await message.answer(ok, reply_markup=main_menu_kb(lang, message.from_user.id))
@@ -1953,10 +1970,7 @@ async def user_feedback_receive(message: Message, state: FSMContext, session: As
     )
 
     for mod_id in get_all_moderator_ids():
-        try:
-            await bot.send_message(mod_id, mod_text)
-        except Exception:
-            pass
+        await safe_send_message(bot, mod_id, mod_text, label="user_feedback_submit")
 
     await message.answer(t("user_feedback_thanks", lang), reply_markup=main_menu_kb(lang, user.id))
     await state.clear()
