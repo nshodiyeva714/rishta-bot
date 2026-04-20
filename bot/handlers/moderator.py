@@ -1028,27 +1028,46 @@ async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
         is_vip = profile.vip_status == VipStatus.ACTIVE
         kb = mod_found_kb(profile.id, is_published, is_vip)
 
-    # Отправляем
-    try:
-        if profile.photo_file_id:
-            if len(full_text) <= 1024:
-                await bot.send_photo(
-                    message.from_user.id,
-                    profile.photo_file_id,
-                    caption=full_text,
-                    reply_markup=kb,
-                )
-            else:
-                await bot.send_photo(message.from_user.id, profile.photo_file_id)
-                await message.answer(full_text, reply_markup=kb)
-        else:
-            await message.answer(full_text, reply_markup=kb)
-    except Exception:
-        if len(full_text) > 4096:
-            await message.answer(full_text[:4096])
-            await message.answer(full_text[4096:], reply_markup=kb)
-        else:
-            await message.answer(full_text, reply_markup=kb)
+    # Отправляем — tri-state через safe_send_* с fallback на text-split.
+    chat_id = message.from_user.id
+
+    # Ветка 1: photo + короткий caption — всё одним сообщением
+    if profile.photo_file_id and len(full_text) <= 1024:
+        ok = await safe_send_photo(
+            bot, chat_id, profile.photo_file_id,
+            caption=full_text, reply_markup=kb,
+            label="mod_find_photo_caption",
+        )
+        if ok:
+            return
+        # Если фото не отправилось (flood/forbidden/bad request) —
+        # fallback на text-only ниже
+
+    # Ветка 2: photo + текст слишком длинный для caption — фото без caption,
+    # текст отдельно. Текст обрабатывается text-only секцией ниже (возможен split).
+    elif profile.photo_file_id and len(full_text) > 1024:
+        await safe_send_photo(
+            bot, chat_id, profile.photo_file_id,
+            label="mod_find_photo_only",
+        )
+        # fallthrough → text-only секция отправит full_text
+
+    # Ветка 3 (и fallback для 1/2): только текст. Если > 4096 — split на две части,
+    # reply_markup на последней.
+    if len(full_text) <= 4096:
+        await safe_send_message(
+            bot, chat_id, full_text, reply_markup=kb,
+            label="mod_find_text",
+        )
+    else:
+        await safe_send_message(
+            bot, chat_id, full_text[:4096],
+            label="mod_find_text_part1",
+        )
+        await safe_send_message(
+            bot, chat_id, full_text[4096:], reply_markup=kb,
+            label="mod_find_text_part2",
+        )
 
 
 # ── Действия модератора с найденной анкетой ──
