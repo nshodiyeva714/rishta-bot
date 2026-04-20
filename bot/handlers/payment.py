@@ -24,6 +24,7 @@ from bot.keyboards.inline import (
 from bot.config import config, get_all_moderator_ids
 from bot.utils.helpers import format_anketa_private
 from bot.utils.safe_send import safe_send_message, safe_send_photo
+from bot.utils.audit import audit
 from sqlalchemy import func
 import logging
 logger = logging.getLogger(__name__)
@@ -175,6 +176,15 @@ async def payment_screenshot(message: Message, state: FSMContext, session: Async
     )
     session.add(payment)
     await session.commit()
+    audit(
+        "payment_submitted",
+        actor=f"user:{message.from_user.id}",
+        payment_id=payment.id,
+        amount=payment.amount,
+        currency=payment.currency,
+        method=payment.method.value if payment.method else None,
+        profile_id=profile_id,
+    )
 
     profile = await session.get(Profile, profile_id) if profile_id else None
 
@@ -440,6 +450,16 @@ async def vip_receive_screenshot(message: Message, state: FSMContext, session: A
     session.add(req)
     await session.commit()
     await session.refresh(req)
+    audit(
+        "vip_request_submitted",
+        actor=f"user:{message.from_user.id}",
+        vip_req_id=req.id,
+        display_id=display_id,
+        profile_id=profile.id,
+        days=days,
+        amount=amount,
+        method="self",
+    )
 
     username_or_id = f"@{message.from_user.username}" if message.from_user.username else f"ID:{message.from_user.id}"
     await _notify_mods_new_vip_request(bot, req, profile, username_or_id)
@@ -562,6 +582,16 @@ async def vip_receive_question(message: Message, state: FSMContext, session: Asy
     session.add(req)
     await session.commit()
     await session.refresh(req)
+    audit(
+        "vip_request_submitted",
+        actor=f"user:{message.from_user.id}",
+        vip_req_id=req.id,
+        display_id=display_id,
+        profile_id=profile.id,
+        days=days,
+        amount=amount,
+        method="moderator",
+    )
 
     # Пуш модераторам: шаблон vip_new_question_mod + кнопка «💬 Ответить»
     username_or_id = f"@{message.from_user.username}" if message.from_user.username else f"ID:{message.from_user.id}"
@@ -649,6 +679,16 @@ async def vip_receive_screenshot_moderator(message: Message, state: FSMContext, 
     session.add(req)
     await session.commit()
     await session.refresh(req)
+    audit(
+        "vip_request_submitted",
+        actor=f"user:{message.from_user.id}",
+        vip_req_id=req.id,
+        display_id=display_id,
+        profile_id=profile.id,
+        days=days,
+        amount=amount,
+        method="moderator_with_screenshot",
+    )
 
     username_or_id = f"@{message.from_user.username}" if message.from_user.username else f"ID:{message.from_user.id}"
     await _notify_mods_new_vip_request(bot, req, profile, username_or_id)

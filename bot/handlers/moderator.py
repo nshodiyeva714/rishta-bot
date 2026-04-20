@@ -34,6 +34,7 @@ from bot.utils.helpers import (
 from bot.utils.safe_send import (
     safe_send_message, safe_send_photo, safe_send_document, safe_send_voice,
 )
+from bot.utils.audit import audit
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -430,6 +431,13 @@ async def mod_publish(callback: CallbackQuery, session: AsyncSession, bot: Bot):
     profile.status = ProfileStatus.PUBLISHED
     profile.published_at = datetime.now()
     await session.commit()
+    audit(
+        "profile_published",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{profile.user_id}" if profile.user_id else None,
+        profile_id=profile.id,
+        display_id=profile.display_id,
+    )
 
     # Уведомляем пользователя
     lang = "ru"
@@ -470,6 +478,13 @@ async def mod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
 
     profile.status = ProfileStatus.REJECTED
     await session.commit()
+    audit(
+        "profile_rejected",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{profile.user_id}" if profile.user_id else None,
+        profile_id=profile.id,
+        display_id=profile.display_id,
+    )
 
     lang = "ru"
     try:
@@ -812,6 +827,15 @@ async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bo
     payment.status = PaymentStatus.CONFIRMED
     payment.confirmed_at = datetime.now()
     await session.commit()
+    audit(
+        "payment_confirmed",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{payment.user_id}",
+        payment_id=payment.id,
+        amount=payment.amount,
+        currency=payment.currency,
+        profile_id=payment.profile_id,
+    )
 
     # Отправляем контакты пользователю
     profile = await session.get(Profile, payment.profile_id)
@@ -839,6 +863,14 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
 
     payment.status = PaymentStatus.REJECTED
     await session.commit()
+    audit(
+        "payment_rejected",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{payment.user_id}",
+        payment_id=payment.id,
+        amount=payment.amount,
+        currency=payment.currency,
+    )
 
     await safe_send_message(
         bot,
@@ -1085,6 +1117,13 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
         profile.status = ProfileStatus.REJECTED
         profile.is_active = False
         await session.commit()
+        audit(
+            "profile_blocked",
+            actor=f"mod:{callback.from_user.id}",
+            target=f"user:{owner_id}" if owner_id else None,
+            profile_id=profile.id,
+            display_id=display_id,
+        )
 
         await callback.message.edit_text(
             f"❌ Анкета <b>{display_id}</b> заблокирована.",
@@ -1109,6 +1148,13 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
         profile.vip_status = VipStatus.NONE
         profile.vip_expires_at = None
         await session.commit()
+        audit(
+            "vip_removed_manual",
+            actor=f"mod:{callback.from_user.id}",
+            target=f"user:{owner_id}" if owner_id else None,
+            profile_id=profile.id,
+            display_id=display_id,
+        )
 
         await callback.message.edit_text(
             f"⭐ VIP статус снят с анкеты <b>{display_id}</b>.",
@@ -1154,6 +1200,15 @@ async def mod_vip_set_duration(callback: CallbackQuery, session: AsyncSession, b
         if not profile.published_at:
             profile.published_at = datetime.now()
     await session.commit()
+    audit(
+        "vip_granted_manual",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{profile.user_id}" if profile.user_id else None,
+        profile_id=profile.id,
+        display_id=profile.display_id,
+        days=days,
+        expires_at=profile.vip_expires_at.isoformat(),
+    )
 
     display_id = profile.display_id or "—"
     days_label = VIP_DURATION_LABELS.get(days, {}).get("ru", f"{days} дней")
@@ -1585,6 +1640,13 @@ async def op_reject_request(callback: CallbackQuery, session: AsyncSession, bot:
                 .values(status=RequestStatus.REJECTED)
             )
             await session.commit()
+            audit(
+                "contact_request_rejected_early",
+                actor=f"mod:{callback.from_user.id}",
+                target=f"user:{user_id}",
+                contact_req_display_id=req_number,
+                profile_id=profile_id,
+            )
     except Exception as _e:
         logger.debug("ignored: %s", _e)
     try:
@@ -2191,6 +2253,17 @@ async def vipmod_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bo
     profile.vip_expires_at = now + timedelta(days=req.days)
 
     await session.commit()
+    audit(
+        "vip_request_confirmed",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{req.user_id}",
+        vip_req_id=req.id,
+        display_id=req.display_id,
+        profile_id=profile.id,
+        days=req.days,
+        amount=req.amount,
+        expires_at=profile.vip_expires_at.isoformat(),
+    )
 
     # Язык юзера для уведомления
     user_result = await session.execute(select(User).where(User.id == req.user_id))
@@ -2237,6 +2310,13 @@ async def vipmod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot
 
     req.status = VipRequestStatus.REJECTED
     await session.commit()
+    audit(
+        "vip_request_rejected",
+        actor=f"mod:{callback.from_user.id}",
+        target=f"user:{req.user_id}",
+        vip_req_id=req.id,
+        display_id=req.display_id,
+    )
 
     user_result = await session.execute(select(User).where(User.id == req.user_id))
     user = user_result.scalar_one_or_none()

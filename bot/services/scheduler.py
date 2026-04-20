@@ -17,6 +17,7 @@ from bot.db.models import (
 from bot.texts import t
 from bot.keyboards.inline import feedback_kb, reminder_kb
 from bot.utils.safe_send import safe_send_message
+from bot.utils.audit import audit
 
 logger = logging.getLogger(__name__)
 
@@ -267,6 +268,13 @@ async def check_vip_expiry(bot: Bot):
             await safe_send_message(bot, profile.user_id, msg, label="vip_expired")
 
             logger.info(f"⭐ VIP expired: {display_id}")
+            audit(
+                "vip_expired_auto",
+                actor="system",
+                target=f"user:{profile.user_id}" if profile.user_id else None,
+                profile_id=profile.id,
+                display_id=display_id,
+            )
 
         await session.commit()
 
