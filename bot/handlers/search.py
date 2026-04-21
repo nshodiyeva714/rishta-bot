@@ -771,7 +771,17 @@ async def filter_residence_uzb(callback: CallbackQuery, session: AsyncSession):
             ("✅ Не важно",           "fval:region:any"),
         ]
         title = "🇺🇿 Выберите область:"
-    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    # 2-в-ряд (симметрия с uz_regions_kb в создании анкеты) + «🔙 Назад».
+    # Используем nav_kb напрямую: filter_option_kb сложил бы всё в 1 колонку.
+    buttons = []
+    for i in range(0, len(options), 2):
+        row = [InlineKeyboardButton(text=options[i][0], callback_data=options[i][1])]
+        if i + 1 < len(options):
+            row.append(InlineKeyboardButton(text=options[i + 1][0], callback_data=options[i + 1][1]))
+        buttons.append(row)
+    buttons.extend(nav_kb(lang, "filter:back", show_main=False))
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await callback.message.edit_text(title, reply_markup=kb)
     await callback.answer()
 
 
