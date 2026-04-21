@@ -70,6 +70,7 @@ async def send_contact_details(bot: Bot, session: AsyncSession, user_id: int, pr
             caption="📸 Фото кандидата\n🔒 Защищено от скриншотов" if lang == "ru"
             else "📸 Nomzodning fotosurati\n🔒 Skrinshotdan himoyalangan",
             label="deliver_contact_photo",
+            protect_content=True,
         )
 
     # Предупреждение

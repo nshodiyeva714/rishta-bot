@@ -1072,6 +1072,7 @@ async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
             bot, chat_id, profile.photo_file_id,
             caption=full_text, reply_markup=kb,
             label="mod_find_photo_caption",
+            protect_content=True,
         )
         if ok:
             return
@@ -1084,6 +1085,7 @@ async def cmd_find(message: Message, session: AsyncSession, bot: Bot):
         await safe_send_photo(
             bot, chat_id, profile.photo_file_id,
             label="mod_find_photo_only",
+            protect_content=True,
         )
         # fallthrough → text-only секция отправит full_text
 
@@ -1836,6 +1838,7 @@ async def confirm_payment(callback: CallbackQuery, session: AsyncSession, bot: B
             caption=t(_caption_key, req_lang),
             reply_markup=kb_for_photo,
             label="confirm_pay_photo",
+            protect_content=True,
         )
 
     # Геоточка (если есть) — всегда последняя

@@ -111,8 +111,19 @@ async def safe_send_photo(
     *,
     label: str = "send_photo",
     retry_on_flood: bool = True,
+    protect_content: bool = False,
     **kwargs: Any,
 ) -> bool:
+    """Отправить фото с опциональной защитой от пересылки/сохранения.
+
+    ``protect_content=True`` включает Telegram-флаг, блокирующий
+    forward, save, screenshot notification (клиенты Telegram его
+    уважают: mobile — без сохранения, desktop — без Save As).
+    По умолчанию False для обратной совместимости. Используется для
+    фото кандидатов (PII) — см. payment.py, moderator.py:confirm_pay.
+    """
+    if protect_content:
+        kwargs["protect_content"] = True
     return await _safe_call(
         lambda: bot.send_photo(chat_id, photo, **kwargs),
         chat_id=chat_id, label=label, retry_on_flood=retry_on_flood,

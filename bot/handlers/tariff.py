@@ -760,7 +760,11 @@ async def _save_profile(callback: CallbackQuery, state: FSMContext, session: Asy
     mod_text = format_full_anketa(profile, lang="ru")
     await safe_send_message(bot, mod_id, mod_text, reply_markup=mod_review_kb(profile.id), label="new_profile_to_mod")
     if profile.photo_file_id:
-        await safe_send_photo(bot, mod_id, profile.photo_file_id, label="new_profile_photo_to_mod")
+        await safe_send_photo(
+            bot, mod_id, profile.photo_file_id,
+            label="new_profile_photo_to_mod",
+            protect_content=True,
+        )
 
     return profile, display_id
 
