@@ -783,7 +783,8 @@ _FILTER_NAT_PREFIX = "fval:nationality"
 
 def _filter_nat_main_kb(lang: str) -> InlineKeyboardMarkup:
     rows = nationality_main_rows(lang, _FILTER_NAT_PREFIX, show_any=True)
-    rows.extend(nav_kb(lang, "filter:back"))
+    # Симметрично с filter_option_kb — только «🔙 Назад», без дубля «Меню».
+    rows.extend(nav_kb(lang, "filter:back", show_main=False))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
