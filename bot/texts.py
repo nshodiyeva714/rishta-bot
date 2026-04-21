@@ -240,8 +240,8 @@ T = {
         "uz": "🌍 5/14-savol\n{bar}\n\nMillati:",
     },
     "q6_city": {
-        "ru": "🏡 Вопрос 6/14\n{bar}\n\nГде вы проживаете?\n(для Узбекистана далее выберете регион)",
-        "uz": "🏡 6/14-savol\n{bar}\n\nQayerda yashaysiz?\n(O'zbekiston uchun keyin viloyatni tanlaysiz)",
+        "ru": "🏡 Вопрос 6/14\n{bar}\n\nСтрана проживания:",
+        "uz": "🏡 6/14-savol\n{bar}\n\nYashash joyi:",
     },
     "q7_education": {
         "ru": "Вопрос 7/14\n{bar}\n\nОбразование:",
