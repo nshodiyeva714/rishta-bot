@@ -607,15 +607,13 @@ async def q6_region_selected(callback: CallbackQuery, state: FSMContext):
     if lang == "uz":
         q_text = (f"🏡 6/14-savol\n{bar}\n\n"
                   f"Tanlandi: {region_name}\n\n"
-                  f"Tuman yoki shahar:\n"
-                  f"(masalan: Yunusobod, Chilonzor)\n"
-                  f"(ixtiyoriy)")
+                  f"Tuman:\n"
+                  f"(masalan: Yunusobod, Chilonzor)")
     else:
         q_text = (f"🏡 Вопрос 6/14\n{bar}\n\n"
                   f"Выбрано: {region_name}\n\n"
-                  f"Район или город:\n"
-                  f"(например: Юнусабад, Чиланзар)\n"
-                  f"(необязательно)")
+                  f"Район:\n"
+                  f"(например: Юнусабад, Чиланзар)")
     full_text = _with_card(data, lang, q_text)
     await callback.message.edit_text(
         full_text,
