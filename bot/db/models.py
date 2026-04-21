@@ -283,6 +283,9 @@ class Profile(Base):
 
     # Q23: active status
     is_active = Column(Boolean, default=True)
+    # True — если анкета поставлена на автопаузу при >=3 жалобах.
+    # Используется в /complaints dismiss-flow для автовосстановления.
+    auto_paused_by_complaints = Column(Boolean, default=False)
 
     # stats
     views_count = Column(Integer, default=0)

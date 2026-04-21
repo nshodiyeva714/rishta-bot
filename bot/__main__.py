@@ -72,6 +72,12 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
             ))
         except Exception:
             pass
+        try:
+            await conn.execute(text(
+                "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS auto_paused_by_complaints BOOLEAN DEFAULT FALSE"
+            ))
+        except Exception:
+            pass
     logger.info("Database tables ensured")
 
     # Команды для обычных пользователей
@@ -82,12 +88,13 @@ async def on_startup(bot: Bot, scheduler: AsyncIOScheduler):
 
     # Команды для модераторов (расширенные)
     mod_commands = [
-        BotCommand(command="start",    description="Главное меню"),
-        BotCommand(command="ankety",   description="Анкеты на проверке"),
-        BotCommand(command="requests", description="Активные запросы контакта"),
-        BotCommand(command="vip",      description="VIP-заявки"),
-        BotCommand(command="find",     description="Найти анкету по номеру"),
-        BotCommand(command="stats",    description="Статистика"),
+        BotCommand(command="start",      description="Главное меню"),
+        BotCommand(command="ankety",     description="Анкеты на проверке"),
+        BotCommand(command="requests",   description="Активные запросы контакта"),
+        BotCommand(command="vip",        description="VIP-заявки"),
+        BotCommand(command="complaints", description="Жалобы на анкеты"),
+        BotCommand(command="find",       description="Найти анкету по номеру"),
+        BotCommand(command="stats",      description="Статистика"),
     ]
     from bot.config import get_all_moderator_ids
     for mod_id in get_all_moderator_ids():

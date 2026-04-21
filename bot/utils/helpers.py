@@ -567,8 +567,6 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     badges = []
     if profile.vip_status == VipStatus.ACTIVE:
         badges.append("⭐ VIP")
-    if getattr(profile, "is_verified", False):
-        badges.append("✅ " + ("Tekshirilgan" if L == "uz" else "Проверено"))
     views = profile.views_count or 0
     if views >= 50:
         badges.append("🔥 " + ("Mashhur" if L == "uz" else "Популярная"))

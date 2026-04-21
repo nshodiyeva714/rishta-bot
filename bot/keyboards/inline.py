@@ -916,6 +916,7 @@ def profile_card_kb(
         next_txt = "Keyingisi ➡️"
         filters_txt = "🔧 Filtrlarni o'zgartirish"
         menu_txt = "🏠 Menyu"
+        report_txt = "🚩 Shikoyat qilish"
     else:
         interest_txt = "💌 Узнать контакт"
         fav_txt = "❤️ В избранное"
@@ -923,6 +924,7 @@ def profile_card_kb(
         next_txt = "Следующая ➡️"
         filters_txt = "🔧 Изменить фильтры"
         menu_txt = "🏠 Меню"
+        report_txt = "🚩 Пожаловаться"
 
     builder = InlineKeyboardBuilder()
 
@@ -958,7 +960,12 @@ def profile_card_kb(
         text=filters_txt, callback_data="search:manual"
     ))
 
-    # 5-й ряд: меню
+    # 5-й ряд: пожаловаться (анти-фейк защита)
+    builder.row(InlineKeyboardButton(
+        text=report_txt, callback_data=f"report:{profile_id}"
+    ))
+
+    # 6-й ряд: меню
     builder.row(InlineKeyboardButton(
         text=menu_txt, callback_data="menu:main"
     ))

@@ -7,14 +7,15 @@ from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import (
     Profile, ProfileStatus, Payment, PaymentStatus, User, VipStatus,
     Favorite, ProfileType, ContactRequest, RequestStatus,
     VipRequest, VipRequestStatus, VipPaymentMethod,
-    Requirement, Complaint, Meeting, Feedback,
+    Requirement, Complaint, ComplaintStatus, ComplaintReason,
+    Meeting, Feedback,
     PhotoType,
 )
 from bot.states import ModeratorReplyStates, ModeratorEditStates, ContactStates, VipModReplyStates
@@ -2524,6 +2525,401 @@ async def vipmod_reply_send(message: Message, state: FSMContext, session: AsyncS
         reply_markup=back_kb,
     )
     await state.set_state(None)
+
+
+# ══════════════════════════════════════════════════════════
+#  /complaints — модератор смотрит жалобы на анкеты
+# ══════════════════════════════════════════════════════════
+
+_COMPLAINT_REASON_LABELS = {
+    "wrong_data":   "❗ Данные не соответствуют",
+    "suspicious":   "🤖 Подозрительная / фейковая",
+    "stolen_photo": "📸 Чужое фото",
+    "bad_behavior": "⚠️ Некорректное поведение",
+    "other":        "📵 Другая причина",
+}
+_COMPLAINTS_PER_PAGE = 5
+
+
+def _complaint_reason_label(reason) -> str:
+    v = reason.value if hasattr(reason, "value") else reason
+    return _COMPLAINT_REASON_LABELS.get(v, v or "—")
+
+
+async def _render_complaints_list(callback_or_message, session: AsyncSession, offset: int = 0):
+    """Общий рендерер списка PENDING-жалоб с пагинацией."""
+    total_q = await session.execute(
+        select(func.count(Complaint.id)).where(Complaint.status == ComplaintStatus.PENDING)
+    )
+    total = total_q.scalar() or 0
+
+    if total == 0:
+        text = "🚩 <b>Жалобы</b>\n\nАктивных жалоб нет. ✅"
+        kb = InlineKeyboardMarkup(inline_keyboard=[])
+        if hasattr(callback_or_message, "message"):
+            try:
+                await callback_or_message.message.edit_text(text, reply_markup=kb)
+            except Exception:
+                await callback_or_message.message.answer(text, reply_markup=kb)
+            await callback_or_message.answer()
+        else:
+            await callback_or_message.answer(text, reply_markup=kb)
+        return
+
+    offset = max(0, min(offset, ((total - 1) // _COMPLAINTS_PER_PAGE) * _COMPLAINTS_PER_PAGE))
+
+    result = await session.execute(
+        select(Complaint)
+        .where(Complaint.status == ComplaintStatus.PENDING)
+        .order_by(Complaint.created_at.desc())
+        .offset(offset).limit(_COMPLAINTS_PER_PAGE)
+    )
+    rows = result.scalars().all()
+
+    header = f"🚩 <b>Жалобы</b>\nВсего PENDING: {total}\n\n"
+    lines = []
+    buttons: list[list[InlineKeyboardButton]] = []
+    for i, c in enumerate(rows, start=offset + 1):
+        profile = await session.get(Profile, c.profile_id)
+        did = (profile.display_id if profile else None) or f"p{c.profile_id}"
+        reason = _complaint_reason_label(c.reason)
+        lines.append(f"{i}. #{c.id} · {did} · {reason}")
+        buttons.append([InlineKeyboardButton(
+            text=f"📋 #{c.id} · {did}",
+            callback_data=f"view_comp:{c.id}",
+        )])
+
+    # Навигация
+    nav: list[InlineKeyboardButton] = []
+    if offset > 0:
+        nav.append(InlineKeyboardButton(
+            text="⬅️ Предыдущие",
+            callback_data=f"comp_list:{max(0, offset - _COMPLAINTS_PER_PAGE)}",
+        ))
+    if offset + _COMPLAINTS_PER_PAGE < total:
+        nav.append(InlineKeyboardButton(
+            text="Следующие ➡️",
+            callback_data=f"comp_list:{offset + _COMPLAINTS_PER_PAGE}",
+        ))
+    if nav:
+        buttons.append(nav)
+
+    text = header + "\n".join(lines)
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    if hasattr(callback_or_message, "message"):
+        try:
+            await callback_or_message.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        except Exception:
+            await callback_or_message.message.answer(text, reply_markup=kb, parse_mode="HTML")
+        await callback_or_message.answer()
+    else:
+        await callback_or_message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+
+@router.message(Command("complaints"))
+async def cmd_complaints(message: Message, session: AsyncSession):
+    """Список активных жалоб для модератора."""
+    if not is_moderator(message.from_user.id):
+        await message.answer("⛔ Только для модераторов")
+        return
+    await _render_complaints_list(message, session, offset=0)
+
+
+@router.callback_query(F.data.startswith("comp_list:"))
+async def comp_list_nav(callback: CallbackQuery, session: AsyncSession):
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        offset = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        offset = 0
+    await _render_complaints_list(callback, session, offset=offset)
+
+
+@router.callback_query(F.data.startswith("view_comp:"))
+async def view_complaint(callback: CallbackQuery, session: AsyncSession):
+    """Карточка одной жалобы с действиями."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        comp_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    c = await session.get(Complaint, comp_id)
+    if not c:
+        await callback.answer("Жалоба не найдена", show_alert=True)
+        return
+
+    profile = await session.get(Profile, c.profile_id)
+
+    # Подсчёт уникальных жалобщиков (не DISMISSED)
+    cnt_q = await session.execute(
+        select(func.count(distinct(Complaint.reporter_user_id)))
+        .where(
+            Complaint.profile_id == c.profile_id,
+            Complaint.status != ComplaintStatus.DISMISSED,
+        )
+    )
+    unique_reporters = cnt_q.scalar() or 0
+
+    status_label = {
+        ProfileStatus.PUBLISHED: "✅ Активна",
+        ProfileStatus.PENDING:   "⏳ На проверке",
+        ProfileStatus.PAUSED:    "⏸ На паузе",
+        ProfileStatus.REJECTED:  "❌ Заблокирована",
+        ProfileStatus.DELETED:   "🗑 Удалена",
+        ProfileStatus.DRAFT:     "📝 Черновик",
+    }.get(profile.status if profile else None, "—")
+
+    auto_pause_note = ""
+    if profile and profile.auto_paused_by_complaints:
+        auto_pause_note = "\n🚫 <i>Автопауза по жалобам</i>"
+
+    text = (
+        f"🚩 <b>ЖАЛОБА #{c.id}</b>\n\n"
+        f"🔖 Анкета: {profile.display_id if profile else '—'}\n"
+        f"Статус анкеты: {status_label}{auto_pause_note}\n"
+        f"Имя: {profile.name if profile else '—'}\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"Причина: {_complaint_reason_label(c.reason)}\n"
+        f"От: <code>ID:{c.reporter_user_id}</code>\n"
+        f"Дата: {c.created_at.strftime('%d.%m.%Y %H:%M') if c.created_at else '—'}\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"Всего жалобщиков: <b>{unique_reporters}</b>"
+    )
+
+    buttons = [
+        [InlineKeyboardButton(text="✅ Признать (оставить на паузе)", callback_data=f"comp_keep:{c.id}")],
+        [InlineKeyboardButton(text="❌ Отклонить жалобу", callback_data=f"comp_dismiss:{c.id}")],
+        [InlineKeyboardButton(text="🚫 Заблокировать анкету", callback_data=f"comp_block:{c.id}")],
+        [InlineKeyboardButton(text="🔙 К списку", callback_data="comp_list:0")],
+    ]
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    try:
+        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("comp_keep:"))
+async def comp_keep(callback: CallbackQuery, session: AsyncSession):
+    """Признать жалобу — Complaint.status = REVIEWED. Анкета остаётся как есть."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        comp_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    c = await session.get(Complaint, comp_id)
+    if not c:
+        await callback.answer("Жалоба не найдена", show_alert=True)
+        return
+
+    c.status = ComplaintStatus.REVIEWED
+    await session.commit()
+    audit(
+        "complaint_reviewed",
+        actor=f"mod:{callback.from_user.id}",
+        complaint_id=c.id,
+        profile_id=c.profile_id,
+    )
+
+    try:
+        await callback.message.edit_text(
+            f"✅ Жалоба #{c.id} признана. Анкета остаётся в текущем статусе.",
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("✅ Признано")
+
+
+@router.callback_query(F.data.startswith("comp_dismiss:"))
+async def comp_dismiss(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Отклонить жалобу — status=DISMISSED. Если анкета на автопаузе и не
+    осталось живых жалоб — восстановить в PUBLISHED."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        comp_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    c = await session.get(Complaint, comp_id)
+    if not c:
+        await callback.answer("Жалоба не найдена", show_alert=True)
+        return
+
+    c.status = ComplaintStatus.DISMISSED
+    await session.commit()
+    audit(
+        "complaint_dismissed",
+        actor=f"mod:{callback.from_user.id}",
+        complaint_id=c.id,
+        profile_id=c.profile_id,
+    )
+
+    # Автовосстановление, если возможно
+    profile = await session.get(Profile, c.profile_id)
+    restored = False
+    if profile and profile.auto_paused_by_complaints and profile.status == ProfileStatus.PAUSED:
+        from bot.handlers.complaint import COMPLAINT_AUTOPAUSE_THRESHOLD
+        remaining_q = await session.execute(
+            select(func.count(distinct(Complaint.reporter_user_id)))
+            .where(
+                Complaint.profile_id == profile.id,
+                Complaint.status != ComplaintStatus.DISMISSED,
+            )
+        )
+        remaining = remaining_q.scalar() or 0
+        if remaining < COMPLAINT_AUTOPAUSE_THRESHOLD:
+            profile.status = ProfileStatus.PUBLISHED
+            profile.is_active = True
+            profile.auto_paused_by_complaints = False
+            await session.commit()
+            restored = True
+            audit(
+                "profile_autopause_restored",
+                actor=f"mod:{callback.from_user.id}",
+                target=f"user:{profile.user_id}" if profile.user_id else None,
+                profile_id=profile.id,
+                display_id=profile.display_id,
+            )
+
+            # Уведомление владельцу
+            owner_lang = "ru"
+            try:
+                o = await session.execute(select(User).where(User.id == profile.user_id))
+                ou = o.scalar_one_or_none()
+                if ou and ou.language:
+                    owner_lang = ou.language.value
+            except Exception as _e:
+                logger.debug("ignored: %s", _e)
+
+            did = profile.display_id or "—"
+            if owner_lang == "uz":
+                owner_msg = (
+                    f"🟢 <b>Anketangiz yana faol</b>\n\n"
+                    f"🔖 {did}\n\n"
+                    f"Shikoyatlar moderator tomonidan rad etildi.\n"
+                    f"Anketa qidirishga qaytdi."
+                )
+            else:
+                owner_msg = (
+                    f"🟢 <b>Ваша анкета снова активна</b>\n\n"
+                    f"🔖 {did}\n\n"
+                    f"Жалобы отклонены модератором.\n"
+                    f"Анкета вернулась в поиск."
+                )
+            if profile.user_id:
+                await safe_send_message(
+                    bot, profile.user_id, owner_msg,
+                    parse_mode="HTML",
+                    label="autopause_restored_notify",
+                )
+
+    reply = f"❌ Жалоба #{c.id} отклонена."
+    if restored:
+        reply += "\n🟢 Анкета автоматически восстановлена (PUBLISHED)."
+    try:
+        await callback.message.edit_text(reply)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("❌ Отклонено")
+
+
+@router.callback_query(F.data.startswith("comp_block:"))
+async def comp_block(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Признать жалобу + заблокировать анкету (status=REJECTED)."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        comp_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    c = await session.get(Complaint, comp_id)
+    if not c:
+        await callback.answer("Жалоба не найдена", show_alert=True)
+        return
+
+    c.status = ComplaintStatus.REVIEWED
+    profile = await session.get(Profile, c.profile_id)
+    blocked = False
+    if profile and profile.status != ProfileStatus.REJECTED:
+        profile.status = ProfileStatus.REJECTED
+        profile.is_active = False
+        profile.auto_paused_by_complaints = False
+        blocked = True
+    await session.commit()
+
+    audit(
+        "complaint_reviewed",
+        actor=f"mod:{callback.from_user.id}",
+        complaint_id=c.id,
+        profile_id=c.profile_id,
+    )
+    if blocked:
+        audit(
+            "profile_blocked",
+            actor=f"mod:{callback.from_user.id}",
+            target=f"user:{profile.user_id}" if profile and profile.user_id else None,
+            profile_id=profile.id if profile else None,
+            display_id=profile.display_id if profile else None,
+            source="complaint",
+        )
+
+    # Уведомление владельцу (как при обычной блокировке)
+    if blocked and profile and profile.user_id:
+        owner_lang = "ru"
+        try:
+            o = await session.execute(select(User).where(User.id == profile.user_id))
+            ou = o.scalar_one_or_none()
+            if ou and ou.language:
+                owner_lang = ou.language.value
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+
+        did = profile.display_id or "—"
+        if owner_lang == "uz":
+            owner_msg = (
+                f"❌ <b>Anketangiz bloklandi</b>\n\n"
+                f"🔖 {did}\n\n"
+                f"Moderator shikoyat asosida anketani bloklashga qaror qildi."
+            )
+        else:
+            owner_msg = (
+                f"❌ <b>Ваша анкета заблокирована</b>\n\n"
+                f"🔖 {did}\n\n"
+                f"Модератор принял решение о блокировке на основании жалобы."
+            )
+        await safe_send_message(
+            bot, profile.user_id, owner_msg,
+            parse_mode="HTML",
+            label="complaint_block_notify",
+        )
+
+    reply = f"🚫 Жалоба #{c.id} признана, анкета заблокирована."
+    if not blocked:
+        reply = f"🚫 Жалоба #{c.id} признана. Анкета уже была заблокирована."
+    try:
+        await callback.message.edit_text(reply)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("🚫 Заблокировано")
 
 
 # ══════════════════════════════════════════════════════════
