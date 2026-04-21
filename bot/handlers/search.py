@@ -30,7 +30,9 @@ from bot.utils.helpers import (
     religiosity_label,
 )
 from bot.utils.safe_send import safe_send_message, safe_send_photo
-from bot.config import config
+from bot.config import config, is_moderator
+from bot.utils.rate_limit import check_rate_limit, CONTACT_REQUEST_LIMIT_PER_DAY
+from bot.utils.audit import audit
 from bot.states import SearchStates, ContactStates
 
 logger = logging.getLogger(__name__)
@@ -1702,6 +1704,31 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
         await callback.answer("Анкета не найдена")
         return
 
+    # Rate-limit — модераторов пропускаем
+    if not is_moderator(user_id):
+        allowed, count = await check_rate_limit(
+            session, user_id, "contact_request", CONTACT_REQUEST_LIMIT_PER_DAY,
+        )
+        if not allowed:
+            audit(
+                "rate_limit_exceeded",
+                actor=f"user:{user_id}",
+                limit_type="contact_request",
+                count=count,
+                limit=CONTACT_REQUEST_LIMIT_PER_DAY,
+            )
+            msg = (
+                f"⚠️ Siz kontakt so'rovlari chegarasiga yetdingiz "
+                f"(sutkasiga {CONTACT_REQUEST_LIMIT_PER_DAY}). "
+                f"Iltimos, moderatorning javoblarini kuting."
+                if lang == "uz" else
+                f"⚠️ Вы достигли лимита запросов контакта "
+                f"({CONTACT_REQUEST_LIMIT_PER_DAY} в сутки). "
+                f"Пожалуйста, дождитесь ответов модератора."
+            )
+            await callback.answer(msg, show_alert=True)
+            return
+
     cr = ContactRequest(
         requester_user_id=user_id,
         target_profile_id=target_profile_id,
@@ -2016,6 +2043,33 @@ async def request_contact(callback: CallbackQuery, session: AsyncSession, state:
         return
 
     display_id = profile.display_id or "—"
+
+    # Rate-limit — модераторов пропускаем
+    if not is_moderator(callback.from_user.id):
+        allowed, count = await check_rate_limit(
+            session, callback.from_user.id,
+            "contact_request", CONTACT_REQUEST_LIMIT_PER_DAY,
+        )
+        if not allowed:
+            audit(
+                "rate_limit_exceeded",
+                actor=f"user:{callback.from_user.id}",
+                limit_type="contact_request",
+                count=count,
+                limit=CONTACT_REQUEST_LIMIT_PER_DAY,
+            )
+            msg = (
+                f"⚠️ Siz kontakt so'rovlari chegarasiga yetdingiz "
+                f"(sutkasiga {CONTACT_REQUEST_LIMIT_PER_DAY}). "
+                f"Iltimos, moderatorning javoblarini kuting."
+                if lang == "uz" else
+                f"⚠️ Вы достигли лимита запросов контакта "
+                f"({CONTACT_REQUEST_LIMIT_PER_DAY} в сутки). "
+                f"Пожалуйста, дождитесь ответов модератора."
+            )
+            await callback.answer(msg, show_alert=True)
+            return
+
     req_number = await _next_req_number(session)
 
     # Сохранить запрос в БД

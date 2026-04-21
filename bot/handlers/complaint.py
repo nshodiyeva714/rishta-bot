@@ -31,9 +31,10 @@ from bot.db.models import (
 )
 from bot.texts import t
 from bot.keyboards.inline import nav_kb, add_nav
-from bot.config import config
+from bot.config import config, is_moderator
 from bot.utils.safe_send import safe_send_message
 from bot.utils.audit import audit
+from bot.utils.rate_limit import check_rate_limit, COMPLAINT_LIMIT_PER_DAY
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -131,6 +132,31 @@ async def submit_complaint(callback: CallbackQuery, session: AsyncSession, bot: 
             show_alert=True,
         )
         return
+
+    # Rate-limit (модераторов не ограничиваем)
+    if not is_moderator(reporter_id):
+        allowed, count = await check_rate_limit(
+            session, reporter_id, "complaint", COMPLAINT_LIMIT_PER_DAY,
+        )
+        if not allowed:
+            audit(
+                "rate_limit_exceeded",
+                actor=f"user:{reporter_id}",
+                limit_type="complaint",
+                count=count,
+                limit=COMPLAINT_LIMIT_PER_DAY,
+            )
+            msg = (
+                f"⚠️ Siz shikoyatlar chegarasiga yetdingiz "
+                f"(sutkasiga {COMPLAINT_LIMIT_PER_DAY}). "
+                f"Ertaga urinib ko'ring."
+                if lang == "uz" else
+                f"⚠️ Вы достигли лимита жалоб "
+                f"({COMPLAINT_LIMIT_PER_DAY} в сутки). "
+                f"Попробуйте завтра."
+            )
+            await callback.answer(msg, show_alert=True)
+            return
 
     # Создаём жалобу
     complaint = Complaint(
