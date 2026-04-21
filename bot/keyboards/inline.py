@@ -911,42 +911,41 @@ def profile_card_kb(
     """
     if lang == "uz":
         interest_txt = "💌 Ma'lumotni olish"
-        fav_txt = "❤️ Saqlash"
         prev_txt = "⬅️ Orqaga"
         next_txt = "Keyingisi ➡️"
         filters_txt = "🔧 Filtrlarni o'zgartirish"
         menu_txt = "🏠 Menyu"
-        report_txt = "🚩 Shikoyat qilish"
+        more_txt = "⋯ Yana"
     else:
         interest_txt = "💌 Узнать контакт"
-        fav_txt = "❤️ В избранное"
         prev_txt = "⬅️ Назад"
         next_txt = "Следующая ➡️"
         filters_txt = "🔧 Изменить фильтры"
         menu_txt = "🏠 Меню"
-        report_txt = "🚩 Пожаловаться"
+        more_txt = "⋯ Ещё"
 
     builder = InlineKeyboardBuilder()
 
-    # 1-й ряд: действие по текущей анкете
+    # 1-й ряд: главное действие
     builder.row(InlineKeyboardButton(
         text=interest_txt, callback_data=f"get_contact:{profile_id}"
     ))
 
-    # 2-й ряд: ❤️ В избранное
-    builder.row(InlineKeyboardButton(
-        text=fav_txt, callback_data=f"fav:{profile_id}"
-    ))
+    # 2-й ряд: фильтры + счётчик
+    filters_counter_row: list[InlineKeyboardButton] = [
+        InlineKeyboardButton(text=filters_txt, callback_data="search:manual"),
+    ]
+    if total > 0:
+        filters_counter_row.append(InlineKeyboardButton(
+            text=f"📄 {current}/{total}", callback_data="noop"
+        ))
+    builder.row(*filters_counter_row)
 
-    # 3-й ряд: ⬅️ Назад · счётчик · Следующая ➡️
+    # 3-й ряд: навигация prev/next (если есть куда)
     nav_row: list[InlineKeyboardButton] = []
     if show_prev:
         nav_row.append(InlineKeyboardButton(
             text=prev_txt, callback_data="search_nav:prev"
-        ))
-    if total > 0:
-        nav_row.append(InlineKeyboardButton(
-            text=f"📄 {current}/{total}", callback_data="noop"
         ))
     if show_next:
         nav_row.append(InlineKeyboardButton(
@@ -955,22 +954,34 @@ def profile_card_kb(
     if nav_row:
         builder.row(*nav_row)
 
-    # 4-й ряд: фильтры
-    builder.row(InlineKeyboardButton(
-        text=filters_txt, callback_data="search:manual"
-    ))
-
-    # 5-й ряд: пожаловаться (анти-фейк защита)
-    builder.row(InlineKeyboardButton(
-        text=report_txt, callback_data=f"report:{profile_id}"
-    ))
-
-    # 6-й ряд: меню
-    builder.row(InlineKeyboardButton(
-        text=menu_txt, callback_data="menu:main"
-    ))
+    # 4-й ряд: «⋯ Ещё» (подменю с ❤️/🚩) + «🏠 Меню»
+    builder.row(
+        InlineKeyboardButton(text=more_txt, callback_data=f"more:{profile_id}"),
+        InlineKeyboardButton(text=menu_txt, callback_data="menu:main"),
+    )
 
     return builder.as_markup()
+
+
+def more_actions_kb(profile_id: int, lang: str = "ru", can_report: bool = True) -> InlineKeyboardMarkup:
+    """Подменю «⋯ Ещё» под карточкой анкеты.
+
+    ❤️ В избранное · 🚩 Пожаловаться · 🔙 Назад к анкете.
+    Кнопка «Пожаловаться» скрывается, если юзер = владелец анкеты.
+    """
+    if lang == "uz":
+        fav_txt = "❤️ Saqlash"
+        report_txt = "🚩 Shikoyat qilish"
+        back_txt = "🔙 Anketaga qaytish"
+    else:
+        fav_txt = "❤️ В избранное"
+        report_txt = "🚩 Пожаловаться"
+        back_txt = "🔙 Назад к анкете"
+    rows = [[InlineKeyboardButton(text=fav_txt, callback_data=f"fav:{profile_id}")]]
+    if can_report:
+        rows.append([InlineKeyboardButton(text=report_txt, callback_data=f"report:{profile_id}")])
+    rows.append([InlineKeyboardButton(text=back_txt, callback_data=f"more_back:{profile_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def get_contact_kb(profile_id: int, lang: str = "ru") -> InlineKeyboardMarkup:

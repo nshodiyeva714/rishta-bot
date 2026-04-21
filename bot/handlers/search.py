@@ -15,7 +15,7 @@ from bot.db.models import (
 )
 from bot.texts import t
 from bot.keyboards.inline import (
-    profile_card_kb, search_nav_kb, back_kb, back_main_kb, main_menu_kb,
+    profile_card_kb, more_actions_kb, search_nav_kb, back_kb, back_main_kb, main_menu_kb,
     get_contact_kb, search_mode_kb, search_no_anketa_kb,
     search_filter_kb, filter_option_kb, nav_kb,
     nationality_main_rows, nationality_more_rows,
@@ -1197,6 +1197,64 @@ async def _safe_show_card(callback: CallbackQuery, text: str, kb: InlineKeyboard
         await callback.message.answer(text, reply_markup=kb, parse_mode="HTML")
     except Exception as e:
         logger.error(f"Ошибка показа анкеты: {e}")
+
+
+# ── Подменю «⋯ Ещё» под карточкой анкеты ──
+
+@router.callback_query(F.data.startswith("more:"))
+async def more_actions(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Показать подменю ❤️/🚩/🔙 под текущей карточкой (меняем только reply_markup)."""
+    try:
+        profile_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+    lang = await get_lang(session, callback.from_user.id)
+    profile = await session.get(Profile, profile_id)
+    # Нельзя пожаловаться на свою анкету (обычно не попадёт сюда — поиск
+    # фильтрует свои, но defence in depth).
+    can_report = bool(profile) and profile.user_id != callback.from_user.id
+    try:
+        await callback.message.edit_reply_markup(
+            reply_markup=more_actions_kb(profile_id, lang, can_report)
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("more_back:"))
+async def more_back(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    """Вернуть клавиатуру главной карточки для текущей анкеты."""
+    try:
+        profile_id = int(callback.data.split(":")[1])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+    lang = await get_lang(session, callback.from_user.id)
+    data = await state.get_data()
+    ids: list[int] = data.get("search_results") or []
+    idx = data.get("current_index", 0)
+    total = len(ids)
+    # idx может не совпадать, если state уже не актуален — пытаемся найти профиль в списке
+    try:
+        real_idx = ids.index(profile_id) if ids else idx
+    except ValueError:
+        real_idx = idx
+    show_prev = real_idx > 0
+    show_next = real_idx < total - 1 if total else False
+    current = real_idx + 1 if total else 0
+
+    kb = profile_card_kb(
+        profile_id, lang,
+        show_prev=show_prev, show_next=show_next,
+        current=current, total=total,
+    )
+    try:
+        await callback.message.edit_reply_markup(reply_markup=kb)
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
 
 
 async def _rebuild_search_snapshot(
