@@ -36,6 +36,22 @@ def back_main_kb(lang: str = "ru", back_cb: str = "back:menu") -> InlineKeyboard
     return InlineKeyboardMarkup(inline_keyboard=nav_kb(lang, back_cb))
 
 
+def confirmation_kb(yes_cb: str, no_cb: str, lang: str = "ru") -> InlineKeyboardMarkup:
+    """Двухкнопочная клавиатура «Да, подтверждаю / Отмена» для критичных действий.
+
+    Используется перед необратимыми операциями (удаление, отклонение оплаты,
+    снятие VIP и т.п.) чтобы защитить от случайного клика.
+    """
+    if lang == "uz":
+        yes, no = "✅ Ha, tasdiqlayman", "❌ Bekor qilish"
+    else:
+        yes, no = "✅ Да, подтверждаю", "❌ Отмена"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=yes, callback_data=yes_cb)],
+        [InlineKeyboardButton(text=no, callback_data=no_cb)],
+    ])
+
+
 def skip_back_ext_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     """Этап 2: текстовый вопрос с [⏭ Пропустить] [🔙 Назад] (back_ext_step)."""
     skip = "⏭ O'tkazib yuborish" if lang == "uz" else "⏭ Пропустить"

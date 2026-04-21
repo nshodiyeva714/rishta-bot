@@ -23,6 +23,7 @@ from bot.config import config, is_moderator
 from bot.keyboards.inline import (
     mod_review_kb, mod_found_kb, mod_vip_duration_kb,
     vip_mod_list_kb, vip_mod_card_kb, vip_after_reply_kb,
+    confirmation_kb,
 )
 from bot.utils.helpers import (
     education_label,
@@ -850,7 +851,40 @@ async def mod_confirm_payment(callback: CallbackQuery, session: AsyncSession, bo
 
 
 @router.callback_query(F.data.startswith("modpay:reject:"))
-async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+async def mod_reject_payment_confirm(callback: CallbackQuery, session: AsyncSession):
+    """Шаг 1: показать подтверждение отклонения оплаты."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔ Нет доступа")
+        return
+
+    payment_id = int(callback.data.split(":")[2])
+    payment = await session.get(Payment, payment_id)
+    if not payment:
+        await callback.answer("Оплата не найдена")
+        return
+
+    amount_str = f"{(payment.amount or 0) // 100:,} {payment.currency or 'UZS'}"
+    prompt = (
+        f"⚠️ Отклонить оплату #{payment.id} на <b>{amount_str}</b>?\n\n"
+        f"Пользователь не получит контакт.\n"
+        f"Revert — только через SQL."
+    )
+    try:
+        await callback.message.edit_text(
+            prompt,
+            reply_markup=confirmation_kb(
+                yes_cb=f"modpay:reject_yes:{payment.id}",
+                no_cb="confirm:cancel",
+            ),
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("modpay:reject_yes:"))
+async def mod_reject_payment_do(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Шаг 2: фактическое отклонение оплаты (после подтверждения)."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔ Нет доступа")
         return
@@ -878,9 +912,10 @@ async def mod_reject_payment(callback: CallbackQuery, session: AsyncSession, bot
         "❌ Оплата отклонена модератором. Свяжитесь с модератором для уточнения.",
         label="mod_reject_payment_notify",
     )
-    await callback.message.edit_text(
-        callback.message.text + "\n\n❌ ОПЛАТА ОТКЛОНЕНА",
-    )
+    try:
+        await callback.message.edit_text(f"❌ Оплата #{payment.id} отклонена.")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
     await callback.answer("❌ Отклонено")
 
 
@@ -1164,6 +1199,24 @@ async def mod_find_action(callback: CallbackQuery, session: AsyncSession, bot: B
         )
 
     elif action == "vip_remove":
+        # Шаг 1 — показать подтверждение. Фактическое снятие — в vip_remove_yes.
+        expires_str = ""
+        if profile.vip_expires_at:
+            expires_str = f" (действует до {profile.vip_expires_at.strftime('%d.%m.%Y')})"
+        try:
+            await callback.message.edit_text(
+                f"⚠️ Снять VIP с анкеты <b>{display_id}</b>{expires_str}?\n\n"
+                f"Оставшиеся оплаченные дни будут потеряны.",
+                reply_markup=confirmation_kb(
+                    yes_cb=f"modfind:vip_remove_yes:{profile.id}",
+                    no_cb="confirm:cancel",
+                ),
+            )
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+
+    elif action == "vip_remove_yes":
+        # Шаг 2 — фактическое снятие VIP после подтверждения.
         profile.vip_status = VipStatus.NONE
         profile.vip_expires_at = None
         await session.commit()
@@ -2311,8 +2364,43 @@ async def vipmod_confirm(callback: CallbackQuery, session: AsyncSession, bot: Bo
 
 
 @router.callback_query(F.data.startswith("vipmod:reject:"))
-async def vipmod_reject(callback: CallbackQuery, session: AsyncSession, bot: Bot):
-    """Отклонить VIP-заявку. Анкета статус не меняет."""
+async def vipmod_reject_confirm(callback: CallbackQuery, session: AsyncSession):
+    """Шаг 1: показать подтверждение отклонения VIP-заявки."""
+    if not is_moderator(callback.from_user.id):
+        await callback.answer("⛔")
+        return
+    try:
+        req_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    req = await session.get(VipRequest, req_id)
+    if not req or req.status != VipRequestStatus.PENDING:
+        await callback.answer("Заявка уже обработана", show_alert=True)
+        return
+
+    prompt = (
+        f"⚠️ Отклонить VIP-заявку <b>{req.display_id or req.id}</b>?\n\n"
+        f"Пользователь не получит VIP.\n"
+        f"Revert — только через SQL."
+    )
+    try:
+        await callback.message.edit_text(
+            prompt,
+            reply_markup=confirmation_kb(
+                yes_cb=f"vipmod:reject_yes:{req.id}",
+                no_cb="confirm:cancel",
+            ),
+        )
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("vipmod:reject_yes:"))
+async def vipmod_reject_do(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+    """Шаг 2: фактическое отклонение VIP-заявки (после подтверждения)."""
     if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
@@ -2502,7 +2590,7 @@ async def cmd_reset(message: Message, session: AsyncSession):
         await message.answer(f"❌ Анкета не найдена: <code>{arg}</code>")
         return
 
-    # Запомним для лога и ответа
+    # Показать подтверждение — фактическое удаление в reset:confirm_one:<id>
     display_id = profile.display_id or f"id={profile.id}"
     name = profile.name or "—"
     age = ""
@@ -2512,6 +2600,42 @@ async def cmd_reset(message: Message, session: AsyncSession):
             age = f", {_dt.now().year - profile.birth_year}"
         except Exception:
             pass
+
+    await message.answer(
+        f"⚠️ Удалить анкету <b>{display_id}</b> ({name}{age}) навсегда?\n\n"
+        f"Будут стёрты: анкета, избранные, запросы контакта, оплаты,\n"
+        f"VIP-заявки, жалобы, встречи, отзывы, требования.\n\n"
+        f"Действие необратимо.",
+        reply_markup=confirmation_kb(
+            yes_cb=f"reset:confirm_one:{profile.id}",
+            no_cb="reset:cancel",
+        ),
+    )
+
+
+@router.callback_query(F.data.startswith("reset:confirm_one:"))
+async def reset_confirm_one(callback: CallbackQuery, session: AsyncSession):
+    """Удалить одну анкету — после подтверждения. Только модератор Ташкент."""
+    if callback.from_user.id != config.mod_tashkent_id:
+        await callback.answer("⛔")
+        return
+    try:
+        profile_id = int(callback.data.split(":")[2])
+    except (ValueError, IndexError):
+        await callback.answer("❌")
+        return
+
+    profile = await session.get(Profile, profile_id)
+    if profile is None:
+        try:
+            await callback.message.edit_text("❌ Анкета не найдена — возможно, уже удалена.")
+        except Exception as _e:
+            logger.debug("ignored: %s", _e)
+        await callback.answer()
+        return
+
+    display_id = profile.display_id or f"id={profile.id}"
+    name = profile.name or "—"
     owner_user_id = profile.user_id
 
     await _delete_profile_cascade(session, profile)
@@ -2519,9 +2643,13 @@ async def cmd_reset(message: Message, session: AsyncSession):
 
     logger.info(
         "reset by mod %s: deleted profile %s owned by user %s",
-        message.from_user.id, display_id, owner_user_id,
+        callback.from_user.id, display_id, owner_user_id,
     )
-    await message.answer(f"✅ Удалено: <b>{display_id}</b> ({name}{age})")
+    try:
+        await callback.message.edit_text(f"✅ Удалено: <b>{display_id}</b> ({name})")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer("✅ Удалено")
 
 
 @router.callback_query(F.data == "reset:confirm_all")
@@ -2571,6 +2699,23 @@ async def reset_confirm_all(callback: CallbackQuery, session: AsyncSession):
 @router.callback_query(F.data == "reset:cancel")
 async def reset_cancel(callback: CallbackQuery):
     if callback.from_user.id != config.mod_tashkent_id:
+        await callback.answer("⛔")
+        return
+    try:
+        await callback.message.edit_text("❌ Отменено.")
+    except Exception as _e:
+        logger.debug("ignored: %s", _e)
+    await callback.answer()
+
+
+# ══════════════════════════════════════════════════════════
+#  Общий cancel для confirmation_kb — замена карточки на «❌ Отменено»
+# ══════════════════════════════════════════════════════════
+
+@router.callback_query(F.data == "confirm:cancel")
+async def confirm_cancel(callback: CallbackQuery):
+    """Общий cancel для подтверждений критичных действий."""
+    if not is_moderator(callback.from_user.id):
         await callback.answer("⛔")
         return
     try:
