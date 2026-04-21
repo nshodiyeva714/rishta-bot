@@ -23,7 +23,7 @@ from bot.keyboards.inline import (
     marital_kb, children_kb, photo_type_kb,
     confirm_age_kb, skip_kb,
     back_step_kb, skip_back_kb, add_nav, body_type_kb, occupation_kb,
-    anketa_finish_kb, city_kb, uz_regions_kb,
+    anketa_finish_kb, city_kb, city_more_kb, uz_regions_kb,
 )
 
 router = Router()
@@ -505,6 +505,38 @@ _REGION_NAMES = {
 
 # Коды областей УЗ (для которых спрашиваем район)
 _UZ_REGION_CODES = set(_REGION_NAMES["ru"].keys())
+
+
+# ── Навигация подменю «Ещё страны» — ДОЛЖНЫ быть выше broad city:* handler ──
+
+@router.callback_query(F.data == "city:more", QuestionnaireStates.q6_city)
+async def q6_city_show_more(callback: CallbackQuery, state: FSMContext):
+    """Показать подменю «Ещё страны» — меняем только клавиатуру карточки."""
+    lang = await _lang(state)
+    # show_back=False/show_main=False → без дубля «Назад» из add_nav.
+    # Единственная «🔙 Назад» — из самой city_more_kb (callback city:back_main).
+    kb = add_nav(
+        city_more_kb(lang).inline_keyboard,
+        lang, "back_step",
+        show_back=False, show_main=False,
+    )
+    try:
+        await callback.message.edit_reply_markup(reply_markup=kb)
+    except Exception:
+        pass
+    await callback.answer()
+
+
+@router.callback_query(F.data == "city:back_main", QuestionnaireStates.q6_city)
+async def q6_city_back_main(callback: CallbackQuery, state: FSMContext):
+    """Вернуть основной список стран из подменю «Ещё страны»."""
+    lang = await _lang(state)
+    kb = add_nav(city_kb(lang).inline_keyboard, lang, "back_step", show_main=False)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=kb)
+    except Exception:
+        pass
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("city:"), QuestionnaireStates.q6_city)

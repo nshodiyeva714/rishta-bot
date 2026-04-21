@@ -566,28 +566,45 @@ def after_publish_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 # ── City keyboard (questionnaire step 6) ──
 
 def city_kb(lang: str = "ru") -> InlineKeyboardMarkup:
-    """Шаг 1: Выбор страны (9 опций, по 1 в ряд)."""
+    """Шаг 1: Выбор страны — 4 основных + «📋 Ещё страны» (вход в подменю)."""
     if lang == "uz":
         opts = [
-            ("🇺🇿 O'zbekiston",   "city:uzbekistan"),
-            ("🇺🇸 AQSH",          "city:usa"),
-            ("🇷🇺 Rossiya",       "city:russia"),
-            ("🇰🇿 Qozog'iston",   "city:kazakhstan"),
-            ("🇰🇬 Qirg'iziston",  "city:kyrgyzstan"),
-            ("🇹🇯 Tojikiston",    "city:tajikistan"),
-            ("🇹🇲 Turkmaniston",  "city:turkmenistan"),
-            ("🌍 Yevropa",        "city:europe"),
+            ("🇺🇿 O'zbekiston",    "city:uzbekistan"),
+            ("🇺🇸 AQSH",           "city:usa"),
+            ("🇷🇺 Rossiya",        "city:russia"),
+            ("🌍 Yevropa",         "city:europe"),
+            ("📋 Boshqa davlatlar", "city:more"),
         ]
     else:
         opts = [
-            ("🇺🇿 Узбекистан",    "city:uzbekistan"),
-            ("🇺🇸 США",           "city:usa"),
-            ("🇷🇺 Россия",        "city:russia"),
-            ("🇰🇿 Казахстан",     "city:kazakhstan"),
-            ("🇰🇬 Кыргызстан",    "city:kyrgyzstan"),
-            ("🇹🇯 Таджикистан",   "city:tajikistan"),
-            ("🇹🇲 Туркменистан",  "city:turkmenistan"),
-            ("🌍 Европа",         "city:europe"),
+            ("🇺🇿 Узбекистан",     "city:uzbekistan"),
+            ("🇺🇸 США",            "city:usa"),
+            ("🇷🇺 Россия",         "city:russia"),
+            ("🌍 Европа",          "city:europe"),
+            ("📋 Ещё страны",      "city:more"),
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts
+    ])
+
+
+def city_more_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    """Подменю «📋 Ещё страны» для шага q6_city — 4 страны + 🔙 к основному списку."""
+    if lang == "uz":
+        opts = [
+            ("🇰🇿 Qozog'iston",    "city:kazakhstan"),
+            ("🇰🇬 Qirg'iziston",   "city:kyrgyzstan"),
+            ("🇹🇯 Tojikiston",     "city:tajikistan"),
+            ("🇹🇲 Turkmaniston",   "city:turkmenistan"),
+            ("🔙 Orqaga",          "city:back_main"),
+        ]
+    else:
+        opts = [
+            ("🇰🇿 Казахстан",      "city:kazakhstan"),
+            ("🇰🇬 Кыргызстан",     "city:kyrgyzstan"),
+            ("🇹🇯 Таджикистан",    "city:tajikistan"),
+            ("🇹🇲 Туркменистан",   "city:turkmenistan"),
+            ("🔙 Назад",           "city:back_main"),
         ]
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=txt, callback_data=cb)] for txt, cb in opts

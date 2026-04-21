@@ -707,28 +707,22 @@ async def filter_residence(callback: CallbackQuery, session: AsyncSession):
     lang = await get_lang(session, callback.from_user.id)
     if lang == "uz":
         options = [
-            ("🇺🇿 O'zbekiston",   "filter:residence:uzb"),
-            ("🇺🇸 AQSH",          "fval:region:usa"),
-            ("🇷🇺 Rossiya",       "fval:region:russia"),
-            ("🇰🇿 Qozog'iston",   "fval:region:kazakhstan"),
-            ("🇰🇬 Qirg'iziston",  "fval:region:kyrgyzstan"),
-            ("🇹🇯 Tojikiston",    "fval:region:tajikistan"),
-            ("🇹🇲 Turkmaniston",  "fval:region:turkmenistan"),
-            ("🌍 Yevropa",        "fval:region:europe"),
-            ("✅ Muhim emas",     "fval:region:any"),
+            ("🇺🇿 O'zbekiston",    "filter:residence:uzb"),
+            ("🇺🇸 AQSH",           "fval:region:usa"),
+            ("🇷🇺 Rossiya",        "fval:region:russia"),
+            ("🌍 Yevropa",         "fval:region:europe"),
+            ("📋 Boshqa davlatlar", "fval:region:more"),
+            ("✅ Muhim emas",      "fval:region:any"),
         ]
         title = "🏡 Yashash joyi:"
     else:
         options = [
-            ("🇺🇿 Узбекистан",    "filter:residence:uzb"),
-            ("🇺🇸 США",           "fval:region:usa"),
-            ("🇷🇺 Россия",        "fval:region:russia"),
-            ("🇰🇿 Казахстан",     "fval:region:kazakhstan"),
-            ("🇰🇬 Кыргызстан",    "fval:region:kyrgyzstan"),
-            ("🇹🇯 Таджикистан",   "fval:region:tajikistan"),
-            ("🇹🇲 Туркменистан",  "fval:region:turkmenistan"),
-            ("🌍 Европа",         "fval:region:europe"),
-            ("✅ Не важно",       "fval:region:any"),
+            ("🇺🇿 Узбекистан",     "filter:residence:uzb"),
+            ("🇺🇸 США",            "fval:region:usa"),
+            ("🇷🇺 Россия",         "fval:region:russia"),
+            ("🌍 Европа",          "fval:region:europe"),
+            ("📋 Ещё страны",      "fval:region:more"),
+            ("✅ Не важно",        "fval:region:any"),
         ]
         title = "🏡 Где проживает:"
     await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
@@ -844,6 +838,43 @@ async def filter_children(callback: CallbackQuery, session: AsyncSession):
         title, reply_markup=filter_option_kb(options, lang)
     )
     await callback.answer()
+
+
+# ── Подменю «Ещё страны» в фильтре проживания ──
+# ВАЖНО: эти handlers ДОЛЖНЫ быть выше broad `fval:` catchall ниже,
+# иначе filter_value_set перехватит "more"/"back_main" как значение фильтра.
+
+
+@router.callback_query(F.data == "fval:region:more")
+async def filter_residence_more(callback: CallbackQuery, session: AsyncSession):
+    """Показать подменю с дополнительными странами (4 шт + возврат)."""
+    lang = await get_lang(session, callback.from_user.id)
+    if lang == "uz":
+        options = [
+            ("🇰🇿 Qozog'iston",   "fval:region:kazakhstan"),
+            ("🇰🇬 Qirg'iziston",  "fval:region:kyrgyzstan"),
+            ("🇹🇯 Tojikiston",    "fval:region:tajikistan"),
+            ("🇹🇲 Turkmaniston",  "fval:region:turkmenistan"),
+            ("🔙 Orqaga",         "fval:region:back_main"),
+        ]
+        title = "🏡 Boshqa davlatlar:"
+    else:
+        options = [
+            ("🇰🇿 Казахстан",     "fval:region:kazakhstan"),
+            ("🇰🇬 Кыргызстан",    "fval:region:kyrgyzstan"),
+            ("🇹🇯 Таджикистан",   "fval:region:tajikistan"),
+            ("🇹🇲 Туркменистан",  "fval:region:turkmenistan"),
+            ("🔙 Назад",          "fval:region:back_main"),
+        ]
+        title = "🏡 Ещё страны:"
+    await callback.message.edit_text(title, reply_markup=filter_option_kb(options, lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "fval:region:back_main")
+async def filter_residence_back_main(callback: CallbackQuery, session: AsyncSession):
+    """Вернуть основной экран фильтра проживания — делегируем filter_residence."""
+    await filter_residence(callback, session)
 
 
 # ── Универсальный обработчик значений фильтров ──
