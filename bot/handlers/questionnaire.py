@@ -72,19 +72,25 @@ def build_card(data: dict, lang: str = "ru") -> str:
         }
         lines.append(photo_map[L].get(pt, f"📸 {pt}"))
 
-    # Телосложение
+    # Телосложение — иконка + подпись «Телосложение:» / «Tana tuzilishi:»
     body_map = {
-        "ru": {"slim": "Стройный/ая", "average": "Среднее", "athletic": "Спортивный/ая", "full": "Плотный/ая"},
-        "uz": {"slim": "Ozg'in", "average": "O'rtacha", "athletic": "Sportchilarga xos", "full": "To'ladan kelgan"},
+        "ru": {"slim": "🪶 Стройный/ая", "average": "🍃 Среднее", "athletic": "🏃 Спортивный/ая", "full": "🌳 Плотный/ая"},
+        "uz": {"slim": "🪶 Ozg'in", "average": "🍃 O'rtacha", "athletic": "🏃 Sportchilarga xos", "full": "🌳 To'ladan kelgan"},
     }
     body = data.get("body_type")
     if body:
-        lines.append(body_map[L].get(body, body))
+        bt_val = body_map[L].get(body, body)
+        bt_label = "Tana tuzilishi" if L == "uz" else "Телосложение"
+        if " " in bt_val:
+            icon, val = bt_val.split(" ", 1)
+            lines.append(f"{icon} {bt_label}: {val}")
+        else:
+            lines.append(bt_val)
 
-    # Национальность
+    # Национальность — флаг уже в значении, подписи нет (синхронно с format_anketa_public)
     nat = data.get("nationality")
     if nat:
-        lines.append(f"{'Нац.' if L == 'ru' else 'Millat'}: {nationality_label(nat, L)}")
+        lines.append(nationality_label(nat, L))
 
     # Город + район
     city = data.get("city")
@@ -116,14 +122,20 @@ def build_card(data: dict, lang: str = "ru") -> str:
     if occ and occ != "—":
         lines.append(f"💼 {occupation_label(occ, L)}")
 
-    # Религиозность
+    # Религиозность — иконка в значении, вставляем подпись «Религиозность:» / «Dindorligi:»
     rel_map = {
         "ru": {"practicing": "🕌 Практикующий/ая", "moderate": "☪️ Умеренный/ая", "secular": "🌐 Светский/ая"},
         "uz": {"practicing": "🕌 Amaliyotchi", "moderate": "☪️ Mo'tadil", "secular": "🌐 Dunyoviy"},
     }
     rel = data.get("religiosity")
     if rel:
-        lines.append(rel_map[L].get(rel, rel))
+        rel_val = rel_map[L].get(rel, rel)
+        rel_label = "Dindorligi" if L == "uz" else "Религиозность"
+        if " " in rel_val:
+            icon, val = rel_val.split(" ", 1)
+            lines.append(f"{icon} {rel_label}: {val}")
+        else:
+            lines.append(rel_val)
 
     # Семейное положение
     mar_map = {

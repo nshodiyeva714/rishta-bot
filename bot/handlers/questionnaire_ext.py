@@ -131,7 +131,7 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     about = data.get("ideal_family_life")
     if about:
         snippet = about[:40] + ("..." if len(about) > 40 else "")
-        lines.append(f"💬 {snippet}")
+        lines.append(f"💭 {snippet}")
 
     # Жильё
     house_map = {
@@ -142,7 +142,7 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     }
     house = data.get("housing")
     if house:
-        lines.append(f"🏠 {house_map[L].get(house, house)}")
+        lines.append(f"🏡 {house_map[L].get(house, house)}")
 
     # Автомобиль
     car_map = {
@@ -151,7 +151,7 @@ def build_ext_card(data: dict, lang: str = "ru") -> str:
     }
     car = data.get("car")
     if car:
-        lines.append(f"🚗 {car_map[L].get(car, car)}")
+        lines.append(f"🚘 {car_map[L].get(car, car)}")
 
     if not lines:
         return ""

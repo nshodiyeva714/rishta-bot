@@ -672,13 +672,13 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
         if fam_parts:
             lines.append(f"👨‍👩‍👧‍👦 {' · '.join(fam_parts)}")
 
-    # 12. 🌸 Характер
+    # 12. ✨ Характер
     if profile.character_hobbies:
-        lines.append(f"🌸 {lb['char']}: {profile.character_hobbies}")
+        lines.append(f"✨ {lb['char']}: {profile.character_hobbies}")
 
-    # 13. 🌿 Здоровье
+    # 13. ❤️ Здоровье
     if getattr(profile, "health_notes", None):
-        lines.append(f"🌿 {lb['health']}: {profile.health_notes}")
+        lines.append(f"❤️ {lb['health']}: {profile.health_notes}")
 
     # 14. 💭 О себе
     if getattr(profile, "ideal_family_life", None):
