@@ -591,10 +591,15 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     if header_parts:
         lines.append("🪪 " + " · ".join(header_parts))
 
-    # 2. Телосложение (иконка уже в значении)
+    # 2. Телосложение (иконка в значении, вставляем подпись между иконкой и словом)
     bt_val = body_type_map.get(L, body_type_map["ru"]).get(getattr(profile, "body_type", None) or "", "")
     if bt_val:
-        lines.append(bt_val)
+        bt_label = "Tana tuzilishi" if L == "uz" else "Телосложение"
+        if " " in bt_val:
+            icon, val = bt_val.split(" ", 1)
+            lines.append(f"{icon} {bt_label}: {val}")
+        else:
+            lines.append(bt_val)
 
     # 3. Национальность (флаг уже в значении — без доп. иконки)
     if profile.nationality:
@@ -623,11 +628,15 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
     if profile.occupation:
         lines.append(f"💼 {occupation_label(profile.occupation, L)}")
 
-    # 7. Религиозность — иконка в значении
+    # 7. Религиозность — иконка в значении, вставляем подпись
     rel_raw = _ev(profile, "religiosity")
     if rel_raw:
         rel_val = rel_plain.get(L, rel_plain["ru"]).get(rel_raw, rel_raw)
-        lines.append(rel_val)
+        if " " in rel_val:
+            icon, val = rel_val.split(" ", 1)
+            lines.append(f"{icon} {lb['religion']}: {val}")
+        else:
+            lines.append(rel_val)
 
     # 8. Семейное положение (+ дети)
     mar_raw = _ev(profile, "marital_status")
@@ -665,15 +674,16 @@ def format_anketa_public(profile: Profile, score: int = 50, lang: str = "ru") ->
 
     # 12. 🌸 Характер
     if profile.character_hobbies:
-        lines.append(f"🌸 {profile.character_hobbies}")
+        lines.append(f"🌸 {lb['char']}: {profile.character_hobbies}")
 
     # 13. 🌿 Здоровье
     if getattr(profile, "health_notes", None):
-        lines.append(f"🌿 {profile.health_notes}")
+        lines.append(f"🌿 {lb['health']}: {profile.health_notes}")
 
     # 14. 💭 О себе
     if getattr(profile, "ideal_family_life", None):
-        lines.append(f"💭 {profile.ideal_family_life}")
+        ideal_label = "O'zi haqida" if L == "uz" else "О себе"
+        lines.append(f"💭 {ideal_label}: {profile.ideal_family_life}")
 
     # 15. 🏡 Жильё
     housing_raw = _ev(profile, "housing")
