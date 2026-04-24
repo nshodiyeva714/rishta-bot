@@ -42,13 +42,18 @@ router = Router()
 
 # ── Уведомления владельцу анкеты ──
 
-NOTIFY_AT_VIEWS = {5, 10, 25, 50, 100, 200, 500}
+# ── Милстоуны уведомлений владельцу ──
+# views: разовые на 10/50/100/500, дальше каждые +500
+NOTIFY_AT_VIEWS = {10, 50, 100, 500}
+# favorites и express_interest: 1, 5, 10, 25, 50, дальше каждые +50
+FAVORITE_MILESTONES = {1, 5, 10, 25, 50}
+INTEREST_MILESTONES = {1, 5, 10, 25, 50}
 
 
 async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, viewer_id: int):
-    """Уведомляет владельца на милстоунах просмотров 5/10/25/50/100/200/500 и каждые 100."""
+    """Уведомляет владельца на милстоунах просмотров: 10/50/100/500, дальше каждые +500."""
     views = profile.views_count or 0
-    if views not in NOTIFY_AT_VIEWS and (views < 500 or views % 100 != 0):
+    if views not in NOTIFY_AT_VIEWS and (views < 500 or views % 500 != 0):
         return
     if not profile.user_id or profile.user_id == viewer_id:
         return
@@ -58,51 +63,33 @@ async def _notify_owner_view(bot: Bot, session: AsyncSession, profile: Profile, 
     lang = user.language.value if user and user.language else "ru"
 
     display_id = profile.display_id or "—"
+    # Заголовок зависит от порога
+    if views == 10:
+        ru_title, uz_title = "👀 <b>Вашу анкету начали смотреть!</b>", "👀 <b>Anketangizni ko'rishni boshlashdi!</b>"
+    elif views == 50:
+        ru_title, uz_title = "👁 <b>Ваша анкета набирает популярность!</b>", "👁 <b>Anketangiz mashhur bo'lmoqda!</b>"
+    elif views == 100:
+        ru_title, uz_title = "🔥 <b>Ваша анкета популярна!</b>", "🔥 <b>Anketangiz mashhur!</b>"
+    else:  # 500+
+        ru_title, uz_title = "⭐ <b>Ваша анкета в топе!</b>", "⭐ <b>Anketangiz top ro'yxatda!</b>"
+
     if lang == "uz":
-        text = (
-            f"👁 <b>Anketangiz mashhur bo'lmoqda!</b>\n\n"
-            f"🔖 {display_id}\n"
-            f"Ko'rishlar soni: <b>{views}</b>\n\n"
-            f"Anketangiz ishlayapti! 🤲"
-        )
+        text = f"{uz_title}\n\n🔖 {display_id}\nKo'rishlar soni: <b>{views}</b>"
     else:
-        text = (
-            f"👁 <b>Ваша анкета набирает популярность!</b>\n\n"
-            f"🔖 {display_id}\n"
-            f"Просмотров: <b>{views}</b>\n\n"
-            f"Ваша анкета работает! 🤲"
-        )
+        text = f"{ru_title}\n\n🔖 {display_id}\nПросмотров: <b>{views}</b>"
     await safe_send_message(bot, profile.user_id, text, parse_mode="HTML", label="notify_owner_view")
 
 
 async def _notify_owner_favorite(bot: Bot, session: AsyncSession, profile: Profile, user_id: int):
-    """Уведомляет владельца что анкету добавили в избранное."""
+    """Уведомляет владельца о добавлении в избранное на милстоунах 1/5/10/25/50, +50."""
     if not profile.user_id or profile.user_id == user_id:
         return
 
-    result = await session.execute(select(User).where(User.id == profile.user_id))
-    user = result.scalar_one_or_none()
-    lang = user.language.value if user and user.language else "ru"
-
-    display_id = profile.display_id or "—"
-    if lang == "uz":
-        text = (
-            f"❤️ <b>Anketangiz tanlanganlar ga qo'shildi!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Bu yaxshi belgi — oila qiziqyapti! 😊"
-        )
-    else:
-        text = (
-            f"❤️ <b>Вашу анкету добавили в избранное!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Хороший знак — семья заинтересовалась! 😊"
-        )
-    await safe_send_message(bot, profile.user_id, text, label="notify_owner_favorite")
-
-
-async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile: Profile):
-    """Уведомляет владельца что запросили контакт."""
-    if not profile.user_id:
+    count_q = await session.execute(
+        select(sa_func.count(Favorite.id)).where(Favorite.profile_id == profile.id)
+    )
+    count = count_q.scalar() or 0
+    if count not in FAVORITE_MILESTONES and (count < 50 or count % 50 != 0):
         return
 
     result = await session.execute(select(User).where(User.id == profile.user_id))
@@ -110,21 +97,95 @@ async def _notify_owner_contact_request(bot: Bot, session: AsyncSession, profile
     lang = user.language.value if user and user.language else "ru"
 
     display_id = profile.display_id or "—"
-    if lang == "uz":
-        text = (
-            f"🔥 <b>Anketangizga jiddiy qiziqish!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Bir oila sizning kontaktingizni so'radi.\n"
-            f"Moderator tez orada siz bilan bog'lanadi 🤝"
+    if count == 1:
+        if lang == "uz":
+            text = (
+                f"❤️ <b>Anketangizni sevimlilar ro'yxatiga qo'shishdi!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Bu yaxshi belgi — oila qiziqyapti! 😊"
+            )
+        else:
+            text = (
+                f"❤️ <b>Вашу анкету добавили в избранное!</b>\n\n"
+                f"🔖 {display_id}\n\n"
+                f"Хороший знак — семья заинтересовалась! 😊"
+            )
+    elif count < 50:
+        if lang == "uz":
+            text = (
+                f"❤️ <b>Anketangizni sevimlilar ro'yxatiga qo'shmoqda</b>\n\n"
+                f"🔖 {display_id}\n"
+                f"Jami: <b>{count}</b>"
+            )
+        else:
+            text = (
+                f"❤️ <b>Вашу анкету добавляют в избранное</b>\n\n"
+                f"🔖 {display_id}\n"
+                f"Всего: <b>{count}</b>"
+            )
+    else:  # 50+
+        if lang == "uz":
+            text = (
+                f"🔥 <b>Anketangizni sevimlilar ro'yxatiga ko'p qo'shmoqda!</b>\n\n"
+                f"🔖 {display_id}\n"
+                f"Jami: <b>{count}</b>"
+            )
+        else:
+            text = (
+                f"🔥 <b>Вашу анкету часто добавляют в избранное!</b>\n\n"
+                f"🔖 {display_id}\n"
+                f"Всего: <b>{count}</b>"
+            )
+    await safe_send_message(bot, profile.user_id, text, parse_mode="HTML", label="notify_owner_favorite")
+
+
+async def _notify_owner_interest(bot: Bot, session: AsyncSession, profile: Profile):
+    """Уведомляет владельца об 'интересе' (express_interest) на милстоунах 1/5/10/25/50, +50."""
+    if not profile.user_id:
+        return
+
+    count_q = await session.execute(
+        select(sa_func.count(ContactRequest.id)).where(
+            ContactRequest.target_profile_id == profile.id
         )
-    else:
-        text = (
-            f"🔥 <b>Серьёзный интерес к вашей анкете!</b>\n\n"
-            f"🔖 {display_id}\n\n"
-            f"Семья запросила ваши контакты.\n"
-            f"Модератор свяжется с вами в ближайшее время 🤝"
-        )
-    await safe_send_message(bot, profile.user_id, text, label="notify_owner_contact_request")
+    )
+    count = count_q.scalar() or 0
+    if count not in INTEREST_MILESTONES and (count < 50 or count % 50 != 0):
+        return
+
+    result = await session.execute(select(User).where(User.id == profile.user_id))
+    user = result.scalar_one_or_none()
+    lang = user.language.value if user and user.language else "ru"
+
+    display_id = profile.display_id or "—"
+    if count == 1:
+        if lang == "uz":
+            text = f"🔔 <b>Kimdir anketangizga qiziqdi!</b>\n\n🔖 {display_id}"
+        else:
+            text = f"🔔 <b>Кем-то заинтересовались вашей анкетой!</b>\n\n🔖 {display_id}"
+    elif count < 50:
+        if lang == "uz":
+            text = (
+                f"🔔 <b>Anketangizga qiziqish bor</b>\n\n"
+                f"🔖 {display_id}\nJami: <b>{count}</b>"
+            )
+        else:
+            text = (
+                f"🔔 <b>Вашей анкетой интересуются</b>\n\n"
+                f"🔖 {display_id}\nВсего: <b>{count}</b>"
+            )
+    else:  # 50+
+        if lang == "uz":
+            text = (
+                f"🔥 <b>Anketangiz ko'p e'tibor tortmoqda!</b>\n\n"
+                f"🔖 {display_id}\nJami: <b>{count}</b>"
+            )
+        else:
+            text = (
+                f"🔥 <b>Ваша анкета привлекает много внимания!</b>\n\n"
+                f"🔖 {display_id}\nВсего: <b>{count}</b>"
+            )
+    await safe_send_message(bot, profile.user_id, text, parse_mode="HTML", label="notify_owner_interest")
 
 PROFILES_PER_PAGE = 1  # Показывать по одной анкете
 
@@ -1738,63 +1799,19 @@ async def express_interest(callback: CallbackQuery, session: AsyncSession, bot: 
     target_profile.requests_count = (target_profile.requests_count or 0) + 1
     await session.commit()
 
-    # Уведомление владельца о запросе контакта
+    # Уведомление владельца — накопительно по милстоунам (1/5/10/25/50, +50).
+    # Раньше слали push на каждый клик, что приводило к mute-бомбёжке.
     try:
-        await _notify_owner_contact_request(bot, session, target_profile)
+        await _notify_owner_interest(bot, session, target_profile)
     except Exception as _e:
         logger.debug("ignored: %s", _e)
+
+    # Нам всё ещё нужен requester_profile ниже — для «contact_moderator» текста юзеру
     result = await session.execute(
         select(Profile).where(Profile.user_id == user_id).limit(1)
     )
     requester_profile = result.scalar_one_or_none()
 
-    if target_profile.user_id:
-        target_lang = "ru"
-        result = await session.execute(select(User).where(User.id == target_profile.user_id))
-        target_user = result.scalar_one_or_none()
-        if target_user and target_user.language:
-            target_lang = target_user.language.value
-
-        age_str = "?"
-        edu_str = "—"
-        occ_str = "—"
-        req_city = "—"
-        res_str = "—"
-
-        if requester_profile:
-            if requester_profile.birth_year:
-                age_str = age_text(calculate_age(requester_profile.birth_year))
-            edu_map = {"secondary": "среднее", "vocational": "среднее спец.", "higher": "высшее", "studying": "учится"}
-            if requester_profile.education:
-                edu_str = edu_map.get(requester_profile.education.value, "—")
-            occ_str = occupation_label(requester_profile.occupation, target_lang)
-            req_city = requester_profile.city or "—"
-            if requester_profile.residence_status:
-                res_map = {
-                    "uzbekistan": "🇺🇿 Узбекистан",
-                    "cis": "🇷🇺 СНГ",
-                    "usa": "🇺🇸 США",
-                    "europe": "🌍 Европа",
-                    "other_country": "🌍 Другая страна",
-                    "residence_permit": "🌍 Другая страна",
-                    "citizenship_other": "🌍 Другая страна",
-                }
-                res_str = res_map.get(requester_profile.residence_status.value, "—")
-
-        await safe_send_message(
-            bot,
-            target_profile.user_id,
-            t("notify_interest", target_lang,
-                display_id=target_profile.display_id,
-                city=req_city,
-                age=age_str,
-                education=edu_str,
-                occupation=occ_str,
-                requester_city=req_city,
-                residence=res_str,
-            ),
-            label="notify_interest",
-        )
     region = "🇺🇿 Узбекистан"
     moderator = config.moderator_tashkent
     hours = "08:00–00:00 (UZT)"
